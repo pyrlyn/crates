@@ -1,0 +1,13 @@
+[package]
+name = "app-home"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.86"
+description = "Resolve the user home, an app's `$APP_HOME` or `~/.app`, and XDG config/data/cache/state dirs the same way on every OS"
+license.workspace = true
+repository = "https://github.com/pyrlyn/crates-packages"
+keywords = ["home", "xdg", "dirs", "tilde", "config"]
+categories = ["filesystem", "config"]
+
+[lints.rust]
+unsafe_code = "forbid"

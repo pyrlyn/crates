@@ -10,6 +10,7 @@ Small, focused Rust crates shared by `ketch` and `rtok`.
 | [`agent-host-config`](agent-host-config) | Register and unregister an MCP server in an agent host's JSON config file, changing only our entry |
 | [`agent-loop`](agent-loop) | Neutral agent turn state machine: provider stream, tool dispatch, approvals, interrupt |
 | [`abi-drift`](abi-drift) | Drift tests for generated bindings: regenerate a cbindgen header or csbindgen C# file, diff it against the committed copy, bless to rewrite |
+| [`app-home`](app-home) | Resolve the user home, `$APP_HOME` or `~/.app`, and XDG config/data/cache/state dirs the same way on every OS |
 | [`cargo-changed-packages`](cargo-changed-packages) | Workspace packages a set of changed paths affects, including reverse dependencies |
 | [`change-preview`](change-preview) | Preview what a command would change: diff or `--stat` of edits, size and file count of removals, totals |
 | [`operation-icons`](operation-icons) | Emoji icons for the verb of a status line and the fixed-width gutter they sit in |
@@ -79,7 +80,7 @@ Two secrets must exist in the repo settings
 | Secret | Where to get it | Used by |
 | --- | --- | --- |
 | `CARGO_REGISTRY_TOKEN` | crates.io → Account Settings → API Tokens → New Token (needs `publish-new` and `publish-update` scopes; restrict it to the crates listed above). Add with `gh secret set CARGO_REGISTRY_TOKEN --repo pyrlyn/crates-packages` | `release.yml`, job `crates-io`: `cargo publish -p <crate>` |
-| `CARGO_REGISTRY_TOKEN` | crates.io → Account Settings → API Tokens → New Token (needs `publish-new` and `publish-update` scopes; restrict it to the `injecta-macros`, `injecta`, `file-backup`, `change-preview`, `fs-kit`, `wasm-plugin-host`, `telemetry-setup`, `gettext-catalog`, `sqlite-change-feed`, `abi-drift` `keychain-secret` and `sccache-r2` crates; add each new crate before its first release). Add with `gh secret set CARGO_REGISTRY_TOKEN --repo pyrlyn/crates-packages` | `release.yml`, job `crates-io`: `cargo publish -p <crate>` |
+| `CARGO_REGISTRY_TOKEN` | crates.io → Account Settings → API Tokens → New Token (needs `publish-new` and `publish-update` scopes; restrict it to the `injecta-macros`, `injecta`, `file-backup`, `change-preview`, `fs-kit`, `wasm-plugin-host`, `telemetry-setup`, `gettext-catalog`, `sqlite-change-feed`, `abi-drift` `keychain-secret`, `sccache-r2` and `app-home` crates; add each new crate before its first release). Add with `gh secret set CARGO_REGISTRY_TOKEN --repo pyrlyn/crates-packages` | `release.yml`, job `crates-io`: `cargo publish -p <crate>` |
 | `RELEASE_PLZ_TOKEN` | A fine-grained PAT (or GitHub App token) with **Contents** and **Pull requests** read/write on this repo — see https://release-plz.dev/docs/github/token. The default `GITHUB_TOKEN` cannot trigger `release.yml` from the release PR it opens, so without this the release PR would land without CI. Add with `gh secret set RELEASE_PLZ_TOKEN --repo pyrlyn/crates-packages` | `bump.yml`: pushes the version branch and opens the version PR |
 
 Without `CARGO_REGISTRY_TOKEN` the release stops at the `crates-io` job with
