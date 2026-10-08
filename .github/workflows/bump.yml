@@ -78,7 +78,7 @@ permissions:
 
 jobs:
   bump:
-    uses: pyrlyn/ci/.github/workflows/bump.yml@a4f93a2606a5dd8f697ad3d876440ab3e2eb4ae9 # main
+    uses: pyrlyn/ci/.github/workflows/bump.yml@341896b491b89d93a1940313c0149ddfd8fae9c2 # main
     permissions:
       contents: write # the bump branch, the tag and the release
       pull-requests: write # merge or close the bump pull request
@@ -94,6 +94,14 @@ jobs:
       release-script-args: ${{ inputs.prerelease }} ${{ inputs.package }}
       dry-run: ${{ inputs.dry-run }}
       release-untagged-head: ${{ inputs.release-untagged-head }}
+      # Every GitHub Release is a dev snapshot, published as a prerelease. This
+      # repository's decision, not pyrlyn/ci's. (crates.io gets the source as
+      # before; there is no binary build profile here.)
+      prerelease: true
+      release-title-suffix: " (dev build)"
+      release-notes-header: |-
+        > [!WARNING]
+        > Dev build: a development snapshot, published as a prerelease.
       release-plz-update: ${{ inputs.prerelease == '' }}
       package: ${{ inputs.package }}
       tag-prefix: ${{ inputs.package }}-v
