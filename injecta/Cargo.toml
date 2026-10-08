@@ -1,0 +1,43 @@
+[package]
+name = "injecta"
+description = "Compile-time dependency injection: one `container!` declaration, `#[derive(Injectable)]`, zero runtime registry"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.86"
+license.workspace = true
+repository = "https://github.com/pyrlyn/crates-packages"
+readme = "README.md"
+keywords = ["dependency-injection", "di", "ioc", "container", "compile-time"]
+categories = ["rust-patterns", "development-tools"]
+
+[features]
+default = ["std", "macros"]
+std = []
+macros = ["dep:injecta-macros"]
+tracing = ["dep:tracing"]
+
+[dependencies]
+injecta-macros = { path = "../injecta-macros", version = "=0.1.0", optional = true }
+tracing = { version = "0.1.44", default-features = false, optional = true }
+
+[dev-dependencies]
+trybuild = "1.0.119"
+
+[lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+unreachable_pub = "warn"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+unwrap_used = "warn"
+expect_used = "warn"
+panic = "warn"
+todo = "warn"
+unimplemented = "warn"
+module_name_repetitions = "allow"
+
+[[example]]
+name = "web_app"
+required-features = ["macros", "std"]

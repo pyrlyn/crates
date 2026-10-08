@@ -25,6 +25,8 @@ Small, focused Rust crates shared by `ketch` and `rtok`.
 | [`llm-wire-openai`](llm-wire-openai) | OpenAI Chat Completions and Responses wires, also for every OpenAI-compatible endpoint |
 | [`mcp-client-host`](mcp-client-host) | MCP client host over rmcp: `.mcp.json` discovery, fail-open connect, OAuth with an injectable token store, elicitation, deferred tools |
 | [`keychain-secret`](keychain-secret) | Application secrets from an environment variable or the OS keychain, never a config file, with a test guard against the real keychain |
+| [`injecta`](injecta) | Compile-time dependency injection: one `container!` declaration, derive `Injectable`, no runtime registry |
+| [`injecta-macros`](injecta-macros) | Procedural macros behind `injecta` (`container!`, `#[derive(Injectable)]`, `#[injectable]`) |
 | [`path-gates`](path-gates) | Map changed paths to named gates by glob rules from a TOML config |
 | [`perm-rules`](perm-rules) | Permission rules for tool calls: `Tool(subject)` grammar, deny/allow/ask decision order, risk fallback |
 | [`proc-sandbox`](proc-sandbox) | Confine a child process: Seatbelt on macOS, bubblewrap or Landlock plus seccomp on Linux, and a path guard for workspace roots |

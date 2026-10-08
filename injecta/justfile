@@ -1,0 +1,41 @@
+# Task runner for injecta. `just check` is the gate before every commit.
+
+msrv := "1.86"
+
+default: check
+
+# fmt, clippy (all targets and features, warnings are errors), tests, docs freshness
+check: fmt-check clippy test msrv
+
+fmt-check:
+    cargo fmt -p injecta -p injecta-macros --check
+
+clippy:
+    cargo clippy -p injecta -p injecta-macros --all-targets --all-features -- -D warnings
+    cargo clippy -p injecta --no-default-features --features macros -- -D warnings
+
+test:
+    cargo nextest run -p injecta -p injecta-macros --all-features
+    cargo test -p injecta -p injecta-macros --doc
+
+# The lowest supported toolchain must still build the library.
+msrv:
+    cargo +{{msrv}} check -p injecta --all-features
+
+# Regenerate llms.txt and llms-full.txt from GUIDE.md and AGENTS.md.
+docs:
+    INJECTA_BLESS=1 cargo test -p injecta --test docs
+    cargo doc --no-deps -p injecta
+
+# Re-pin compile-fail messages after a toolchain bump; review the diff.
+bless-ui:
+    TRYBUILD=overwrite cargo test -p injecta --test compile_fail
+
+# Comparison benchmarks (separate workspace in bench/).
+bench:
+    cd bench && cargo bench -p di-bench
+
+# Criterion suite: injecta's own paths plus the cross-crate comparison.
+# Reports land in bench/target/criterion; `bench/criterion-bench/report.py` prints the tables.
+bench-criterion:
+    cd bench && cargo bench -p criterion-bench --bench criterion

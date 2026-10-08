@@ -1,0 +1,5 @@
+error: unknown lifetime `lazy`; expected `instance`, `singleton`, `scoped` or `transient` (`singleton` is created lazily and shared)
+ --> tests/ui/unknown_lifetime.rs:3:9
+  |
+3 |         lazy u32,
+  |         ^^^^

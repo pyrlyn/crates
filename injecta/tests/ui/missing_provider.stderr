@@ -1,0 +1,24 @@
+error[E0277]: `App` has no provider for `Arc<Database>`
+  --> tests/ui/missing_provider.rs:13:19
+   |
+13 |         transient Repo,
+   |                   ^^^^ `Arc<Database>` is not registered in `App`
+   |
+   = note: declare it in `injecta::container!` as `instance Arc<Database>`, `singleton Arc<Database>` or `transient Arc<Database>`
+   = note: inside a `scope`, a root `singleton` cannot depend on a `scoped` value: make the dependent `scoped` or `transient`
+help: the trait `Provide<Arc<Database>>` is not implemented for `App`
+      but trait `Provide<Repo>` is implemented for it
+  --> tests/ui/missing_provider.rs:13:19
+   |
+13 |         transient Repo,
+   |                   ^^^^
+   = help: for that trait implementation, expected `Repo`, found `Arc<Database>`
+note: required for `Repo` to implement `Injectable<App>`
+  --> tests/ui/missing_provider.rs:7:8
+   |
+ 7 | struct Repo {
+   |        ^^^^
+ 8 |     db: Arc<Database>,
+   |         --- unsatisfied trait bound
+   = help: consider manually implementing `Injectable<App>` to avoid undesired bounds caused by "imperfect derives"
+   = note: to learn more, visit <https://github.com/rust-lang/rust/issues/26925>

@@ -1,0 +1,37 @@
+[package]
+name = "injecta-macros"
+description = "Procedural macros for injecta: `container!`, `#[derive(Injectable)]`, `#[injectable]`"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.86"
+license.workspace = true
+repository = "https://github.com/pyrlyn/crates-packages"
+readme = "README.md"
+keywords = ["dependency-injection", "di", "ioc", "container", "compile-time"]
+categories = ["rust-patterns", "development-tools"]
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro2 = "1.0.107"
+quote = "1.0.47"
+syn = { version = "2.0.119", features = ["full"] }
+
+[dev-dependencies]
+injecta = { path = "../injecta" }
+
+[lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+unreachable_pub = "warn"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+unwrap_used = "warn"
+expect_used = "warn"
+panic = "warn"
+todo = "warn"
+unimplemented = "warn"
+module_name_repetitions = "allow"
