@@ -170,8 +170,9 @@ impl<F: Fn(&str) -> Option<OsString>> Dirs<F> {
     }
 }
 
-// Deprecated until Rust 1.87 fixed its Windows behaviour; this crate's floor
-// is 1.86, where the function already works and only the warning remains.
+// Rust 1.85 stopped it reading `HOME` on Windows and 1.87 lifted the
+// deprecation, so on this crate's 1.86 floor only the warning remains. Before
+// 1.90 an empty Unix `HOME` came back as `Some("")`, hence the filter.
 #[allow(deprecated)]
 fn os_home() -> Option<PathBuf> {
     std::env::home_dir().filter(|p| !p.as_os_str().is_empty())
