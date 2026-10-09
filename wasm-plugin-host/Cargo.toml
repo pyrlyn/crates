@@ -21,9 +21,13 @@ missing_docs = "warn"
 extism = { version = "1.30.0", default-features = false, features = ["wasmtime-exceptions"] }
 serde = "1.0"
 serde_json = "1.0"
+sha2 = "0.10"
 thiserror = "2"
 # extism 1.30.0 does not build with its default features off: it relies on
 # wasmtime 43's `anyhow` feature, which only its `wasmtime-default-features`
 # turns on. This enables that one feature by feature unification. It must stay
 # on extism's wasmtime major, or a second wasmtime resolves that extism never sees.
 wasmtime = { version = "43", default-features = false, features = ["anyhow"] }
+
+[dev-dependencies]
+tempfile = "3"

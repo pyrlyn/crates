@@ -15,6 +15,7 @@
 | wasmtime | local | https://github.com/bytecodealliance/wasmtime | Only to turn on the `anyhow` feature extism 1.30 needs |
 | serde | local | https://github.com/serde-rs/serde | Call inputs and outputs |
 | serde_json | local | https://github.com/serde-rs/json | JSON on the plugin wire |
+| sha2 | local | https://github.com/RustCrypto/hashes | SHA-256 package digest |
 | thiserror | local | https://github.com/dtolnay/thiserror | `PluginError` |
 
 ## ketch
