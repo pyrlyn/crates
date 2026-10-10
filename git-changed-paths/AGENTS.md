@@ -13,7 +13,7 @@ Paths are relative to the repository top level.
 ## Rules
 
 - Fail safe: when the answer cannot be computed exactly, return an `Error`; callers
-  treat that as "everything changed", never "nothing changed".
+  never treat it as "nothing changed": fail loudly or run everything.
 - Tests build throwaway repos with `tempfile`; keep host git config out of them.
 
 ## Commands

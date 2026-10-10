@@ -188,6 +188,39 @@ fn unrelated_history_has_no_merge_base() {
 }
 
 #[test]
+fn shallow_clone_without_a_merge_base_says_so() {
+    let tmp = repo();
+    let src = tmp.path();
+    write(src, "f.txt", "f\n");
+    commit_all(src, "feature work");
+    git(src, &["checkout", "-q", "main"]);
+    write(src, "m.txt", "m\n");
+    commit_all(src, "main moves on");
+    git(src, &["checkout", "-q", "feature"]);
+
+    // Depth 1 keeps only the tips, so the fork point is cut off on both sides.
+    let dst = tempfile::tempdir().unwrap();
+    let url = format!("file://{}", src.display());
+    git(
+        dst.path(),
+        &["clone", "-q", "--depth=1", "--no-single-branch", &url, "."],
+    );
+    git(dst.path(), &["checkout", "-q", "feature"]);
+    let err = changed_paths(dst.path(), "origin/main").unwrap_err();
+    assert!(matches!(err, Error::ShallowNoMergeBase(_)), "{err:?}");
+    let text = err.to_string();
+    assert!(
+        text.contains("shallow") && text.contains("fetch-depth: 0") && text.contains("--unshallow"),
+        "{text}"
+    );
+
+    // Deepening restores the fork point, and the query then succeeds.
+    git(dst.path(), &["fetch", "-q", "--unshallow"]);
+    let result = changed_paths(dst.path(), "origin/main").unwrap();
+    assert_eq!(result.paths, set(&["f.txt"]));
+}
+
+#[test]
 fn subdirectory_argument_yields_top_level_relative_paths() {
     let tmp = repo();
     write(tmp.path(), "sub/c.txt", "changed\n");
