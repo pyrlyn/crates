@@ -1,9 +1,9 @@
-//! Turns the change set into the commands to run, falling back to "everything" whenever
-//! the exact answer is out of reach.
+//! Turns the change set into the commands to run. When the exact answer is out of reach the
+//! plan records the error; it runs every gate only if the caller opted into the fallback.
 
 use std::path::PathBuf;
 
-use cargo_changed_packages::Affected;
+use cargo_changed_packages::{Affected, Resolver};
 use path_gates::Selection;
 use serde::Serialize;
 
@@ -14,7 +14,7 @@ use crate::config::{Config, Gate, Part};
 pub struct Step {
     pub name: String,
     pub command: String,
-    /// `scoped`, `all: unmatched <path>`, `all: <error>` or `--all`.
+    /// `scoped`, `all: unmatched <path>`, `all: fallback after error: <error>` or `--all`.
     pub why: String,
 }
 
@@ -35,6 +35,9 @@ pub struct Plan {
     pub nothing_changed: bool,
     pub gates: Vec<Step>,
     pub skipped: Vec<Skip>,
+    /// Why planning failed; `null` when it did not. Without the opt-in fallback `gates` is
+    /// then empty, with it `gates` holds every gate.
+    pub error: Option<String>,
 }
 
 struct Values {
@@ -43,8 +46,9 @@ struct Values {
     changed: String,
 }
 
-/// Plan the gates for `base`. Never returns "nothing to do" because of an error.
-pub fn build(cfg: &Config, base: &str, all: bool) -> Plan {
+/// Plan the gates for `base`. A planning error is recorded in [`Plan::error`] and never
+/// turns into "nothing to do"; `fallback_all` makes it select every gate instead.
+pub fn build(cfg: &Config, base: &str, all: bool, fallback_all: bool, resolver: &Resolver) -> Plan {
     let mut plan = Plan {
         base: base.to_owned(),
         merge_base: None,
@@ -52,6 +56,7 @@ pub fn build(cfg: &Config, base: &str, all: bool) -> Plan {
         nothing_changed: false,
         gates: Vec::new(),
         skipped: Vec::new(),
+        error: None,
     };
     let mut forced = all.then(|| "--all".to_owned());
     let mut paths = Vec::new();
@@ -61,7 +66,9 @@ pub fn build(cfg: &Config, base: &str, all: bool) -> Plan {
             paths = found.paths.into_iter().collect::<Vec<_>>();
             plan.changed = Some(paths.len());
         }
-        Err(e) => forced = forced.or_else(|| fall_back(&e)),
+        // `--all` ignores the change set on purpose, so its failure is not an error then.
+        Err(e) if forced.is_none() => return failed(cfg, plan, &e.to_string(), fallback_all),
+        Err(_) => {}
     }
     if forced.is_none() {
         if paths.is_empty() {
@@ -73,29 +80,35 @@ pub fn build(cfg: &Config, base: &str, all: bool) -> Plan {
             let first = selection.unmatched.first().map(|p| p.display().to_string());
             forced = Some(format!("all: unmatched {}", first.unwrap_or_default()));
         } else {
-            match scoped(cfg, &paths, &selection) {
+            match scoped(cfg, &paths, &selection, resolver) {
                 Ok((gates, skipped)) => {
                     plan.gates = gates;
                     plan.skipped = skipped;
                     return plan;
                 }
-                Err(e) => forced = fall_back(&e),
+                Err(e) => return failed(cfg, plan, &e, fallback_all),
             }
         }
     }
-    let why = forced.unwrap_or_default();
+    plan.gates = every_gate(cfg, &forced.unwrap_or_default());
+    plan
+}
+
+fn every_gate(cfg: &Config, why: &str) -> Vec<Step> {
     let full = Values {
         packages: "--workspace".to_owned(),
         filter: String::new(),
         changed: String::new(),
     };
-    plan.gates = cfg.gates.iter().map(|g| step(g, &full, &why)).collect();
-    plan
+    cfg.gates.iter().map(|g| step(g, &full, why)).collect()
 }
 
-fn fall_back(error: &dyn std::fmt::Display) -> Option<String> {
-    eprintln!("scoped-check: warning: {error}; running every gate");
-    Some(format!("all: {error}"))
+fn failed(cfg: &Config, mut plan: Plan, error: &str, fallback_all: bool) -> Plan {
+    if fallback_all {
+        plan.gates = every_gate(cfg, &format!("all: fallback after error: {error}"));
+    }
+    plan.error = Some(error.to_owned());
+    plan
 }
 
 fn step(gate: &Gate, values: &Values, why: &str) -> Step {
@@ -119,7 +132,12 @@ fn step(gate: &Gate, values: &Values, why: &str) -> Step {
 
 type Scoped = (Vec<Step>, Vec<Skip>);
 
-fn scoped(cfg: &Config, paths: &[PathBuf], selection: &Selection) -> Result<Scoped, String> {
+fn scoped(
+    cfg: &Config,
+    paths: &[PathBuf],
+    selection: &Selection,
+    resolver: &Resolver,
+) -> Result<Scoped, String> {
     let (mut steps, mut skipped) = (Vec::new(), Vec::new());
     for gate in cfg
         .gates
@@ -140,7 +158,7 @@ fn scoped(cfg: &Config, paths: &[PathBuf], selection: &Selection) -> Result<Scop
                 .map_err(|e| format!("cannot quote a changed path: {e}"))?,
         };
         if gate.needs_packages() {
-            let affected = affected(cfg, &claimed)?;
+            let affected = affected(cfg, resolver, &claimed)?;
             if !affected.all && affected.packages.is_empty() {
                 skipped.push(Skip {
                     name: gate.name.clone(),
@@ -163,7 +181,7 @@ fn scoped(cfg: &Config, paths: &[PathBuf], selection: &Selection) -> Result<Scop
     Ok((steps, skipped))
 }
 
-fn affected(cfg: &Config, claimed: &[&PathBuf]) -> Result<Affected, String> {
+fn affected(cfg: &Config, resolver: &Resolver, claimed: &[&PathBuf]) -> Result<Affected, String> {
     // Changed paths are repo-relative; the cargo library wants them relative to the
     // workspace, so those outside it cannot affect its packages.
     let relative: Vec<PathBuf> = claimed
@@ -171,6 +189,6 @@ fn affected(cfg: &Config, claimed: &[&PathBuf]) -> Result<Affected, String> {
         .filter_map(|p| p.strip_prefix(&cfg.workspace).ok())
         .map(PathBuf::from)
         .collect();
-    cargo_changed_packages::affected(&cfg.dir.join(&cfg.workspace), &relative)
-        .map_err(|e| e.to_string())
+    // One resolver serves every gate, so `cargo metadata` runs at most once per run.
+    resolver.affected(&relative).map_err(|e| e.to_string())
 }

@@ -16,6 +16,7 @@ pub const DEFAULT_BASE: &str = "origin/main";
 struct Raw {
     base: Option<String>,
     workspace: Option<PathBuf>,
+    fallback: Option<String>,
     #[serde(default)]
     gate: Vec<RawGate>,
 }
@@ -56,6 +57,9 @@ pub struct Config {
     pub base: Option<String>,
     /// Cargo workspace root, relative to [`dir`](Self::dir); empty for the directory itself.
     pub workspace: PathBuf,
+    /// `fallback = "all"`: a planning error runs every gate instead of failing. Off by
+    /// default; see `main.rs` for why failing is the default.
+    pub fallback_all: bool,
     pub rules: Rules,
     /// Gates in config order.
     pub gates: Vec<Gate>,
@@ -93,6 +97,11 @@ impl Config {
                 _ => bail!("`workspace` must be a relative path inside the repository"),
             }
         }
+        let fallback_all = match raw.fallback.as_deref() {
+            None | Some("error") => false,
+            Some("all") => true,
+            Some(other) => bail!("`fallback` must be \"error\" or \"all\", not \"{other}\""),
+        };
         let dir = match path.parent() {
             Some(p) if !p.as_os_str().is_empty() => p.to_path_buf(),
             _ => PathBuf::from("."),
@@ -101,6 +110,7 @@ impl Config {
             dir,
             base: raw.base,
             workspace,
+            fallback_all,
             rules,
             gates,
         })

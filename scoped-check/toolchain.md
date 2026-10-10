@@ -5,6 +5,7 @@
 | rustc | mise | Build | https://github.com/rust-lang/rust |
 | git | system package | Runtime: the CLI `git-changed-paths` shells out to | https://git-scm.com |
 | cargo | mise | Runtime: `cargo metadata` via `cargo-changed-packages` | https://github.com/rust-lang/cargo |
+| bash | system package | Runtime: `scripts/bench.sh` | https://www.gnu.org/software/bash/ |
 | just | mise | Test recipe | https://github.com/casey/just |
 | ketch | see its README | Installs swarfr | https://github.com/pyrlyn/ketch |
 | swarfr | ketch | Lossless cleanup of target/ after tests | https://github.com/listepo/swarfr |
