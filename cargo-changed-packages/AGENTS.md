@@ -8,12 +8,13 @@ conflicts with this file, ask the creator.
 Library: given repo-relative changed paths, the workspace packages they affect,
 reverse dependencies included, via `guppy` and `determinator`. Anything that
 changes the package graph or the build selects everything (`all: true`); it
-never answers "nothing" when it cannot tell.
+never answers "nothing" when it cannot tell. The `cargo metadata` cache (`src/cache.rs`)
+must treat every doubt as a miss, never as a hit.
 
 ## Commands
 
 ```bash
-cargo test
+cargo test   # tests/cache.rs counts cargo runs with a shim
 cargo clippy --all-targets
 cargo fmt
 ```
