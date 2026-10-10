@@ -6,8 +6,8 @@
 //! developer machine already has it, and four read-only commands do not justify a heavy
 //! library such as `gix`.
 //!
-//! Callers that cannot trust a partial answer should treat any [`Error`] as "everything
-//! changed" rather than "nothing changed".
+//! Callers that cannot trust a partial answer must not treat an [`Error`] as "nothing
+//! changed"; failing loudly is the safe choice, and running everything is the other one.
 
 #![deny(missing_docs)]
 
@@ -40,6 +40,14 @@ pub enum Error {
     /// `HEAD` and the base ref share no history.
     #[error("no merge base between HEAD and {0}")]
     NoMergeBase(String),
+    /// `HEAD` and the base ref share no history in a shallow clone, so the merge base is
+    /// probably just cut off.
+    #[error(
+        "no merge base between HEAD and {0}: this is a shallow clone, so the history may be \
+         cut off; fetch more (`git fetch --unshallow`, `git fetch --deepen=<n>`, or \
+         `fetch-depth: 0` in actions/checkout)"
+    )]
+    ShallowNoMergeBase(String),
     /// A git command exited unsuccessfully for another reason.
     #[error("`git {args}` failed ({status}): {stderr}")]
     GitFailed {
@@ -103,7 +111,11 @@ pub fn changed_paths(repo: &Path, base: &str) -> Result<ChangedPaths, Error> {
 
     let merge_base = run(&top, &["merge-base", "HEAD", base], |out, args| {
         if out.status.code() == Some(1) {
-            Error::NoMergeBase(base.to_owned())
+            if is_shallow(&top) {
+                Error::ShallowNoMergeBase(base.to_owned())
+            } else {
+                Error::NoMergeBase(base.to_owned())
+            }
         } else {
             failed(out, args)
         }
@@ -131,6 +143,13 @@ pub fn changed_paths(repo: &Path, base: &str) -> Result<ChangedPaths, Error> {
     paths.extend(nul_paths(&untracked));
 
     Ok(ChangedPaths { merge_base, paths })
+}
+
+/// Whether the repository is a shallow clone; any doubt answers `false`, which only picks the
+/// plainer error message.
+fn is_shallow(top: &Path) -> bool {
+    run(top, &["rev-parse", "--is-shallow-repository"], failed)
+        .is_ok_and(|out| out.trim() == "true")
 }
 
 fn nul_paths(output: &str) -> impl Iterator<Item = PathBuf> + '_ {
