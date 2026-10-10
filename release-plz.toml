@@ -24,6 +24,10 @@ git_only = true
 # more than a third digit to someone deciding whether to upgrade, 1.0 or not.
 features_always_increment_minor = true
 
+# No per-crate list here: every workspace crate is covered, `git_only` keys on the
+# `<crate>-v<version>` tags, so git-changed-paths, cargo-changed-packages and
+# scoped-check need no entry of their own.
+
 # One tag per crate: release.yml derives `file-backup-v<version>` from
 # `file-backup/Cargo.toml`, and the changelog headings link to the release page.
 git_tag_name = "{{ package }}-v{{ version }}"

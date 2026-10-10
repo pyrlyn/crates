@@ -47,6 +47,9 @@ on:
           - sqlite-change-feed
           - abi-drift
           - keychain-secret
+          - git-changed-paths
+          - cargo-changed-packages
+          - scoped-check
       dry-run:
         description: open the version pull request and wait for its checks, then close it
         default: false

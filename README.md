@@ -55,7 +55,8 @@ cargo fmt --all -- --check
   closes it.
 - A crate is released after the sibling crates it depends on: `llm-wire` before
   `llm-http`, `llm-wire-openai`, `llm-wire-anthropic`, `llm-catalog` and
-  `agent-loop`; `file-backup` before `agent-host-config`. Those dependency
+  `agent-loop`; `file-backup` before `agent-host-config`; `git-changed-paths` and
+  `cargo-changed-packages` before `scoped-check` (which also needs `path-gates`). Those dependency
   lines carry both `path` and `version`, so `cargo publish` fails while a
   sibling is not on crates.io yet.
 - On crates.io: `file-backup`. `change-preview` and `wasm-plugin-host` are publish-ready (CI runs their
