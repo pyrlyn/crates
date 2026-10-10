@@ -17,3 +17,19 @@ if let Some(filter) = result.nextest_filter() {
     println!("cargo nextest run -E '{filter}'");
 }
 ```
+
+For several calls on one workspace use `Resolver`: it runs `cargo metadata` lazily, once, and
+can keep the JSON in a cache directory. The key hashes `Cargo.lock`, every `Cargo.toml`
+under the root, `.cargo/config*`, `rust-toolchain*` and `cargo --version`, and re-hashes
+path dependencies outside the root; any doubt recomputes. `cache_status()` reports `Hit`,
+`Miss`, `MissNotStored` or `Disabled`. An empty change set, a build-altering path or an
+unmappable path never starts cargo.
+
+```rust
+use cargo_changed_packages::Resolver;
+use std::path::{Path, PathBuf};
+
+let resolver = Resolver::new(Path::new(".")).cache_dir("/tmp/cache");
+let a = resolver.affected(&[PathBuf::from("a/src/lib.rs")])?;
+let b = resolver.affected(&[PathBuf::from("b/src/lib.rs")])?; // same graph, no second run
+```

@@ -141,7 +141,7 @@ fn root_that_is_not_the_workspace_root_is_an_error() {
 fn directory_without_a_workspace_is_an_error() {
     let dir = tempfile::tempdir().unwrap();
     let err = affected(dir.path(), &[PathBuf::from("x.rs")]).unwrap_err();
-    assert!(matches!(err, Error::Metadata(_)), "{err}");
+    assert!(matches!(err, Error::Cargo(_)), "{err}");
 }
 
 #[test]
