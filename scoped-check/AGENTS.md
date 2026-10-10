@@ -11,8 +11,15 @@ crates: `git-changed-paths` (change set), `path-gates` (glob rules to gates) and
 
 ## Rules
 
-- Fail safe: any error computing the change set or the affected packages warns on stderr
-  and behaves as `--all`, never as "nothing to do". Only a config error is fatal (exit 2).
+- Fail loudly: any error computing the change set or the affected packages is an error on
+  stderr and exit 3, never "nothing to do" and never a silent `--all`. Running every gate
+  after an error exists only as the opt-in `--fallback-all` / `fallback = "all"`, with a loud
+  warning. A config error exits 2; a failing gate exits with its own code (also under
+  `--keep-going`).
+- `cargo metadata` runs once per run, lazily, through one `Resolver`; do not call
+  `cargo_changed_packages::affected` per gate.
+- Tests count `cargo metadata` runs with a `cargo` shim passed through `$CARGO`; new
+  speed behaviour needs such a test.
 - Substituted values are shell-quoted with `shlex`; the `run` text itself is the
   repository's own, trusted like its justfile.
 - Tests build throwaway git repos with `tempfile`; keep host git config out of them.
@@ -20,7 +27,7 @@ crates: `git-changed-paths` (change set), `path-gates` (glob rules to gates) and
 ## Commands
 
 ```bash
-cargo test -p scoped-check
+cargo test -p scoped-check -p cargo-changed-packages -p git-changed-paths
 cargo clippy -p scoped-check --all-targets
 cargo fmt
 ```
