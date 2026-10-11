@@ -27,6 +27,7 @@ on:
           - file-backup
           - change-preview
           - operation-icons
+          - fs-kit
           - agent-ext
           - agent-host-config
           - agent-loop

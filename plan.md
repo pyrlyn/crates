@@ -16,7 +16,6 @@ Cargo workspace of five small published crates shared by ketch and rtok — git-
 | T8 | todo | P3 | 1 | 0% | |
 | T9 | todo | P3 | 2 | 0% | |
 | T10 | todo | P2 | 1 | 0% | |
-| T11 | in progress | P1 | 2 | 90% | Claude / opus-5.5 |
 | T13 | in progress | P1 | 2 | 90% | Claude / opus-5.5 |
 | T20.2 | todo | P1 | 3 | 0% | |
 | T20.3 | todo | P2 | 4 | 0% | |
@@ -68,17 +67,6 @@ A `[[gate]]` with `run` but no `paths`/`always` is silently unselectable (`path-
 ### T10. Fix crate metadata: license mix and repository URL drift
 
 Workspace `Cargo.toml` sets `license = "GPL-3.0-or-later"` (inherited only by file-backup) while the other four crates hardcode `MIT`; every `repository` field, README badges, and the release-plz postprocessor say `pyrlyn/crates-packages` while origin is `listepo/crates-packages`. Done means: one license everywhere (intentionally chosen) and URLs match the canonical remote.
-
-### T11. atomic-replace: one atomic file write for every project
-
-Six projects (rtok, ketch, cox, swarfr, aulo, runa) carry about 18 hand-written temp-file-and-rename writes that disagree on fsync, permissions, symlinks and temp naming. New crate `atomic-replace` (std only, edition 2021, Rust 1.86 so ketch can use it): `write(path, bytes)` and `Options { durable, preserve_permissions, follow_symlinks, create_parent, mode }` with `write`/`write_with`, plus `sync_dir`. Ported from rtok `rtok-agent-sdk` `write_atomic`/`link_target` (permissions, Windows read-only bit, dangling links) and ketch `state.rs` `save_path` (fsync file and directory). Done means: the crate is in the workspace with tests, wired into CI dry-run publish, bump options, README and sonar; consumers migrate in their own tasks.
-
-Plan:
-1. `atomic-replace/` with Cargo.toml, src/lib.rs, AGENTS.md, README.md, plan/todo/done/roadmap/ideas/toolchain.md, justfile (copy of change-preview's layout).
-2. Temp file beside the target via `create_new`, named `.<name>.tmp-<pid>-<nanos>-<counter>`; removed on every error path.
-3. Register: workspace members, `ci.yml` dry-run, `bump.yml` package options, root README crate table and token scope, `sonar-project.properties`.
-4. Check: `cargo test -p atomic-replace`, clippy `-D warnings`, fmt, `cargo +1.86 check -p atomic-replace`.
-
 
 ### T20.2. wasm-plugin-host: package layout
 

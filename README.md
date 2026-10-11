@@ -14,6 +14,7 @@ Small, focused Rust crates shared by `ketch` and `rtok`.
 | [`change-preview`](change-preview) | Preview what a command would change: diff or `--stat` of edits, size and file count of removals, totals |
 | [`operation-icons`](operation-icons) | Emoji icons for the verb of a status line and the fixed-width gutter they sit in |
 | [`config-schema`](config-schema) | Schema-checked TOML config: stale JSON Schema check, figment layering with per-key provenance, comment-preserving key edits (not published yet) |
+| [`fs-kit`](fs-kit) | One entry point for file and directory work: `\\?\`-free paths, atomic writes, tree usage, copy and removal, backups |
 | [`file-backup`](file-backup) | Copy a file to `<name>.bak-<unix-seconds>` beside it before replacing it |
 | [`gettext-catalog`](gettext-catalog) | gettext `.po` catalogs for an application's own strings: plural rules, named placeholders, language negotiation and per-message fallback |
 | [`git-changed-paths`](git-changed-paths) | Paths a git working tree changed relative to a base ref |
@@ -60,7 +61,7 @@ cargo fmt --all -- --check
   `cargo-changed-packages` before `scoped-check` (which also needs `path-gates`). Those dependency
   lines carry both `path` and `version`, so `cargo publish` fails while a
   sibling is not on crates.io yet.
-- On crates.io: `file-backup`. `change-preview` and `wasm-plugin-host` are publish-ready (CI runs their
+- On crates.io: `file-backup`. `change-preview`, `fs-kit` and `wasm-plugin-host` are publish-ready (CI runs their
   publish dry-run) and go out with their first bump. The other crates are not published yet.
 
 Secrets: `CARGO_REGISTRY_TOKEN` (crates.io API token) and
@@ -75,7 +76,7 @@ Two secrets must exist in the repo settings
 | Secret | Where to get it | Used by |
 | --- | --- | --- |
 | `CARGO_REGISTRY_TOKEN` | crates.io → Account Settings → API Tokens → New Token (needs `publish-new` and `publish-update` scopes; restrict it to the crates listed above). Add with `gh secret set CARGO_REGISTRY_TOKEN --repo pyrlyn/crates-packages` | `release.yml`, job `crates-io`: `cargo publish -p <crate>` |
-| `CARGO_REGISTRY_TOKEN` | crates.io → Account Settings → API Tokens → New Token (needs `publish-new` and `publish-update` scopes; restrict it to the `file-backup`, `change-preview`, `wasm-plugin-host`, `telemetry-setup`, `gettext-catalog`, `sqlite-change-feed`, `abi-drift` and `keychain-secret` crates; add each new crate before its first release). Add with `gh secret set CARGO_REGISTRY_TOKEN --repo pyrlyn/crates-packages` | `release.yml`, job `crates-io`: `cargo publish -p <crate>` |
+| `CARGO_REGISTRY_TOKEN` | crates.io → Account Settings → API Tokens → New Token (needs `publish-new` and `publish-update` scopes; restrict it to the `file-backup`, `change-preview`, `fs-kit`, `wasm-plugin-host`, `telemetry-setup`, `gettext-catalog`, `sqlite-change-feed`, `abi-drift` and `keychain-secret` crates; add each new crate before its first release). Add with `gh secret set CARGO_REGISTRY_TOKEN --repo pyrlyn/crates-packages` | `release.yml`, job `crates-io`: `cargo publish -p <crate>` |
 | `RELEASE_PLZ_TOKEN` | A fine-grained PAT (or GitHub App token) with **Contents** and **Pull requests** read/write on this repo — see https://release-plz.dev/docs/github/token. The default `GITHUB_TOKEN` cannot trigger `release.yml` from the release PR it opens, so without this the release PR would land without CI. Add with `gh secret set RELEASE_PLZ_TOKEN --repo pyrlyn/crates-packages` | `bump.yml`: pushes the version branch and opens the version PR |
 
 Without `CARGO_REGISTRY_TOKEN` the release stops at the `crates-io` job with

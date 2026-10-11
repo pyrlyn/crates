@@ -1926,6 +1926,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "fs-kit"
+version = "0.1.0"
+dependencies = [
+ "dunce",
+ "tempfile",
+]
+
+[[package]]
 name = "fs-set-times"
 version = "0.20.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
