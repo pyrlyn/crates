@@ -81,6 +81,7 @@ jobs:
           cargo publish --dry-run -p file-backup --locked
           cargo publish --dry-run -p change-preview --locked
           cargo publish --dry-run -p operation-icons --locked
+          cargo publish --dry-run -p fs-kit --locked
           cargo publish --dry-run -p wasm-plugin-host --locked
           cargo publish --dry-run -p telemetry-setup --locked
           # The workspace run builds default features only; OTLP export is opt-in.

@@ -1,0 +1,19 @@
+[package]
+name = "fs-kit"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.86"
+description = "One entry point for file and directory work: path identity without Windows UNC prefixes, atomic writes, tree size, copy and removal, sibling backups"
+license.workspace = true
+repository = "https://github.com/pyrlyn/crates-packages"
+keywords = ["filesystem", "atomic", "path", "canonicalize", "copy"]
+categories = ["filesystem"]
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[dependencies]
+dunce = "1"
+
+[dev-dependencies]
+tempfile = "3"

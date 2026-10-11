@@ -19,6 +19,7 @@ Direct dependencies of the workspace members. Path crates are this repo.
 | --- | --- | --- | --- |
 | cargo-changed-packages | local | https://github.com/pyrlyn/crates-packages | Affected workspace packages |
 | file-backup | local | https://github.com/pyrlyn/crates-packages | Sibling `.bak-<unix-seconds>` copies |
+| dunce | local | https://gitlab.com/kornelski/dunce | `fs-kit` canonical paths without the Windows `\\?\` prefix |
 | git-changed-paths | local | https://github.com/pyrlyn/crates-packages | Change set against a base ref |
 | path-gates | local | https://github.com/pyrlyn/crates-packages | Changed paths to gates |
 | scoped-check | local | https://github.com/pyrlyn/crates-packages | Check commands for a change |
