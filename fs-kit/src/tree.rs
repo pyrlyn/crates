@@ -77,22 +77,23 @@ pub enum Links {
     /// Recreate the link as it is (an app bundle whose links are part of it). Where links
     /// cannot be made (Windows without Developer Mode) the target is copied instead.
     Keep,
+    /// Leave the link out: an unpacked archive whose links could point out of the tree.
+    Skip,
 }
 
-/// Copy the directory `src` into `dest`, creating `dest`. A regular file keeps its mode.
+/// What [`copy_tree_with`] calls with each copied file's path relative to the source and its
+/// bytes; `Some` replaces the copy's bytes, `None` leaves the copy as it is.
+pub type Fix<'a> = &'a mut dyn FnMut(&Path, &[u8]) -> Option<Vec<u8>>;
+
+/// Copy the directory `src` into `dest`, creating `dest`. A regular file keeps its mode, and
+/// no file is read back: a large bundle costs one copy, not a copy plus a read.
 pub fn copy_tree(src: &Path, dest: &Path, links: Links) -> io::Result<()> {
-    copy_tree_with(src, dest, links, &mut |_, bytes| bytes)
+    copy_dir(src, dest, links, Path::new(""), &mut None)
 }
 
-/// [`copy_tree`] with every copied file's bytes passed through `fix`, given its path relative
-/// to `src`; a file whose bytes `fix` leaves alone is not rewritten.
-pub fn copy_tree_with(
-    src: &Path,
-    dest: &Path,
-    links: Links,
-    fix: &mut dyn FnMut(&Path, Vec<u8>) -> Vec<u8>,
-) -> io::Result<()> {
-    copy_dir(src, dest, links, Path::new(""), fix)
+/// [`copy_tree`] with every copied file passed through `fix`.
+pub fn copy_tree_with(src: &Path, dest: &Path, links: Links, fix: Fix) -> io::Result<()> {
+    copy_dir(src, dest, links, Path::new(""), &mut Some(fix))
 }
 
 fn copy_dir(
@@ -100,7 +101,7 @@ fn copy_dir(
     dest: &Path,
     links: Links,
     rel: &Path,
-    fix: &mut dyn FnMut(&Path, Vec<u8>) -> Vec<u8>,
+    fix: &mut Option<Fix>,
 ) -> io::Result<()> {
     fs::create_dir_all(dest).map_err(|e| crate::at(dest, e))?;
     for entry in fs::read_dir(src).map_err(|e| crate::at(src, e))? {
@@ -109,7 +110,9 @@ fn copy_dir(
         let to = dest.join(entry.file_name());
         let rel = rel.join(entry.file_name());
         let kind = entry.file_type().map_err(|e| crate::at(&from, e))?;
-        if kind.is_symlink() && links == Links::Keep && keep_link(&from, &to)? {
+        if kind.is_symlink()
+            && (links == Links::Skip || (links == Links::Keep && keep_link(&from, &to)?))
+        {
             continue;
         }
         // A followed link to a directory is a directory to copy, not a file.
@@ -118,10 +121,11 @@ fn copy_dir(
             continue;
         }
         fs::copy(&from, &to).map_err(|e| crate::at(&from, e))?;
-        let bytes = fs::read(&to).map_err(|e| crate::at(&to, e))?;
-        let fixed = fix(&rel, bytes.clone());
-        if fixed != bytes {
-            fs::write(&to, fixed).map_err(|e| crate::at(&to, e))?;
+        if let Some(fix) = fix {
+            let bytes = fs::read(&to).map_err(|e| crate::at(&to, e))?;
+            if let Some(fixed) = fix(&rel, &bytes) {
+                fs::write(&to, fixed).map_err(|e| crate::at(&to, e))?;
+            }
         }
     }
     Ok(())
@@ -204,13 +208,9 @@ mod tests {
         fs::write(src.join("a.txt"), "a").unwrap();
         fs::write(src.join("sub/b.txt"), "b").unwrap();
         let mut seen = Vec::new();
-        copy_tree_with(&src, &dir.join("dest"), Links::Follow, &mut |rel, bytes| {
+        copy_tree_with(&src, &dir.join("dest"), Links::Follow, &mut |rel, _| {
             seen.push(rel.to_path_buf());
-            if rel == Path::new("sub/b.txt") {
-                b"B".to_vec()
-            } else {
-                bytes
-            }
+            (rel == Path::new("sub/b.txt")).then(|| b"B".to_vec())
         })
         .unwrap();
         assert_eq!(fs::read(dir.join("dest/a.txt")).unwrap(), b"a");
@@ -235,6 +235,9 @@ mod tests {
         let followed = fs::symlink_metadata(dir.join("followed/link")).unwrap();
         assert!(followed.is_dir());
         assert_eq!(fs::read(dir.join("followed/link/f")).unwrap(), b"f");
+        copy_tree(&src, &dir.join("skipped"), Links::Skip).unwrap();
+        assert!(fs::symlink_metadata(dir.join("skipped/link")).is_err());
+        assert_eq!(fs::read(dir.join("skipped/real/f")).unwrap(), b"f");
         fs::remove_dir_all(&dir).unwrap();
     }
 
