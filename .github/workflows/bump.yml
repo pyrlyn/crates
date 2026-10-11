@@ -26,6 +26,7 @@ on:
         options:
           - file-backup
           - change-preview
+          - operation-icons
           - agent-ext
           - agent-host-config
           - agent-loop

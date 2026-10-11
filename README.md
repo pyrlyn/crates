@@ -12,6 +12,7 @@ Small, focused Rust crates shared by `ketch` and `rtok`.
 | [`abi-drift`](abi-drift) | Drift tests for generated bindings: regenerate a cbindgen header or csbindgen C# file, diff it against the committed copy, bless to rewrite |
 | [`cargo-changed-packages`](cargo-changed-packages) | Workspace packages a set of changed paths affects, including reverse dependencies |
 | [`change-preview`](change-preview) | Preview what a command would change: diff or `--stat` of edits, size and file count of removals, totals |
+| [`operation-icons`](operation-icons) | Emoji icons for the verb of a status line and the fixed-width gutter they sit in |
 | [`config-schema`](config-schema) | Schema-checked TOML config: stale JSON Schema check, figment layering with per-key provenance, comment-preserving key edits (not published yet) |
 | [`file-backup`](file-backup) | Copy a file to `<name>.bak-<unix-seconds>` beside it before replacing it |
 | [`gettext-catalog`](gettext-catalog) | gettext `.po` catalogs for an application's own strings: plural rules, named placeholders, language negotiation and per-message fallback |
