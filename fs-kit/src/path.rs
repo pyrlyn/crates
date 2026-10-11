@@ -10,7 +10,7 @@ pub fn canon(path: &Path) -> PathBuf {
 }
 
 /// [`std::fs::canonicalize`] without the Windows `\\?\` prefix; an error for a missing path.
-pub fn canonicalize(path: &Path) -> std::io::Result<PathBuf> {
+pub fn canonicalize(path: impl AsRef<Path>) -> std::io::Result<PathBuf> {
     dunce::canonicalize(path)
 }
 
