@@ -86,6 +86,11 @@ jobs:
         with:
           ref: ${{ needs.version.outputs.ref }}
       - run: rustup component add rustfmt clippy
+      # speech-capture links ALSA through cpal's alsa-sys on Linux; ci.yml installs it too.
+      - name: System libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libasound2-dev pkg-config
       - uses: Swatinem/rust-cache@v2
       - name: Format
         run: cargo fmt --all -- --check
