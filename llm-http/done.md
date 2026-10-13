@@ -7,3 +7,7 @@ Copied from cox's `cox-provider-http` so aulo can share the plumbing; cox is unt
 ### T3. One Transport for the wires
 
 Aulo follow-up to T1.3 and T1.4. `Transport` (base URL, key env var, idle timeout, max retries) is defined here and used by `llm-wire-openai` and `llm-wire-anthropic`, which each kept a private copy; `llm_wire_openai::config::Transport` and `llm_wire_anthropic::Transport` are gone. `llm-wire` stays free of transport settings. Check: `cargo test --workspace --all-features`, clippy and `cargo fmt --all --check` green.
+
+### T4. Optional keyring, reqwest and SSE features
+
+Mailune keeps secrets in its host secret store and sends HTTP through its host trait, so it must not link `keyring`, `reqwest` or `eventsource-stream`. Each is now behind a default feature: `keyring` gates `resolve_key`, `reqwest` gates `client_with_timeout`, and `sse` gates the `sse` module (with `bytes` and `futures`). `resolve_key_with`, `bearer`, `api_key`, `map_http_error`, `retry` and `Transport` stay; the helpers take `http` crate types, the ones reqwest re-exports, so existing callers compile unchanged. Check: `cargo test -p llm-http` with and without default features (19 and 14 tests), clippy `-D warnings` with no features and with each one alone, and `cargo tree -p llm-http --no-default-features -e normal --target all` free of the three crates; CI runs the slim test, clippy and tree check.

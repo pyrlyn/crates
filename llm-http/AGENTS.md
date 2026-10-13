@@ -25,6 +25,10 @@ provider stream, and generic SSE framing. Extracted from cox's
   `resolve_key`.
 - **No `unwrap`, `expect` or `panic!` outside tests** (clippy denies them), and
   no `unsafe` (forbidden), so tests inject the environment instead of setting it.
+- **Heavy dependencies stay behind features.** `keyring`, `reqwest` and
+  `eventsource-stream` are optional (features `keyring`, `reqwest`, `sse`, all
+  default). The header helpers, `map_http_error` and `retry` build without
+  them; CI tests that build and checks its `cargo tree`. Use `http` types, not reqwest's, in always-available code.
 - **Doc comments on every public item** (`missing_docs` is on).
 - **Published to crates.io** from this repository: a dependency on a sibling crate
   carries both `path` and `version`, so a release publishes the siblings first.

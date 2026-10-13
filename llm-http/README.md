@@ -24,5 +24,25 @@ fn auth_header() -> Result<reqwest::header::HeaderValue, llm_wire::ProviderError
 }
 ```
 
+## Features
+
+All three are on by default, so a plain dependency gets everything above.
+
+| Feature | Gates | Pulls in |
+| --- | --- | --- |
+| `keyring` | `http::resolve_key` (env var, then the platform keyring) | `keyring` |
+| `reqwest` | `http::client_with_timeout` | `reqwest` |
+| `sse` | the `sse` module (`sse_stream`, `parse_sse_str`) | `eventsource-stream`, `bytes`, `futures` |
+
+A host that keeps secrets in its own store and sends requests through its own
+HTTP stack sets `default-features = false` and builds without `keyring`,
+`reqwest` or `eventsource-stream`. It keeps `resolve_key_with` (the lookup
+injected), `bearer`, `api_key`, `map_http_error` (on `http` crate types,
+the ones reqwest re-exports), the whole `retry` module and `Transport`.
+
+```toml
+llm-http = { version = "0.1", default-features = false }
+```
+
 Licensed `GPL-3.0-or-later OR LicenseRef-Royalty-Free`; see the repository's
 `LICENSE` and `LICENSE-ROYALTY-FREE.md`.

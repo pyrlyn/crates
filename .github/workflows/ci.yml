@@ -93,4 +93,14 @@ jobs:
           # injecta needs injecta-macros on crates.io first (exact path+version dep),
           # so only the macros crate can dry-run until its first release.
           cargo publish --dry-run -p injecta-macros --locked
+          # A host with its own secret store and HTTP stack (Mailune) builds llm-http without
+          # its default features, so that build is tested and must not link the crates those
+          # features gate. The workspace run above only sees default features.
+          cargo test -p llm-http --no-default-features --locked
+          cargo clippy -p llm-http --no-default-features --all-targets --locked -- -D warnings
+          if cargo tree -p llm-http --no-default-features -e normal --target all --prefix none --locked \
+            | grep -E '^(keyring|reqwest|eventsource-stream) v'; then
+            echo "llm-http --no-default-features links a crate its features gate" >&2
+            exit 1
+          fi
         fi

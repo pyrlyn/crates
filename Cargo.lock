@@ -2943,6 +2943,7 @@ dependencies = [
  "bytes",
  "eventsource-stream",
  "futures",
+ "http",
  "keyring",
  "llm-wire",
  "reqwest 0.12.28",
