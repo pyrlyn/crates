@@ -65,3 +65,10 @@ Direct dependencies of the workspace members. Path crates are this repo.
 | Package | Where | Source | Why here |
 | --- | --- | --- | --- |
 | swarfr | global | https://github.com/listepo/swarfr | Lossless cleanup of `target/` after tests |
+
+## Linkers
+
+- **Windows (MSVC):** `rust-lld` through `.cargo/config.toml` (`[target.*-pc-windows-msvc] linker`). It ships with rustup, nothing to install.
+- **Linux:** default linker (Rust >= 1.90 already links `x86_64-unknown-linux-gnu` with rust-lld); mold is not wired here because CI does not use mise.
+- **macOS:** Apple's native linker (mold has no macOS support).
+- **Cranelift:** not used. It needs a nightly toolchain and this repository is on stable.
