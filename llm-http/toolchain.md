@@ -19,5 +19,6 @@
 | keyring | local, optional (`keyring`) | https://github.com/open-source-cooperative/keyring-rs | Platform credential store lookup |
 | reqwest | local, optional (`reqwest`) | https://github.com/seanmonstar/reqwest | Client builder of `client_with_timeout` (`rustls-tls` only) |
 | serde_json | local | https://github.com/serde-rs/json | Reads the `error.message` envelope of an error body |
-| tokio | local | https://github.com/tokio-rs/tokio | `mpsc`, `sleep`, `select!` and `join!` in the retry loop |
+| tokio | local | https://github.com/tokio-rs/tokio | `mpsc`, `select!` and `join!` in the retry loop; `sleep` (`time`) everywhere but wasm32-unknown-unknown |
 | tokio-util | local | https://github.com/tokio-rs/tokio | `CancellationToken` in the retry loop |
+| web-time | local, wasm32-unknown-unknown only | https://github.com/daxpedda/web-time | The clock behind the backoff jitter, where std's clock panics |

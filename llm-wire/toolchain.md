@@ -19,6 +19,7 @@
 | tokio | local | https://github.com/tokio-rs/tokio | `mpsc::Sender` in the `Provider::stream` signature (`sync` feature only) |
 | tokio-util | local | https://github.com/tokio-rs/tokio | `CancellationToken` in the `Provider::stream` signature |
 | ulid | local | https://github.com/dylanhart/ulid-rs | `CallId` and `ArchiveId` |
+| getrandom | local, wasm32-unknown-unknown only | https://github.com/rust-random/getrandom | `wasm_js` backend for ulid's random bits in a browser build |
 | figment | local, optional (`test-util`) | https://github.com/SergioBenitez/Figment | Parse a scenario TOML file |
 | sha2 | local, optional (`test-util`) | https://github.com/RustCrypto/hashes | Cassette hash key |
 | pretty_assertions | local, dev | https://github.com/rust-pretty-assertions/rust-pretty-assertions | Readable test diffs |

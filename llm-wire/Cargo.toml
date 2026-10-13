@@ -29,6 +29,14 @@ ulid = { version = "3", features = ["serde"] }
 figment = { version = "0.10", default-features = false, features = ["toml"], optional = true }
 sha2 = { version = "0.11", optional = true }
 
+# ulid's random bits come from getrandom, which has no wasm32-unknown-unknown
+# backend unless `wasm_js` (Crypto.getRandomValues through wasm-bindgen) is on.
+# getrandom's README advises libraries against enabling it unless they already
+# depend on wasm-bindgen there; ulid does, through web-time on this target, so
+# a browser build of llm-wire works with no flag from the host.
+[target.'cfg(all(target_arch = "wasm32", target_os = "unknown"))'.dependencies]
+getrandom = { version = "0.4.3", features = ["wasm_js"] }
+
 [dev-dependencies]
 pretty_assertions = "1.4"
 rstest = "0.27"

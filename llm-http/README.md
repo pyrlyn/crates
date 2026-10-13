@@ -9,7 +9,9 @@ HTTP plumbing for LLM provider wires, on top of `reqwest`.
   `llm_wire::ProviderError`).
 - `retry`: `stream_with_retry` runs one provider attempt with exponential
   backoff and jitter, honours `retry-after`, and retries only before the
-  first event reached the caller.
+  first event reached the caller. `stream_with_retry_with` is the same loop
+  with the backoff sleep passed in, for a host without tokio's timer (it is
+  the only one on wasm32-unknown-unknown) and for tests that must not wait.
 - `Transport`: the section every wire's constructor takes (base URL, key env
   var, idle timeout, max retries).
 - `sse`: `sse_stream` turns a byte stream into `(event, data)` frames and
@@ -38,7 +40,9 @@ A host that keeps secrets in its own store and sends requests through its own
 HTTP stack sets `default-features = false` and builds without `keyring`,
 `reqwest` or `eventsource-stream`. It keeps `resolve_key_with` (the lookup
 injected), `bearer`, `api_key`, `map_http_error` (on `http` crate types,
-the ones reqwest re-exports), the whole `retry` module and `Transport`.
+the ones reqwest re-exports), the whole `retry` module and `Transport`. That
+build also compiles for wasm32-unknown-unknown, where the backoff jitter reads
+the JS clock through `web-time`.
 
 ```toml
 llm-http = { version = "0.1", default-features = false }

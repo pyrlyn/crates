@@ -103,4 +103,8 @@ jobs:
             echo "llm-http --no-default-features links a crate its features gate" >&2
             exit 1
           fi
+          # Mailune's browser build: llm-wire and the slim llm-http must compile for wasm.
+          rustup target add wasm32-unknown-unknown
+          cargo build -p llm-wire --target wasm32-unknown-unknown --locked
+          cargo build -p llm-http --no-default-features --target wasm32-unknown-unknown --locked
         fi

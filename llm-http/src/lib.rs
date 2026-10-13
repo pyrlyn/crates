@@ -27,6 +27,10 @@
 //! `parse_context_too_long` and `map_http_error` (on `http` crate types,
 //! the same ones reqwest re-exports), the whole `retry` module, and
 //! [`Transport`].
+//!
+//! On wasm32-unknown-unknown, `retry::stream_with_retry` is absent because
+//! tokio's timer cannot run there; `retry::stream_with_retry_with` takes the
+//! backoff sleep from the caller instead.
 
 pub mod http;
 pub mod retry;
