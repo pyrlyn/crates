@@ -8,13 +8,16 @@
 //! every backend — a 500 from Anthropic is transient per their own docs, and
 //! treating it as a fatal `BadRequest` retried nothing.
 
+#[cfg(feature = "reqwest")]
 use std::time::Duration;
 
+use ::http::StatusCode;
+use ::http::header::HeaderValue;
 use llm_wire::ProviderError;
-use reqwest::header::HeaderValue;
 
 /// How long a TCP/TLS handshake may take before a call is `Network`. Shared
 /// by every backend that builds its own `reqwest::Client`.
+#[cfg(feature = "reqwest")]
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 
 /// Builds the connection-pooled client every network backend uses: a
@@ -22,6 +25,7 @@ const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 /// `timeout_s`. The read timeout is the gap
 /// between bytes on an open stream, not a whole-call cap, so a long answer
 /// keeps streaming for minutes without ever going idle.
+#[cfg(feature = "reqwest")]
 pub fn client_with_timeout(timeout_s: u32) -> Result<reqwest::Client, ProviderError> {
     reqwest::Client::builder()
         .connect_timeout(CONNECT_TIMEOUT)
@@ -44,6 +48,7 @@ pub fn client_with_timeout(timeout_s: u32) -> Result<reqwest::Client, ProviderEr
 /// propagate the error with `?`; OpenAI-shaped sections build with an
 /// `Option<String>` key and call `.ok()`, because a local server or a
 /// self-hosted gateway commonly needs none. It never panics.
+#[cfg(feature = "keyring")]
 pub fn resolve_key(
     env_var: &str,
     service: &str,
@@ -107,6 +112,7 @@ pub fn keyring_enabled(value: Option<&str>) -> bool {
 /// The real platform keyring entry `service`/`account`, or nothing when the
 /// switch value turns the keyring off. The switch is checked before
 /// `keyring::Entry` is constructed, so a disabled keyring is never touched.
+#[cfg(feature = "keyring")]
 fn platform_keyring(service: &str, account: &str, switch: Option<&str>) -> Option<String> {
     if !keyring_enabled(switch) {
         return None;
@@ -163,11 +169,7 @@ pub fn parse_context_too_long(message: &str) -> Option<(u32, u32)> {
 
 /// Maps a non-2xx response to a [`ProviderError`]. `retry_after` comes from
 /// the `retry-after` header, read before the body is consumed.
-pub fn map_http_error(
-    status: reqwest::StatusCode,
-    body: &str,
-    retry_after: Option<u64>,
-) -> ProviderError {
+pub fn map_http_error(status: StatusCode, body: &str, retry_after: Option<u64>) -> ProviderError {
     let message = error_message(body);
     match status.as_u16() {
         401 | 403 => ProviderError::Auth,
@@ -192,22 +194,22 @@ mod tests {
     fn http_union_mapping_preserves_both_backends_cases() {
         // Anthropic's asserted cases.
         assert!(matches!(
-            map_http_error(reqwest::StatusCode::UNAUTHORIZED, "{}", None),
+            map_http_error(StatusCode::UNAUTHORIZED, "{}", None),
             ProviderError::Auth
         ));
         assert!(matches!(
-            map_http_error(reqwest::StatusCode::TOO_MANY_REQUESTS, "{}", Some(30)),
+            map_http_error(StatusCode::TOO_MANY_REQUESTS, "{}", Some(30)),
             ProviderError::RateLimited {
                 retry_after: Some(30)
             }
         ));
         assert!(matches!(
-            map_http_error(reqwest::StatusCode::SERVICE_UNAVAILABLE, "{}", None),
+            map_http_error(StatusCode::SERVICE_UNAVAILABLE, "{}", None),
             ProviderError::Overloaded
         ));
         let body = r#"{"type":"error","error":{"type":"invalid_request_error","message":"prompt is too long: 250000 tokens > 200000 maximum"}}"#;
         assert_eq!(
-            map_http_error(reqwest::StatusCode::BAD_REQUEST, body, None),
+            map_http_error(StatusCode::BAD_REQUEST, body, None),
             ProviderError::ContextTooLong {
                 max: 200_000,
                 got: 250_000,
@@ -215,12 +217,12 @@ mod tests {
         );
         // Chat's asserted cases: 403 is auth, Ollama's "exceeds" phrasing parses.
         assert!(matches!(
-            map_http_error(reqwest::StatusCode::FORBIDDEN, "{}", None),
+            map_http_error(StatusCode::FORBIDDEN, "{}", None),
             ProviderError::Auth
         ));
         let body = r#"{"error":{"message":"input length exceeds context length: 40000 tokens > 32768 maximum","type":"invalid_request_error"}}"#;
         assert_eq!(
-            map_http_error(reqwest::StatusCode::BAD_REQUEST, body, None),
+            map_http_error(StatusCode::BAD_REQUEST, body, None),
             ProviderError::ContextTooLong {
                 max: 32_768,
                 got: 40_000,
@@ -228,7 +230,7 @@ mod tests {
         );
         // Plain-text proxy body survives.
         assert_eq!(
-            map_http_error(reqwest::StatusCode::BAD_REQUEST, "nope", None),
+            map_http_error(StatusCode::BAD_REQUEST, "nope", None),
             ProviderError::BadRequest {
                 message: "nope".into()
             }
@@ -274,6 +276,7 @@ mod tests {
 
     /// A switched-off keyring answers before `keyring::Entry` exists, so this
     /// never reaches the real platform store.
+    #[cfg(feature = "keyring")]
     #[test]
     fn platform_keyring_is_never_consulted_when_switched_off() {
         assert_eq!(platform_keyring("llm-http-test", "acct", Some("off")), None);
@@ -324,6 +327,7 @@ mod tests {
     /// The public entry point reads the real environment; an unset variable
     /// with the keyring switched off must resolve to `Auth` without touching
     /// the platform store.
+    #[cfg(feature = "keyring")]
     #[test]
     fn resolve_key_with_the_keyring_switch_off_is_auth_when_env_is_unset() {
         let got = resolve_key_with("LLM_HTTP_TEST_NO_SUCH_VAR", "acct", |account| {

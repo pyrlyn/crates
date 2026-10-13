@@ -2943,12 +2943,14 @@ dependencies = [
  "bytes",
  "eventsource-stream",
  "futures",
+ "http",
  "keyring",
  "llm-wire",
  "reqwest 0.12.28",
  "serde_json",
  "tokio",
  "tokio-util",
+ "web-time",
 ]
 
 [[package]]
@@ -2957,6 +2959,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "figment",
+ "getrandom 0.4.3",
  "pretty_assertions",
  "rstest",
  "schemars 1.2.2",

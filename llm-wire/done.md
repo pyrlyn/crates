@@ -7,3 +7,7 @@ Copied verbatim from cox's `cox-protocol` (and the pure helpers of `cox-provider
 ### T3. One ProviderModel, Capabilities and effort rule for the llm crates
 
 Aulo follow-up to T1.3, T1.4 and T1.5, which each carried their own copy of cox's model entry and effort decision. Moved into this crate: `model` (`ProviderModel`, the catalog's former `ModelEntry` under cox's name, with serde and JSON Schema; `Capabilities` with `declared_by`) and `effort` (`Api`, `WireEffort`, `effort_for`, `supports_adaptive_thinking` and its prefix list), with their tests. `llm-catalog` and `llm-wire-openai` now read these types, `llm-wire-anthropic` and `llm-wire-openai` call `effort_for`, and `llm_wire_openai::Capabilities::chat_effort` is gone (`effort_for(Api::Chat, ..)` replaces it). `ulid_id!` is exported so `agent-loop` shares it (T1.15). No new dependencies. Check: `cargo test -p llm-wire --all-features` (24 tests), clippy and `cargo fmt --all --check` green.
+
+### T4. Builds for wasm32-unknown-unknown
+
+Mailune's browser build uses `llm-wire`. ULID ids draw on getrandom 0.4, which has no backend on wasm32-unknown-unknown until its `wasm_js` feature is on, so a target-specific dependency turns it on there; ulid already links wasm-bindgen on that target through web-time, which is the exception getrandom's README allows a library. Check: `cargo build -p llm-wire --target wasm32-unknown-unknown` and its clippy `-D warnings` green, in CI too; native tests unchanged.
