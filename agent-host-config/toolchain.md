@@ -12,7 +12,7 @@
 | Package | Where | Source | Why here |
 | --- | --- | --- | --- |
 | anyhow | local | https://github.com/dtolnay/anyhow | Errors that name the file |
-| file-backup | local | https://github.com/pyrlyn/crates-packages | Copy the old config to `<name>.bak-<unix-seconds>` before an edit |
+| file-backup | local | https://github.com/pyrlyn/crates | Copy the old config to `<name>.bak-<unix-seconds>` before an edit |
 | jsonc-parser | local | https://github.com/dprint/jsonc-parser | Lossless syntax tree: edit our entry, keep every other byte |
 | serde_json | local | https://github.com/serde-rs/json | Entry values and reading an entry back |
 | tempfile | local | https://github.com/Stebalien/tempfile | Temp directories in tests |

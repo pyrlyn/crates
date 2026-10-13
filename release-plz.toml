@@ -55,5 +55,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 # NOTE: This is a TOML literal string, so TOML preserves backslashes. The regex
 # receives `\\.` to match a literal dot.
 postprocessors = [
-  { pattern = 'https://github\.com/pyrlyn/crates-packages/compare/[^)\s]*\.\.\.([^)\s]*)', replace = "https://github.com/pyrlyn/crates-packages/releases/tag/${1}" },
+  { pattern = 'https://github\.com/pyrlyn/crates/compare/[^)\s]*\.\.\.([^)\s]*)', replace = "https://github.com/pyrlyn/crates/releases/tag/${1}" },
 ]

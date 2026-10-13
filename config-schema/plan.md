@@ -1,6 +1,6 @@
 # config-schema
 
-https://github.com/pyrlyn/crates-packages
+https://github.com/pyrlyn/crates
 
 Schema-checked TOML config helpers: stale-schema check, figment layering with per-key provenance, comment-preserving key edits.
 

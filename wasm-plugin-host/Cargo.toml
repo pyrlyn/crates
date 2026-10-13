@@ -6,7 +6,7 @@ edition = "2024"
 rust-version = "1.98"
 description = "Run WebAssembly plugins with extism: one worker thread per plugin, a memory cap, per-call deadlines and a control lane served before events"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/pyrlyn/crates-packages"
+repository = "https://github.com/pyrlyn/crates"
 keywords = ["wasm", "plugin", "extism", "sandbox"]
 categories = ["wasm", "development-tools"]
 

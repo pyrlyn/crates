@@ -1,6 +1,6 @@
 # text-sanitize
 
-Plan for the `text-sanitize` crate of https://github.com/pyrlyn/crates-packages: the shared
+Plan for the `text-sanitize` crate of https://github.com/pyrlyn/crates: the shared
 terminal and bidi guard for untrusted text.
 
 | # | Status | Priority | Complexity | Readiness | Agent |

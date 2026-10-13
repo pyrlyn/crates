@@ -6,7 +6,7 @@ edition = "2021"
 rust-version = "1.86"
 description = "Drift tests for generated bindings: regenerate a cbindgen header or csbindgen C# file, diff it against the committed copy, rewrite it under a bless variable"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/pyrlyn/crates-packages"
+repository = "https://github.com/pyrlyn/crates"
 keywords = ["cbindgen", "csbindgen", "ffi", "bindings", "testing"]
 categories = ["development-tools::testing", "development-tools::ffi"]
 # The member's plan and agent files are repository bookkeeping, not part of the published crate.

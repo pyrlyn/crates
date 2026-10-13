@@ -1,4 +1,4 @@
-# SonarCloud OSS setup (crates-packages)
+# SonarCloud OSS setup (crates)
 
 Maintainer guide for the SonarCloud workflow in `.github/workflows/sonarcloud.yml` and the scanner
 configuration in `sonar-project.properties`.
@@ -14,7 +14,7 @@ GitHub account) on first import.
 1. Sign in at [sonarcloud.io](https://sonarcloud.io) with GitHub.
 2. Create or pick the organization bound to the **listepo** GitHub account and choose
    the free plan for open-source (public) projects.
-3. Import the **listepo/crates-packages** repository.
+3. Import the **pyrlyn/crates** repository.
 4. Compare the **organization key** and **project key** shown in the UI with
    `sonar-project.properties`. If they differ, update the file so they match exactly;
    a mismatch makes the scan fail or report into the wrong project.
@@ -31,12 +31,12 @@ In the SonarCloud project: **Administration → Analysis Method → Automatic An
 
 1. Open <https://sonarcloud.io/account/security>
    (**My Account → Security**, section **Access Tokens / Personal Tokens**).
-2. Generate a token (for example `crates-packages-github-actions`).
+2. Generate a token (for example `crates-github-actions`).
 3. Copy the value; it is shown only once.
 
 ## 4. Add the `SONAR_TOKEN` secret
 
-On **listepo/crates-packages**: **Settings → Secrets and variables → Actions → New repository secret**
+On **pyrlyn/crates**: **Settings → Secrets and variables → Actions → New repository secret**
 
 - Name: `SONAR_TOKEN`
 - Value: the token from step 3
