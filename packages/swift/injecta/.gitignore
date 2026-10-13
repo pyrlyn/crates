@@ -1,0 +1,7 @@
+.build/
+.build-*/
+.swiftpm/
+Benchmarks/.build/
+Benchmarks/.build-*/
+Benchmarks/.swiftpm/
+*.xcodeproj/xcuserdata/
