@@ -1,6 +1,6 @@
 # injecta
 
-Compile-time dependency injection for Rust: one `container!` declaration, `#[derive(Injectable)]`, no runtime registry. Lives in crates-packages (`injecta/`, `injecta-macros/`); not published yet.
+Compile-time dependency injection for Rust: one `container!` declaration, `#[derive(Injectable)]`, no runtime registry. Lives in pyrlyn/crates (`injecta/`, `injecta-macros/`); not published yet.
 
 | # | Status | Priority | Complexity | Readiness | Agent |
 | --- | --- | --- | --- | --- | --- |

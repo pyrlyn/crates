@@ -90,4 +90,7 @@ jobs:
           cargo publish --dry-run -p sqlite-change-feed --locked
           cargo publish --dry-run -p abi-drift --locked
           cargo publish --dry-run -p keychain-secret --locked
+          # injecta needs injecta-macros on crates.io first (exact path+version dep),
+          # so only the macros crate can dry-run until its first release.
+          cargo publish --dry-run -p injecta-macros --locked
         fi
