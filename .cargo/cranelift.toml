@@ -1,0 +1,11 @@
+# Opt-in, dev profile only: the Cranelift codegen backend (release stays LLVM). Needs nightly,
+# so it is NOT part of the stable-pinned build; this file is read only through --config:
+#   rustup component add rustc-codegen-cranelift-preview --toolchain nightly
+#   cargo +nightly --config .cargo/cranelift.toml build        (also check, run)
+# Linux and macOS only; not supported on Windows here. Panics abort, so do not
+# use it for `cargo test` (should_panic and unwinding tests fail). Never for release.
+[unstable]
+codegen-backend = true
+
+[profile.dev]
+codegen-backend = "cranelift"
