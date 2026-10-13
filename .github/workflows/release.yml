@@ -131,7 +131,7 @@ jobs:
           if [ $status -eq 0 ]; then
             exit 0
           fi
-          if [ "$GITHUB_RUN_ATTEMPT" -gt 1 ] && grep -q "already published" publish.log; then
+          if [ "$GITHUB_RUN_ATTEMPT" -gt 1 ] && grep -qE "already (published|exists)" publish.log; then
             echo "already on crates.io; continuing"
             exit 0
           fi
