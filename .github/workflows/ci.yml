@@ -93,6 +93,7 @@ jobs:
           # injecta needs injecta-macros on crates.io first (exact path+version dep),
           # so only the macros crate can dry-run until its first release.
           cargo publish --dry-run -p injecta-macros --locked
+          cargo publish --dry-run -p sccache-r2 --locked
           # A host with its own secret store and HTTP stack (Mailune) builds llm-http without
           # its default features, so that build is tested and must not link the crates those
           # features gate. The workspace run above only sees default features.
