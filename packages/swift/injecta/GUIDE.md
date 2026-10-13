@@ -1,0 +1,273 @@
+# Injecta guide
+
+Injecta is compile-time dependency injection for Swift 6. You declare a container once with
+`@Container`, mark the types it builds `@Injectable`, and read entries as properties. The macros
+write the wiring as plain initializer calls, so a resolve is a property read: no registry, no
+dictionary, no lock and no task-local lookup on the hot path. A missing entry, a dependency cycle
+or a misuse is a compile error at the line that causes it.
+
+## Quick start
+
+```swift
+import Injecta
+
+@Injectable
+final class Database: Sendable {
+  init(config: Config, logger: any Logger) { ... }
+}
+
+@Injectable
+struct UserRepo: Sendable {
+  let db: Database
+  let logger: any Logger
+}
+
+@Container
+final class AppGraph: Sendable {
+  let config: Config                                   // input: an init parameter
+  @Provides(.singleton) func makeLogger() -> any Logger { ConsoleLogger() }
+  @Singleton var db: Database                          // built once, on first read
+  @Transient var repo: UserRepo                        // built on every read
+}
+
+let graph = AppGraph(config: Config())
+let repo = graph.repo
+```
+
+Add the build-tool plugin to the target that declares the container (see "The plugin"). It
+generates one line per auto-wired type, `extension AppGraph: Database.Needs {}`, and checks the
+whole graph across files.
+
+## Entries
+
+Every member of a `@Container` class is an entry, named by its property name.
+
+| Declaration | Lifetime | Built from |
+| --- | --- | --- |
+| `let name: Type` (no value) | input | a parameter of the generated `init` |
+| `let name = value` or a computed `var` | input | your code, as written |
+| `@Singleton var name: Type` | one per container, on first read | `Type`'s `@Injectable` initializer |
+| `@Singleton(.eager) var name: Type` | one per container, in `init` | the same |
+| `@Transient var name: Type` | new on every read | the same |
+| `@Provides(.singleton) func makeName(a: A) -> Type` | one per container | your function |
+| `@Provides(.eagerSingleton) func makeName(...) -> Type` | one per container, in `init` | your function |
+| `@Provides(.transient) func makeName(...) -> Type` | new on every read | your function |
+| `@Forward var name: Type` | the parent's | `parent.name` |
+
+Rules:
+
+- A provider is named `make` + the entry name: `makeCore` provides `core`.
+- A provider's argument labels are entry names. `func makeCore(home: String)` reads `home`.
+- Use a provider for protocol types (`any Logger`), types from other modules, generic types, and
+  anything that needs custom construction. `@Singleton`/`@Transient` take only concrete
+  `@Injectable` types.
+- Providers and injected initializers cannot `throw` or be `async`. Build such values before the
+  container and pass them in as inputs.
+- A `Lazy<T>` or `() -> T` parameter (also `@Sendable () -> T`) names the entry of type `T` and
+  reads it later. See "Lazy and factories".
+
+## Injectable types
+
+`@Injectable` lets a container build the type. It picks the initializer marked `@Inject`, else the
+only initializer, else a struct's memberwise initializer. Every argument label without a default
+value is an entry the container must provide under that name; defaulted arguments keep their
+defaults.
+
+```swift
+@MainActor
+@Injectable
+final class SettingsStore {
+  @Inject init(client: any SettingsClient, secrets: any SecretStore, cwd: String) { ... }
+  init(preview: Void) { ... }  // not used by the container
+}
+```
+
+The macro generates a nested `Needs` protocol (one `var` per label), `init(injecting:)`, and
+`injectaDependencies` (the labels that are edges) plus `injectaDeferred` (the labels read later).
+Generic types cannot be `@Injectable`; wire them with a provider.
+
+## Scopes
+
+A scope is a child container. It takes the parent as the input `parent`, forwards what it shares
+with `@Forward`, and owns its own singletons, which live as long as the child.
+
+```swift
+@MainActor
+@Container
+final class SessionGraph {
+  let parent: AppGraph
+  let session: any SessionClient       // the value this scope exists for
+  @Forward var secrets: any SecretStore
+  @Singleton var store: SessionStore   // one per session
+}
+
+let scope = SessionGraph(parent: app, session: client)
+```
+
+The parent never sees the child's entries, so an app-wide singleton cannot depend on a
+per-session value: that mistake has no syntax.
+
+## Lazy and factories
+
+A singleton that takes a transient keeps that one instance for the container's life (a captive
+dependency, reported as a warning). A cycle has the same shape: each value needs the other before
+either exists. Both are fixed by reading the dependency later.
+
+```swift
+@Injectable
+final class Cache: Sendable {
+  let clock: @Sendable () -> Clock          // a new Clock each call
+  init(clock: @escaping @Sendable () -> Clock) { self.clock = clock }
+}
+
+@Injectable
+final class Left: Sendable {
+  let right: Lazy<Right>                    // one Right, on first `.value`
+  init(right: Lazy<Right>) { self.right = right }
+}
+
+@Injectable
+final class Right: Sendable {
+  let left: Left
+  init(left: Left) { self.left = left }
+}
+
+@Container
+final class AppGraph: Sendable {
+  let counter: Counter
+  @Transient var clock: Clock
+  @Singleton var cache: Cache               // no captive warning
+  @Singleton var left: Left                 // no cycle
+  @Singleton var right: Right
+}
+```
+
+`() -> T` and `Lazy<T>` are not edges. The entry named by the label must still exist, and a test
+sees it on the graph as `~clock` (`cache: Cache [singleton] <- ~clock`). A provider parameter of
+either shape is wrapped the same way: `func makeCache(clock: @escaping @Sendable () -> Clock)` is
+called with a closure that reads `self.clock`.
+
+`Lazy.value` and the factory closure run the entry's normal resolution, so a transient factory
+builds a new value per call and a singleton factory returns the shared one. Do not read `.value`
+or call the factory from the initializer that just received it: the singleton cell is still being
+filled, and the read waits on the same lock.
+
+## Overrides for tests and previews
+
+Every container has an `Overrides` struct with one optional field per singleton and transient.
+
+```swift
+var overrides = AppGraph.Overrides()
+overrides.logger = SilentLogger()          // a singleton: the value from the start
+overrides.repo = { UserRepo.fixture() }    // a transient: called instead of the provider
+let graph = AppGraph(config: .test, overrides: overrides)
+```
+
+A singleton override is stored in the cell during `init`, so it costs nothing on the resolve path
+and the real provider never runs. Use the same container type in tests and previews; do not write
+a second container for tests.
+
+## Swift concurrency
+
+- A container whose entries are all `Sendable` can be `final class AppGraph: Sendable` and used
+  from any isolation. Singletons are built once even when many tasks read them first at the same
+  time.
+- A container that builds `@MainActor` types (SwiftUI models) must itself be `@MainActor`. Its
+  `Needs` conformances are isolated conformances (`extension UIGraph: @MainActor Model.Needs`),
+  generated for you by the plugin. Its `Overrides` closures are main-actor closures.
+- The macros recognise a global actor by the `Actor` suffix of the attribute (`@MainActor`).
+
+## The plugin
+
+`InjectaCheckPlugin` runs `injecta-check` on the target's Swift files before they compile. It:
+
+1. generates the `Needs` conformance of every auto-wired type (a macro may only add conformances it
+   declares up front, so `@Container` cannot add them itself);
+2. reports, at the entry's line, a missing entry or a cycle that runs through `@Injectable` types
+   in other files, and a singleton that captures a transient (warning).
+
+SwiftPM:
+
+```swift
+.package(path: "../injecta-swift"),
+.target(
+  name: "App",
+  dependencies: [.product(name: "Injecta", package: "injecta-swift")],
+  plugins: [.plugin(name: "InjectaCheckPlugin", package: "injecta-swift")]
+)
+```
+
+Xcode: add the package, then the target's Build Phases → Run Build Tool Plug-ins →
+`InjectaCheckPlugin`. Without the plugin, write the conformance lines yourself, one per auto-wired
+type.
+
+A debug build whose plugin was not attached, and whose lines were not written by hand, still
+compiles: constructing the container traps with `missingPluginMessage`, which names
+`InjectaCheckPlugin` and the `extension <Container>: Type.Needs {}` line. The check compares each
+auto-wired entry (the same types `injectaGraph` lists) with the container's conformances. A release
+build keeps the static `Type(injecting: self)` call, so the missing line is a compile error there
+and the resolve path is unchanged.
+
+## Compile-time errors
+
+| You see | Meaning | Fix |
+| --- | --- | --- |
+| `'x' needs 'y', but the container has no entry named 'y'` | an initializer or provider reads `y` | add an input `let y: T`, a provider `makeY`, or `@Singleton var y: T` |
+| `dependency cycle: a -> b -> a` | the entries need each other | move the shared part into a third entry both depend on |
+| `singleton 'a' captures transient 'b'` (warning) | `a` keeps one `b` forever | make `b` a singleton, make `a` transient, or depend on `() -> b` or `Lazy<b>` |
+| `'any P' cannot be auto-wired` | protocol, optional, generic or function type on `@Singleton`/`@Transient` | use `@Provides(.singleton) func makeX(...) -> any P` |
+| `@Singleton is for var entries; a function is a provider` | `@Singleton func ...` | `@Provides(.singleton) func makeX(...)` |
+| `this type has N initializers; mark the one the container calls with @Inject` | ambiguous initializer | put `@Inject` on one |
+| `an injected parameter needs an argument label` | `init(_ x: X)` | give it a label; the label is the entry name |
+| `@Forward reads parent.x; declare the parent container as an input` | no `let parent` | add `let parent: ParentGraph` |
+| `does not conform to protocol 'Needs'` (release), or a trap naming `InjectaCheckPlugin` (debug) | the plugin is not attached | attach `InjectaCheckPlugin`, or add `extension Container: Type.Needs {}` |
+
+## Introspection
+
+`AppGraph.injectaGraph` lists every entry, its lifetime and what it needs.
+
+```swift
+#expect(AppGraph.injectaGraph.issues().isEmpty)   // one test catches what the plugin would
+print(AppGraph.injectaGraph.describe())           // "db: Database [singleton] <- config, logger"
+let dot = AppGraph.injectaGraph.dot()             // Graphviz
+```
+
+## Extension points
+
+Injecta is a set of small parts; each can be used or replaced on its own.
+
+- `InjectaGraph`: the graph model and the checks (missing, cycle, captive), with no dependencies.
+  Use it for your own tooling or to check a hand-written container.
+- `Once<Value>`: the singleton cell (an acquire load on the hot path). A hand-written computed
+  property in a container is an entry like any other, so you can replace any generated entry with
+  your own code, cached with `Once` or not.
+- `injecta-check`: also a command-line tool (`injecta-check OUT.swift FILES...`) for build systems
+  other than SwiftPM and Xcode.
+- `InjectaSyntax`: the reader that turns declarations into the model, shared by the macros and the
+  checker, so both apply the same rules. The macro target compiles the same files through a
+  symlink (`Sources/InjectaMacros/Reader`).
+
+## Performance
+
+A singleton read is one acquiring atomic load and a field read. A transient read is the
+initializer call plus an override check (a load and a branch). There is no type-keyed registry,
+no lock after the first build, and no task-local or dictionary lookup. See `Benchmarks/` for the
+comparison with hand-written wiring, swift-dependencies, Factory, Swinject and Resolver, and
+README.md for the measured numbers.
+
+## Anti-patterns
+
+- Passing the container into a service. Inject the entries the service needs instead.
+- Registering one type twice. Give each entry its own name; names are the keys.
+- Writing a second container type for tests. Use `Overrides`.
+- Reading a container from a global. Create it at the composition root (the `App` struct) and pass
+  entries down; for SwiftUI, put the models it builds into the environment.
+- Silencing a missing entry with a default value or an optional. Add the entry.
+
+## Limits
+
+- Providers and injected initializers are synchronous and non-throwing.
+- `@Injectable` does not support generic types; containers cannot be generic.
+- Names, not types, connect entries: two entries of one type are fine, but a label must match an
+  entry name exactly.
+- A cycle that goes through a hand-written computed property is not visible to the checks.
