@@ -54,6 +54,15 @@ on:
           - scoped-check
           - injecta-macros
           - injecta
+      prerelease:
+        description: "semver prerelease suffix, e.g. alpha.1 (empty: a normal release through release-plz)"
+        default: ""
+        type: string
+      level:
+        description: "prerelease only: how far past the last released version (a never-released crate keeps its version)"
+        default: patch
+        type: choice
+        options: [patch, minor, major]
       dry-run:
         description: open the version pull request and wait for its checks, then close it
         default: false
@@ -77,10 +86,14 @@ jobs:
       statuses: read
       issues: write # notify-failure: a failed run opens a release-failure issue
     with:
-      level: patch
+      level: ${{ inputs.level }}
+      # A prerelease goes through scripts/prerelease.sh (<version>-<suffix>; a
+      # `-` version makes the GitHub Release a prerelease); otherwise release-plz.
+      release-script: ${{ inputs.prerelease != '' && 'scripts/prerelease.sh' || '' }}
+      release-script-args: ${{ inputs.prerelease }} ${{ inputs.package }}
       dry-run: ${{ inputs.dry-run }}
       release-untagged-head: ${{ inputs.release-untagged-head }}
-      release-plz-update: true
+      release-plz-update: ${{ inputs.prerelease == '' }}
       package: ${{ inputs.package }}
       tag-prefix: ${{ inputs.package }}-v
       commit-message: "chore: release ${{ inputs.package }}-v{version}"
