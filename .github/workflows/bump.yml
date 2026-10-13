@@ -52,6 +52,8 @@ on:
           - git-changed-paths
           - cargo-changed-packages
           - scoped-check
+          - injecta-macros
+          - injecta
       dry-run:
         description: open the version pull request and wait for its checks, then close it
         default: false

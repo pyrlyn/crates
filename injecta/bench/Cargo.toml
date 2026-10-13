@@ -1,0 +1,19 @@
+# Comparison benchmarks. A separate workspace so the competitors never enter
+# the library's dependency graph; nothing here is published.
+[workspace]
+members = ["impl-baseline", "impl-injecta", "impl-shaku", "impl-nject", "impl-teloc", "impl-dill", "di-bench", "criterion-bench"]
+resolver = "3"
+
+[workspace.package]
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[workspace.dependencies]
+injecta = { path = ".." }
+shaku = "=0.6.3"
+nject = "=0.5.1"
+teloc = "=0.2.0"
+dill = "=0.17.1"
+divan = "=0.1.21"
+criterion = { version = "=0.8.2", default-features = false, features = ["cargo_bench_support"] }

@@ -25,6 +25,8 @@ Small, focused Rust crates shared by `ketch` and `rtok`.
 | [`llm-wire-openai`](llm-wire-openai) | OpenAI Chat Completions and Responses wires, also for every OpenAI-compatible endpoint |
 | [`mcp-client-host`](mcp-client-host) | MCP client host over rmcp: `.mcp.json` discovery, fail-open connect, OAuth with an injectable token store, elicitation, deferred tools |
 | [`keychain-secret`](keychain-secret) | Application secrets from an environment variable or the OS keychain, never a config file, with a test guard against the real keychain |
+| [`injecta`](injecta) | Compile-time dependency injection: one `container!` declaration, derive `Injectable`, no runtime registry |
+| [`injecta-macros`](injecta-macros) | Procedural macros behind `injecta` (`container!`, `#[derive(Injectable)]`, `#[injectable]`) |
 | [`path-gates`](path-gates) | Map changed paths to named gates by glob rules from a TOML config |
 | [`perm-rules`](perm-rules) | Permission rules for tool calls: `Tool(subject)` grammar, deny/allow/ask decision order, risk fallback |
 | [`proc-sandbox`](proc-sandbox) | Confine a child process: Seatbelt on macOS, bubblewrap or Landlock plus seccomp on Linux, and a path guard for workspace roots |
@@ -62,7 +64,7 @@ cargo fmt --all -- --check
   lines carry both `path` and `version`, so `cargo publish` fails while a
   sibling is not on crates.io yet.
 - On crates.io: `file-backup`. `change-preview`, `fs-kit` and `wasm-plugin-host` are publish-ready (CI runs their
-  publish dry-run) and go out with their first bump. The other crates are not published yet.
+  publish dry-run) and go out with their first bump. `injecta-macros` then `injecta` are publish-ready too (`injecta` cannot dry-run until `injecta-macros` is on crates.io); the Swift port lives in `packages/swift/injecta`. The other crates are not published yet.
 
 Secrets: `CARGO_REGISTRY_TOKEN` (crates.io API token) and
 `RELEASE_PLZ_TOKEN` (a PAT that can trigger workflows; bump opens the
@@ -76,7 +78,7 @@ Two secrets must exist in the repo settings
 | Secret | Where to get it | Used by |
 | --- | --- | --- |
 | `CARGO_REGISTRY_TOKEN` | crates.io → Account Settings → API Tokens → New Token (needs `publish-new` and `publish-update` scopes; restrict it to the crates listed above). Add with `gh secret set CARGO_REGISTRY_TOKEN --repo pyrlyn/crates-packages` | `release.yml`, job `crates-io`: `cargo publish -p <crate>` |
-| `CARGO_REGISTRY_TOKEN` | crates.io → Account Settings → API Tokens → New Token (needs `publish-new` and `publish-update` scopes; restrict it to the `file-backup`, `change-preview`, `fs-kit`, `wasm-plugin-host`, `telemetry-setup`, `gettext-catalog`, `sqlite-change-feed`, `abi-drift` and `keychain-secret` crates; add each new crate before its first release). Add with `gh secret set CARGO_REGISTRY_TOKEN --repo pyrlyn/crates-packages` | `release.yml`, job `crates-io`: `cargo publish -p <crate>` |
+| `CARGO_REGISTRY_TOKEN` | crates.io → Account Settings → API Tokens → New Token (needs `publish-new` and `publish-update` scopes; restrict it to the `injecta-macros`, `injecta`, `file-backup`, `change-preview`, `fs-kit`, `wasm-plugin-host`, `telemetry-setup`, `gettext-catalog`, `sqlite-change-feed`, `abi-drift` and `keychain-secret` crates; add each new crate before its first release). Add with `gh secret set CARGO_REGISTRY_TOKEN --repo pyrlyn/crates-packages` | `release.yml`, job `crates-io`: `cargo publish -p <crate>` |
 | `RELEASE_PLZ_TOKEN` | A fine-grained PAT (or GitHub App token) with **Contents** and **Pull requests** read/write on this repo — see https://release-plz.dev/docs/github/token. The default `GITHUB_TOKEN` cannot trigger `release.yml` from the release PR it opens, so without this the release PR would land without CI. Add with `gh secret set RELEASE_PLZ_TOKEN --repo pyrlyn/crates-packages` | `bump.yml`: pushes the version branch and opens the version PR |
 
 Without `CARGO_REGISTRY_TOKEN` the release stops at the `crates-io` job with

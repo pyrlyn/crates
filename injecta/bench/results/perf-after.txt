@@ -1,0 +1,20 @@
+== after 2026-10-08 15:48:11 EEST rustc 1.99.0 (b940084d7 2026-09-28)
+load: 15:48  up 6 days,  1:45, 1 user, load averages: 55.77 45.00 34.38
+Timer precision: 41 ns
+resolve                fastest       │ slowest       │ median        │ mean          │ samples │ iters
+├─ baseline                          │               │               │               │         │
+│  ├─ cold             75.16 ns      │ 5.668 µs      │ 80.41 ns      │ 201.9 ns      │ 100     │ 1600
+│  ├─ singleton        4.301 ns      │ 36.65 ns      │ 4.382 ns      │ 5.246 ns      │ 100     │ 102400
+│  ╰─ transient_graph  9.184 ns      │ 1.99 µs       │ 9.346 ns      │ 30.18 ns      │ 100     │ 51200
+╰─ injecta                           │               │               │               │         │
+   ├─ cold             129.8 ns      │ 581.6 ns      │ 132.4 ns      │ 137 ns        │ 100     │ 3200
+   ├─ singleton        4.301 ns      │ 4.464 ns      │ 4.383 ns      │ 4.397 ns      │ 100     │ 102400
+   ╰─ transient_graph  32.2 ns       │ 297.1 ns      │ 32.86 ns      │ 35.44 ns      │ 100     │ 6400
+
+crate-only build: real 2.77 cpu 0.58
+crate-only build: real 4.06 cpu 0.61
+crate-only build: real 3.52 cpu 0.58
+crate-only build: real 3.02 cpu 0.53
+crate-only build: real 4.41 cpu 0.66
+bin 440176 stripped 343096
+load after: 15:49  up 6 days,  1:46, 1 user, load averages: 129.51 65.23 42.38

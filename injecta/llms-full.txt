@@ -1,0 +1,368 @@
+<!-- Generated from GUIDE.md and AGENTS.md by `just docs`; do not edit. -->
+
+# injecta
+
+Compile-time dependency injection for Rust. You declare a container once with
+`container!`, derive `Injectable` on your types, and call `resolve`. Every
+dependency is checked by the compiler: a missing provider, a dependency cycle
+or a singleton that depends on a request-scoped value does not compile.
+There is no runtime registry, no `TypeId` map, no locks and no `dyn` on the
+resolve path: a resolve compiles to constructor calls and `Arc` clones, within
+about 1 ns of hand-written wiring on the comparison benchmark.
+
+## Quick start
+
+```rust
+use std::sync::Arc;
+use injecta::{Injectable, Resolve};
+
+#[derive(Clone)]
+struct Config { url: String }
+
+trait Logger: Send + Sync { fn log(&self, line: &str); }
+
+#[derive(Injectable)]
+struct StdoutLogger;
+impl Logger for StdoutLogger { fn log(&self, _line: &str) {} }
+
+#[derive(Injectable)]
+struct Database { config: Config, logger: Arc<dyn Logger> }
+
+#[derive(Injectable)]
+struct UserRepo { db: Arc<Database> }
+
+injecta::container! {
+    pub struct App {
+        instance Config,                                              // passed to App::new
+        singleton Arc<dyn Logger> = |c| Arc::new(c.build::<StdoutLogger>()),
+        singleton Arc<Database>,                                      // built once, on first use
+        transient UserRepo,                                           // built on every resolve
+    }
+}
+
+let app = App::new(Config { url: "postgres://localhost".into() });
+let repo = app.resolve::<UserRepo>();
+assert_eq!(repo.db.config.url, "postgres://localhost");
+// singletons are shared
+assert!(Arc::ptr_eq(&repo.db, &app.resolve::<UserRepo>().db));
+```
+
+## The four lifetimes
+
+| Entry | Built | `resolve` returns | Use it for |
+| --- | --- | --- | --- |
+| `instance T` | by you, passed to `App::new` | a clone of the value | config, values built with async or fallible code |
+| `singleton T` | once, on first resolve | a clone of the cached value (`Arc<T>` to share) | pools, clients, caches |
+| `scoped T` | once per scope value | a clone of the scope's cached value | per-request or per-session state |
+| `transient T` | on every resolve | a new value | cheap handlers and services |
+
+Without a factory, an entry is built with `Injectable`: `singleton Arc<X>` and
+`transient Box<X>` build `X` and wrap it; any other `T` is built directly.
+
+## Which tool to use
+
+| You want to | Write |
+| --- | --- |
+| build a struct from its fields | `#[derive(Injectable)]` on the struct |
+| build through a constructor (private fields, invariants) | `#[injecta::injectable]` on the `impl`, `#[inject]` on the constructor |
+| give a field a fixed value | `#[inject(value = expr)]` or `#[inject(default)]` on the field |
+| bind a trait object to an implementation | `singleton Arc<dyn Trait> = \|c\| Arc::new(c.build::<Impl>())` |
+| register a type from another crate | a factory: `singleton Arc<Client> = \|c\| Arc::new(Client::new(c.resolve::<Config>().url))` |
+| use a value that needs `async` or can fail | build it first, register it as `instance` |
+| two values of the same type | newtypes: `struct PrimaryDb(Arc<Db>);` |
+| per-request values | a `scope` block with `scoped` and `instance` entries |
+| replace something in a test | `App::new(..).with(fake)` (singleton) or `Request::new(..).with(fake)` (scoped) |
+| get a value | `container.resolve::<T>()` |
+| use a shared value without cloning it (hot loops, many threads) | `container.get::<T>()` on an `instance`, `singleton` or `scoped` entry |
+| one thread only (CLI, `current_thread` runtime, `no_std`) | `#[injecta(storage = injecta::SingleThread)]` on the root |
+| build an unregistered `Injectable` | `container.build::<T>()` |
+| accept "any container that has a `T`" | the bound `C: Provide<T>` |
+| accept "any container that holds a `T` I can borrow" | the bound `C: ProvideRef<T>` |
+
+## Borrowing cached values
+
+`resolve` returns an owned value, so for `Arc<T>` it bumps the reference count
+and the drop at the end of the statement lowers it again. `get` lends the
+cached value instead: a plain load, no atomic write, nothing shared between
+threads but the read. Use it at call sites that only need to look; the
+container keeps the value alive.
+
+```rust
+use std::sync::Arc;
+use injecta::{Injectable, Resolve};
+
+#[derive(Clone)]
+struct Config { url: String }
+
+#[derive(Injectable)]
+struct Db { config: Config }
+
+injecta::container! {
+    struct App {
+        instance Config,
+        singleton Arc<Db>,
+    }
+}
+
+let app = App::new(Config { url: "postgres://localhost".into() });
+let db: &Arc<Db> = app.get();                 // created on first use, then borrowed
+assert_eq!(db.config.url, "postgres://localhost");
+assert_eq!(Arc::strong_count(db), 1);          // no clone was made
+assert_eq!(app.get::<Config>().url, "postgres://localhost");
+```
+
+`get` only exists for cached entries; asking for a `transient` is a compile
+error that points to `resolve`. Benchmarks: `docs/performance.md`.
+
+## Constructors
+
+```rust
+use injecta::Resolve;
+
+#[derive(Clone)]
+struct Config { pool_size: u32 }
+
+struct Pool { size: u32 }
+
+#[injecta::injectable]
+impl Pool {
+    #[inject]
+    fn new(config: Config) -> Self {
+        Self { size: config.pool_size.max(1) }
+    }
+}
+
+injecta::container! {
+    struct App { instance Config, transient Pool }
+}
+
+assert_eq!(App::new(Config { pool_size: 0 }).resolve::<Pool>().size, 1);
+```
+
+## Scopes
+
+A `scope` is a child container. It shares the root's instances and
+singletons, owns its `scoped` and `instance` entries, and rebuilds the root's
+transients so they can depend on scoped values.
+
+```rust
+use std::sync::Arc;
+use injecta::{Injectable, Resolve};
+
+#[derive(Clone)]
+struct Config;
+#[derive(Clone, Copy, PartialEq, Debug)]
+struct UserId(u64);
+
+#[derive(Injectable)]
+struct Session { user: UserId }
+
+#[derive(Injectable)]
+struct Handler { config: Config, session: Arc<Session> }
+
+injecta::container! {
+    pub struct App {
+        instance Config,
+    }
+    pub scope Request {
+        instance UserId,
+        scoped Arc<Session>,
+        transient Handler,
+    }
+}
+
+let app = App::new(Config);
+let request = Request::new(&app, UserId(7));
+let a = request.resolve::<Handler>();
+let b = request.resolve::<Handler>();
+assert_eq!(a.session.user, UserId(7));
+assert!(Arc::ptr_eq(&a.session, &b.session)); // one Session per request
+```
+
+A root `singleton` that needs a `scoped` value is a compile error: the
+singleton would outlive the scope (the "captive dependency" bug).
+
+## Overrides for tests
+
+```rust
+use std::sync::Arc;
+use injecta::Resolve;
+
+trait Clock: Send + Sync { fn now(&self) -> u64; }
+struct SystemClock;
+impl Clock for SystemClock { fn now(&self) -> u64 { 1 } }
+struct FixedClock(u64);
+impl Clock for FixedClock { fn now(&self) -> u64 { self.0 } }
+
+injecta::container! {
+    struct App {
+        singleton Arc<dyn Clock> = |_| Arc::new(SystemClock),
+    }
+}
+
+let app = App::new().with(Arc::new(FixedClock(42)) as Arc<dyn Clock>);
+assert_eq!(app.resolve::<Arc<dyn Clock>>().now(), 42);
+```
+
+## Compile-time errors
+
+A missing provider names the container, the type and the fix:
+
+```compile_fail
+use injecta::Injectable;
+
+struct Database;
+
+#[derive(Injectable)]
+struct Repo { db: std::sync::Arc<Database> }
+
+injecta::container! {
+    struct App { transient Repo }
+}
+// error[E0277]: `App` has no provider for `Arc<Database>`
+//   = note: declare it in `injecta::container!` as `instance Arc<Database>`, ...
+```
+
+A dependency cycle fails const evaluation of the depth check:
+
+```compile_fail
+use injecta::Injectable;
+
+#[derive(Injectable)]
+struct A { b: Box<B> }
+#[derive(Injectable)]
+struct B { a: Box<A> }
+
+injecta::container! {
+    struct App { transient Box<A>, transient Box<B> }
+}
+// error[E0391]: cycle detected when ...
+```
+
+Factories (`= |c| ...`) are opaque to the cycle check: keep them small and
+prefer `c.build::<T>()` inside them.
+
+## Extension points
+
+| Extension point | Trait | Default | Select with |
+| --- | --- | --- | --- |
+| Cache for singleton and scoped values | [`Storage`] + [`SingletonCell`] | [`ThreadSafe`] (`OnceLock`) with `std`, [`SingleThread`] (`OnceCell`) without | `#[injecta(storage = MyStorage)]` |
+| Lifecycle and diagnostics hooks | [`Hooks`] | [`NoHooks`] (compiles away) | `#[injecta(hooks = MyHooks)]` |
+| Introspection | [`Container`] | generated `NAME` and `PROVIDERS` | `App::describe()` |
+| Building a type | [`Injectable`] | derive or `#[injectable]` | hand-written impl |
+| Resolving a type | [`Provide`] | generated per entry | hand-written impl for a custom container |
+
+```rust
+use std::sync::atomic::{AtomicUsize, Ordering};
+use injecta::{Hooks, ProviderInfo, Resolve, Container};
+
+#[derive(Default)]
+struct CountCreations(AtomicUsize);
+impl Hooks for CountCreations {
+    fn on_create(&self, _info: &ProviderInfo) {
+        self.0.fetch_add(1, Ordering::Relaxed);
+    }
+}
+
+#[derive(Clone, injecta::Injectable)]
+struct Cache;
+
+injecta::container! {
+    #[injecta(storage = injecta::SingleThread, hooks = CountCreations)]
+    struct App { singleton Cache }
+}
+
+let app = App::new();
+app.resolve::<Cache>();
+app.resolve::<Cache>();
+assert_eq!(app.hooks().0.load(Ordering::Relaxed), 1);
+assert_eq!(App::describe().to_string(), "App\n  singleton Cache\n");
+```
+
+## Features
+
+| Feature | Default | Adds |
+| --- | --- | --- |
+| `std` | yes | [`ThreadSafe`] storage; without it the crate is `no_std + alloc` |
+| `macros` | yes | `container!`, `#[derive(Injectable)]`, `#[injectable]` |
+| `tracing` | no | `TracingHooks` |
+
+## Generic code
+
+Write the bound, not the container type, so a function works with the root,
+with any scope, and with a test container:
+
+```rust
+use injecta::{Provide, Resolve};
+
+#[derive(Clone)]
+struct Config { name: &'static str }
+
+fn greeting<C: Provide<Config>>(c: &C) -> String {
+    format!("hello {}", c.resolve::<Config>().name)
+}
+
+injecta::container! {
+    struct App { instance Config }
+}
+
+assert_eq!(greeting(&App::new(Config { name: "ivan" })), "hello ivan");
+```
+
+## Anti-patterns
+
+| Don't | Do instead | Why |
+| --- | --- | --- |
+| store the container in a service and `resolve` inside methods | take each dependency as a field | hidden dependencies; the compiler can no longer check them |
+| `instance Arc<Mutex<Everything>>` | one entry per service | one provider per type keeps the graph checkable |
+| `unwrap()` or blocking I/O in an `#[inject]` constructor | do it before `App::new` and register the value as `instance` | constructors run lazily, at the first resolve, far from `main` |
+| `singleton Pool` where `Pool` is expensive to clone | `singleton Arc<Pool>` | `resolve` returns a clone |
+| a global `static APP: OnceLock<App>` | pass `&App` (or a scope) down from `main` | tests get their own container |
+| registering the same type twice under different "names" | newtypes | names are not part of a Rust type |
+| logic in factories | `c.build::<Impl>()` plus a constructor | factories are opaque to the cycle check |
+
+## Limits (by design)
+
+- One provider per type per container. Use newtypes for several values of one type.
+- No async or fallible providers: do that work before building the container and register the result as `instance`.
+- No runtime registration. Plugins discovered at runtime belong in a value you register (`instance Vec<Arc<dyn Plugin>>`).
+- Values are returned by value (`resolve`; share with `Arc<T>`) or borrowed from the container for as long as it lives (`get`, cached entries only).
+
+---
+
+# AGENTS.md — injecta
+
+If an `AGENTS.md` or `CLAUDE.md` exists higher in the tree, follow it too; on conflict, ask the creator.
+
+## Using injecta (for agents writing application code)
+
+The full guide with runnable examples is `GUIDE.md` (also in `llms-full.txt`). The short version:
+
+1. Derive `Injectable` on every struct the container should build. Fields are the dependencies.
+2. If a type needs a constructor, put `#[injecta::injectable]` on its `impl` and `#[inject]` on exactly one constructor that returns `Self`.
+3. Declare one `injecta::container! { pub struct App { .. } }` in the assembly crate (next to `main`), not in library crates.
+4. Pick the lifetime per entry:
+   - `instance T`: values you already have (config, values that needed `async` or could fail). They become `App::new` arguments.
+   - `singleton Arc<T>`: one shared value, created on first resolve.
+   - `transient T`: a new value per resolve.
+   - `scoped Arc<T>` inside `scope Name { .. }`: one value per scope (request, session).
+5. Trait objects and foreign types need a factory: `singleton Arc<dyn Trait> = |c| Arc::new(c.build::<Impl>())`.
+6. Get values with `container.resolve::<T>()`. In generic code, bound on `C: Provide<T>`.
+7. In tests, replace singletons with `App::new(..).with(fake)`; never add a second container type just for tests.
+
+Hard rules:
+
+- Never store the container inside a service; inject fields.
+- Never register two entries of one type; use newtypes.
+- Never `unwrap` in an `#[inject]` constructor; build fallible values first and register them as `instance`.
+- When the compiler says ``App` has no provider for `X` ``, add an entry for `X` (the note lists the three forms). Do not add `Option`, `Default` or a hand-written `Provide` impl to silence it.
+- A `cycle detected when simplifying constant ... DEPTH` error is a dependency cycle between the listed types. Break the cycle in the design (extract the shared part into a third type); do not hide it behind a factory.
+
+## Changing injecta (for agents working on this repository)
+
+- Layout: `injecta` (runtime traits, storage, hooks, introspection; `no_std + alloc` without the `std` feature) and `../injecta-macros` (`container!`, `#[derive(Injectable)]`, `#[injectable]`). `bench/` is a separate, unpublished workspace that compares injecta with other DI crates; it is never a dependency of the library.
+- The hot path must stay free of locks, `dyn`, `TypeId` maps and allocation beyond what the user's own types do. Any change to generated `provide` bodies needs a run of `just bench` and the numbers in the PR.
+- Every misuse that can be caught at compile time gets a `tests/ui/*.rs` case with a pinned `.stderr` that contains a fix hint. Macro errors use `syn::Error::new(span, ..)` on the offending tokens, and report all errors of one invocation at once.
+- Docs have one source: `GUIDE.md`. It is the crate-level rustdoc (`include_str!`), its examples are doctests, and `tests/docs.rs` derives `llms.txt` and `llms-full.txt` from it and this file. After editing either, run `just docs`.
+- Before calling work done: `just check` (fmt, clippy with `-D warnings` on all targets and features, nextest, doctests, compile-fail tests, MSRV check).
+- Conventional Commits in English. The human is the only author: no `Co-Authored-By` or "Generated with" lines.

@@ -2,3 +2,6 @@
 **/tests/fixtures/** text eol=lf
 # Committed JSON Schemas are compared byte for byte with the generated ones.
 **/schema/** text eol=lf
+# injecta tests compare llms*.txt with GUIDE.md and AGENTS.md byte for byte.
+injecta/*.md text eol=lf
+injecta/llms*.txt text eol=lf
