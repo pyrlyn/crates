@@ -10,11 +10,8 @@ injecta::container! {
     }
 }
 
+fn require_sync<T: Sync>(_: &T) {}
+
 fn main() {
-    let app = App::new();
-    std::thread::scope(|s| {
-        s.spawn(|| {
-            let _ = &app;
-        });
-    });
+    require_sync(&App::new());
 }

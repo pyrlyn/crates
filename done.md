@@ -42,4 +42,4 @@ Delivered as the `write` module of `fs-kit` instead of a crate of its own (creat
 
 ### T29. Refresh injecta's compile-fail diagnostic for Rust 1.99
 
-The `single_thread_is_not_sync` trybuild snapshot lacked the `Scope::spawn` bound context emitted by the pinned Rust 1.99 compiler, failing the workspace suite despite the expected type error. Updated only the snapshot. The focused compile-fail test and full workspace tests, clippy and formatting checks passed.
+The `single_thread_is_not_sync` trybuild diagnostic depended on whether standard-library source was available: macOS printed extra `Scope::spawn` context that Linux CI omitted. The fixture now requires `Sync` through a local function, preserving the rejection of `SingleThread` containers with a stable diagnostic. The focused compile-fail test passes; the full workspace tests, clippy and formatting passed before this fixture adjustment.

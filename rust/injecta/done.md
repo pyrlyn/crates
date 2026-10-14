@@ -10,4 +10,4 @@
 
 ### T29. Refresh compile-fail diagnostic for Rust 1.99
 
-Updated the `single_thread_is_not_sync` trybuild snapshot with the new Rust 1.99 `Scope::spawn` bound context. The focused compile-fail test and full workspace tests, clippy and formatting checks passed.
+The `single_thread_is_not_sync` fixture now checks a local `Sync` bound rather than `Scope::spawn`, avoiding diagnostic differences when standard-library source is unavailable in CI. The compile-fail test still rejects sharing `SingleThread` containers and includes the `OnceLock` fix hint. The focused compile-fail test passes; full workspace tests, clippy and formatting passed before the fixture adjustment.
