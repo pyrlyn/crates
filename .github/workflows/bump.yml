@@ -54,6 +54,7 @@ on:
           - scoped-check
           - injecta-macros
           - injecta
+          - sccache-r2
       prerelease:
         description: "semver prerelease suffix, e.g. alpha.1 (empty: a normal release through release-plz)"
         default: ""
