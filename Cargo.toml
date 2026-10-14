@@ -1,8 +1,9 @@
 [workspace]
 members = ["rust/abi-drift", "rust/agent-ext", "rust/agent-host-config", "rust/agent-loop", "rust/app-home", "rust/cargo-changed-packages", "rust/change-preview", "rust/config-schema", "rust/file-backup", "rust/fs-kit", "rust/gettext-catalog", "rust/git-changed-paths", "rust/injecta", "rust/injecta-macros", "rust/keychain-secret", "rust/llm-catalog", "rust/llm-http", "rust/llm-wire", "rust/llm-wire-anthropic", "rust/llm-wire-openai", "rust/mcp-client-host", "rust/operation-icons", "rust/path-gates", "rust/perm-rules", "rust/proc-sandbox", "rust/sccache-r2", "rust/scoped-check", "rust/shell-classify", "rust/speech-capture", "rust/sqlite-change-feed", "rust/telemetry-setup", "rust/text-sanitize", "rust/wasm-plugin-host"]
 resolver = "2"
-# A separate, unpublished workspace: benchmarks never enter CI or Cargo.lock.
-exclude = ["rust/injecta/bench"]
+# Separate workspaces with their own Cargo.lock: rust/injecta/bench (unpublished benchmarks) and
+# plugwright (wasmtime and wasmer pin cranelift versions this workspace does not need).
+exclude = ["rust/injecta/bench", "plugwright"]
 
 [workspace.package]
 license = "GPL-3.0-or-later"
