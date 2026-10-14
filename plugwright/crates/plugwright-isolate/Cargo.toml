@@ -1,0 +1,29 @@
+[package]
+name = "plugwright-isolate"
+description = "Runs plugwright native plugins in a sandboxed child process; crashes and hangs never reach the host"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords = ["plugin", "isolation", "sandbox"]
+
+[dependencies]
+plugwright-abi.workspace = true
+plugwright-core.workspace = true
+plugwright-native.workspace = true
+plugwright-sandbox.workspace = true
+semver.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+# Unix syscalls; on Windows only the CRT's `_dup2`.
+libc.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { workspace = true, features = ["Win32_Foundation", "Win32_System_Console", "Win32_System_Threading"] }
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

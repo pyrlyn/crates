@@ -29,6 +29,7 @@ Small, focused Rust crates shared by `ketch` and `rtok`.
 | [`injecta`](injecta) | Compile-time dependency injection: one `container!` declaration, derive `Injectable`, no runtime registry |
 | [`injecta-macros`](injecta-macros) | Procedural macros behind `injecta` (`container!`, `#[derive(Injectable)]`, `#[injectable]`) |
 | [`path-gates`](path-gates) | Map changed paths to named gates by glob rules from a TOML config |
+| [`plugwright`](plugwright) | Plugin manager for Rust hosts: native (in-process or isolated) and Wasm (wasmtime, wasmi, wasmer) plugins from one manifest, cached builds, `#[plugin]`/`#[interface]` macros (separate workspace, not published yet) |
 | [`perm-rules`](perm-rules) | Permission rules for tool calls: `Tool(subject)` grammar, deny/allow/ask decision order, risk fallback |
 | [`sccache-r2`](sccache-r2) | Wire sccache to a Cloudflare R2 bucket from env vars: validate, export (GitHub Actions or shell), check the bucket, print stats; off without the secrets |
 | [`proc-sandbox`](proc-sandbox) | Confine a child process: Seatbelt on macOS, bubblewrap or Landlock plus seccomp on Linux, and a path guard for workspace roots |

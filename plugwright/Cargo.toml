@@ -1,0 +1,97 @@
+[workspace]
+resolver = "3"
+# Own lockfile: wasmer 7.5 pins cranelift =0.136.0, wasmtime 49.0.2 needs ^0.136.2.
+exclude = ["crates/plugwright-wasmer"]
+members = [
+    "crates/plugwright-abi",
+    "crates/plugwright-sdk",
+    "crates/plugwright-macros",
+    "crates/plugwright-core",
+    "crates/plugwright-sandbox",
+    "crates/plugwright-build",
+    "crates/plugwright-native",
+    "crates/plugwright-isolate",
+    "crates/plugwright-wasm",
+    "crates/plugwright-wasmtime",
+    "crates/plugwright-wasmi",
+    "crates/plugwright-loader",
+    "crates/plugwright",
+    "crates/plugwright-runner",
+    "crates/cargo-plugwright",
+    "examples/native-hello",
+    "examples/static-hello",
+    "examples/wasm-hello",
+    "examples/host",
+]
+# Plugins are built by plugwright itself, not by `cargo build` at the root.
+default-members = [
+    "crates/plugwright-abi",
+    "crates/plugwright-sdk",
+    "crates/plugwright-macros",
+    "crates/plugwright-core",
+    "crates/plugwright-sandbox",
+    "crates/plugwright-build",
+    "crates/plugwright-native",
+    "crates/plugwright-isolate",
+    "crates/plugwright-wasm",
+    "crates/plugwright-wasmtime",
+    "crates/plugwright-wasmi",
+    "crates/plugwright-loader",
+    "crates/plugwright",
+    "crates/plugwright-runner",
+    "crates/cargo-plugwright",
+    "examples/host",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.89"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/pyrlyn/crates"
+
+[workspace.dependencies]
+plugwright-abi = { path = "crates/plugwright-abi", version = "0.1.0" }
+plugwright-sdk = { path = "crates/plugwright-sdk", version = "0.1.0" }
+plugwright-macros = { path = "crates/plugwright-macros", version = "0.1.0" }
+plugwright = { path = "crates/plugwright", version = "0.1.0", default-features = false }
+plugwright-core = { path = "crates/plugwright-core", version = "0.1.0" }
+plugwright-sandbox = { path = "crates/plugwright-sandbox", version = "0.1.0" }
+plugwright-build = { path = "crates/plugwright-build", version = "0.1.0" }
+plugwright-native = { path = "crates/plugwright-native", version = "0.1.0" }
+plugwright-isolate = { path = "crates/plugwright-isolate", version = "0.1.0" }
+plugwright-wasm = { path = "crates/plugwright-wasm", version = "0.1.0" }
+plugwright-wasmtime = { path = "crates/plugwright-wasmtime", version = "0.1.0" }
+plugwright-wasmi = { path = "crates/plugwright-wasmi", version = "0.1.0" }
+plugwright-loader = { path = "crates/plugwright-loader", version = "0.1.0", default-features = false }
+# Third-party versions shared by the host crates.
+cc = "1.8.0"
+libc = "0.2"
+libloading = "0.9.0"
+semver = { version = "1.0.28", features = ["serde"] }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.154"
+sha2 = "0.11.1"
+tempfile = "3.27.0"
+thiserror = "2.0.21"
+toml = "1.1.8"
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+wasmi = "2.0.0"
+wasmi_core = "2.0.0"
+wasmtime = { version = "49.0.2", default-features = false, features = ["cranelift", "runtime", "std"] }
+windows-sys = "0.61.2"
+
+[workspace.lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+
+[profile.dev]
+# Disk is tight; wasmtime/cranelift debug info is large.
+debug = 0
+
+# Artifact hashing runs on every cold lookup; unoptimised sha2 is ~10x slower.
+[profile.dev.package.sha2]
+opt-level = 3
+
+[profile.release]
+debug = 0
