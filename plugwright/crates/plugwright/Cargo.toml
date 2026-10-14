@@ -1,0 +1,39 @@
+[package]
+name = "plugwright"
+description = "Build, cache, load, isolate and unload Rust plugins: native cdylib via libloading and Wasm via pluggable engines"
+version.workspace = true
+edition.workspace = true
+# wasmtime 49 needs 1.96; plugwright-abi/-sdk keep the lower workspace MSRV.
+rust-version = "1.96"
+license.workspace = true
+repository.workspace = true
+keywords = ["plugin", "dylib", "wasm", "libloading", "sandbox"]
+categories = ["development-tools", "wasm"]
+
+[features]
+default = ["wasmtime", "wasmi"]
+wasmtime = ["plugwright-loader/wasmtime"]
+wasmi = ["plugwright-loader/wasmi"]
+
+[dependencies]
+plugwright-abi.workspace = true
+plugwright-core.workspace = true
+plugwright-sandbox.workspace = true
+plugwright-build.workspace = true
+plugwright-native.workspace = true
+plugwright-isolate.workspace = true
+plugwright-wasm.workspace = true
+plugwright-macros.workspace = true
+plugwright-loader = { workspace = true, features = ["wasm"] }
+semver.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+toml.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+tracing-subscriber.workspace = true
+
+[lints]
+workspace = true

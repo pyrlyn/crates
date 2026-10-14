@@ -1,0 +1,27 @@
+[package]
+name = "plugwright-build"
+description = "Builds plugin crates with cargo into a content-addressed cache; git sources pinned by SHA"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords = ["plugin", "cargo", "cache"]
+
+[dependencies]
+plugwright-abi.workspace = true
+# Finds the C compiler driver / link.exe the way build scripts do.
+cc.workspace = true
+plugwright-core.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+# Reads plugin manifests for the cache key (no `cargo metadata` run).
+toml.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

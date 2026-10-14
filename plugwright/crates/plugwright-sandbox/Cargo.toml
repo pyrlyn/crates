@@ -1,0 +1,30 @@
+[package]
+name = "plugwright-sandbox"
+description = "Self-applied process sandbox: Seatbelt (macOS), Landlock + seccomp (Linux), low integrity + job object (Windows)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords = ["sandbox", "seccomp", "landlock", "seatbelt"]
+
+[dependencies]
+serde.workspace = true
+
+[target.'cfg(any(target_os = "linux", target_os = "macos"))'.dependencies]
+libc.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { workspace = true, features = [
+    "Win32_Foundation",
+    "Win32_Security",
+    "Win32_System_JobObjects",
+    "Win32_System_Threading",
+] }
+
+[dev-dependencies]
+tempfile.workspace = true
+toml.workspace = true
+
+[lints]
+workspace = true
