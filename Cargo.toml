@@ -1,8 +1,8 @@
 [workspace]
-members = ["abi-drift", "agent-ext", "agent-host-config", "agent-loop", "app-home", "cargo-changed-packages", "change-preview", "config-schema", "file-backup", "fs-kit", "gettext-catalog", "git-changed-paths", "injecta", "injecta-macros", "keychain-secret", "llm-catalog", "llm-http", "llm-wire", "llm-wire-anthropic", "llm-wire-openai", "mcp-client-host", "operation-icons", "path-gates", "perm-rules", "proc-sandbox", "sccache-r2", "scoped-check", "shell-classify", "speech-capture", "sqlite-change-feed", "telemetry-setup", "text-sanitize", "wasm-plugin-host"]
+members = ["rust/abi-drift", "rust/agent-ext", "rust/agent-host-config", "rust/agent-loop", "rust/app-home", "rust/cargo-changed-packages", "rust/change-preview", "rust/config-schema", "rust/file-backup", "rust/fs-kit", "rust/gettext-catalog", "rust/git-changed-paths", "rust/injecta", "rust/injecta-macros", "rust/keychain-secret", "rust/llm-catalog", "rust/llm-http", "rust/llm-wire", "rust/llm-wire-anthropic", "rust/llm-wire-openai", "rust/mcp-client-host", "rust/operation-icons", "rust/path-gates", "rust/perm-rules", "rust/proc-sandbox", "rust/sccache-r2", "rust/scoped-check", "rust/shell-classify", "rust/speech-capture", "rust/sqlite-change-feed", "rust/telemetry-setup", "rust/text-sanitize", "rust/wasm-plugin-host"]
 resolver = "2"
 # A separate, unpublished workspace: benchmarks never enter CI or Cargo.lock.
-exclude = ["injecta/bench"]
+exclude = ["rust/injecta/bench"]
 
 [workspace.package]
 license = "GPL-3.0-or-later"
