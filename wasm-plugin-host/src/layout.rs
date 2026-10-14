@@ -83,7 +83,10 @@ pub fn stage(src: &Path, plugin_dir: &Path, digest: &str) -> io::Result<PathBuf>
     if fs::symlink_metadata(&tmp).is_ok() {
         remove_path(&tmp)?;
     }
-    copy_synced(src, &tmp)?;
+    if let Err(e) = copy_synced(src, &tmp) {
+        let _ = fs::remove_dir_all(&tmp);
+        return Err(e);
+    }
     if package_digest(&tmp)? != digest {
         fs::remove_dir_all(&tmp)?;
         return Err(io::Error::other(
@@ -240,7 +243,7 @@ fn write_pointer(plugin_dir: &Path, name: &str, value: &str) -> io::Result<()> {
     fs::create_dir_all(plugin_dir)?;
     let tmp = plugin_dir.join(format!("{name}.tmp"));
     fs::write(&tmp, value)?;
-    File::open(&tmp)?.sync_all()?;
+    sync_file(&tmp)?;
     fs::rename(&tmp, plugin_dir.join(name))?;
     sync_dir(plugin_dir);
     Ok(())
@@ -282,11 +285,17 @@ fn copy_synced(src: &Path, dst: &Path) -> io::Result<()> {
             copy_synced(&entry.path(), &to)?;
         } else if ty.is_file() {
             fs::copy(entry.path(), &to)?;
-            File::open(&to)?.sync_all()?;
+            sync_file(&to)?;
         }
     }
     sync_dir(dst);
     Ok(())
+}
+
+/// Flushes a file to disk. Opened for writing: Windows refuses
+/// `FlushFileBuffers` on a read-only handle with `Access is denied`.
+fn sync_file(path: &Path) -> io::Result<()> {
+    fs::OpenOptions::new().write(true).open(path)?.sync_all()
 }
 
 /// Best effort: a directory fsync makes a rename durable on Unix; other
