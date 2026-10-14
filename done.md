@@ -27,3 +27,19 @@ Plan:
 4. Check: `cargo test -p atomic-replace`, clippy `-D warnings`, fmt, `cargo +1.86 check -p atomic-replace`.
 
 Delivered as the `write` module of `fs-kit` instead of a crate of its own (creator's call, 2026-10-12): `fs_kit::write::{atomic, Options, write_with, if_changed, sync_dir}`, ported from branch `t11-atomic-file` with its tests. Consumers migrate in their own tasks.
+
+### T26. Classify Git output and external diff flags by their effects
+
+`shell-classify` rated `git diff`, `git log`, and `git show` as read-only even when `--output` wrote a file or `--ext-diff` could execute a configured helper. Those flags now raise the risk to `Exec`, while ordinary reads remain `ReadOnly`. A regression test failed before the fix and passed after it; crate tests, clippy and formatting checks passed.
+
+### T27. Preserve trailing newlines in coloured previews
+
+`change_preview::paint` removed the final newline from a rendered diff, so subsequent terminal output could join its last line. It now preserves trailing newlines. A regression test failed before the fix and passed after it; crate tests, clippy and formatting checks passed.
+
+### T28. Reuse parsed line diff in change-preview
+
+`Preview::edit` parsed each before/after pair twice, once for counts and once for the unified diff. It now reuses one `TextDiff` through a private renderer. The public API and output stay the same; the existing tests, clippy and formatting checks passed before and after the refactor.
+
+### T29. Refresh injecta's compile-fail diagnostic for Rust 1.99
+
+The `single_thread_is_not_sync` trybuild snapshot lacked the `Scope::spawn` bound context emitted by the pinned Rust 1.99 compiler, failing the workspace suite despite the expected type error. Updated only the snapshot. The focused compile-fail test and full workspace tests, clippy and formatting checks passed.
