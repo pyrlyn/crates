@@ -1,8 +1,9 @@
 [workspace]
 members = ["abi-drift", "agent-ext", "agent-host-config", "agent-loop", "app-home", "cargo-changed-packages", "change-preview", "config-schema", "file-backup", "fs-kit", "gettext-catalog", "git-changed-paths", "injecta", "injecta-macros", "keychain-secret", "llm-catalog", "llm-http", "llm-wire", "llm-wire-anthropic", "llm-wire-openai", "mcp-client-host", "operation-icons", "path-gates", "perm-rules", "proc-sandbox", "sccache-r2", "scoped-check", "shell-classify", "speech-capture", "sqlite-change-feed", "telemetry-setup", "text-sanitize", "wasm-plugin-host"]
 resolver = "2"
-# A separate, unpublished workspace: benchmarks never enter CI or Cargo.lock.
-exclude = ["injecta/bench"]
+# Separate workspaces with their own Cargo.lock: injecta/bench (unpublished benchmarks) and
+# plugwright (wasmtime and wasmer pin cranelift versions this workspace does not need).
+exclude = ["injecta/bench", "plugwright"]
 
 [workspace.package]
 license = "GPL-3.0-or-later"
