@@ -1,6 +1,6 @@
-# crates (crates-packages)
+# crates
 
-<https://github.com/pyrlyn/crates-packages>
+<https://github.com/pyrlyn/crates>
 
 Cargo workspace of five small published crates shared by ketch and rtok — git-changed-paths, path-gates, cargo-changed-packages, scoped-check, file-backup — released via release-plz.
 
@@ -66,7 +66,7 @@ A `[[gate]]` with `run` but no `paths`/`always` is silently unselectable (`path-
 
 ### T10. Fix crate metadata: license mix and repository URL drift
 
-Workspace `Cargo.toml` sets `license = "GPL-3.0-or-later"` (inherited only by file-backup) while the other four crates hardcode `MIT`; every `repository` field, README badges, and the release-plz postprocessor say `pyrlyn/crates-packages` while origin is `listepo/crates-packages`. Done means: one license everywhere (intentionally chosen) and URLs match the canonical remote.
+Workspace `Cargo.toml` sets `license = "GPL-3.0-or-later"` (inherited only by file-backup) while the other four crates hardcode `MIT`; every `repository` field, README badges, and the release-plz postprocessor say `pyrlyn/crates` while origin is `pyrlyn/crates`. Done means: one license everywhere (intentionally chosen) and URLs match the canonical remote.
 
 ### T20.2. wasm-plugin-host: package layout
 

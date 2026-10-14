@@ -5,7 +5,7 @@ edition = "2024"
 rust-version = "1.91"
 description = "Wire sccache to a Cloudflare R2 bucket from environment variables: validate, emit the env, check and print stats"
 license = "MIT"
-repository = "https://github.com/pyrlyn/crates-packages"
+repository = "https://github.com/pyrlyn/crates"
 keywords = ["sccache", "cloudflare", "r2", "ci", "cache"]
 categories = ["development-tools::build-utils", "command-line-utilities"]
 

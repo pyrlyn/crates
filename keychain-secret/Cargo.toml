@@ -6,7 +6,7 @@ edition = "2024"
 rust-version = "1.98"
 description = "Application secrets from an environment variable or the OS keychain, never a config file: a redacted Secret type, an in-memory store for tests and a guard against tests reaching the real keychain"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/pyrlyn/crates-packages"
+repository = "https://github.com/pyrlyn/crates"
 keywords = ["keychain", "keyring", "secrets", "credentials", "api-key"]
 categories = ["authentication", "config"]
 # The member's plan and agent files are repository bookkeeping, not part of the published crate.

@@ -1,6 +1,6 @@
 # agent-host-config
 
-https://github.com/pyrlyn/crates-packages
+https://github.com/pyrlyn/crates
 
 Register and unregister an MCP server in an agent host's JSON config file, changing only our entry.
 

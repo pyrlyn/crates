@@ -5,7 +5,7 @@ edition = "2024"
 rust-version = "1.88"
 description = "Map changed paths to named gates by glob rules from a TOML config"
 license = "MIT"
-repository = "https://github.com/pyrlyn/crates-packages"
+repository = "https://github.com/pyrlyn/crates"
 
 [lints.rust]
 unsafe_code = "forbid"

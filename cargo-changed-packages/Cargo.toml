@@ -5,7 +5,7 @@ edition = "2024"
 rust-version = "1.91"
 description = "Workspace packages a set of changed paths affects, including reverse dependencies"
 license = "MIT"
-repository = "https://github.com/pyrlyn/crates-packages"
+repository = "https://github.com/pyrlyn/crates"
 
 [lints.rust]
 unsafe_code = "forbid"

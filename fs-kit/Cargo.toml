@@ -5,7 +5,7 @@ edition = "2021"
 rust-version = "1.86"
 description = "One entry point for file and directory work: path identity without Windows UNC prefixes, atomic writes, tree size, copy and removal, sibling backups"
 license.workspace = true
-repository = "https://github.com/pyrlyn/crates-packages"
+repository = "https://github.com/pyrlyn/crates"
 keywords = ["filesystem", "atomic", "path", "canonicalize", "copy"]
 categories = ["filesystem"]
 

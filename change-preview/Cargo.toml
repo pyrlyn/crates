@@ -5,7 +5,7 @@ edition = "2021"
 rust-version = "1.86"
 description = "Preview what a command would change: unified diff or --stat of file edits, size and file count of removals, and a totals line"
 license.workspace = true
-repository = "https://github.com/pyrlyn/crates-packages"
+repository = "https://github.com/pyrlyn/crates"
 keywords = ["dry-run", "diff", "preview", "cli"]
 categories = ["command-line-interface", "text-processing"]
 

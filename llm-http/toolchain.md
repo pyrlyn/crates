@@ -11,7 +11,7 @@
 
 | Package | Where | Source | Why here |
 | --- | --- | --- | --- |
-| llm-wire | local (path) | https://github.com/pyrlyn/crates-packages | `ProviderError`, `ProviderEvent` and `Usage` |
+| llm-wire | local (path) | https://github.com/pyrlyn/crates | `ProviderError`, `ProviderEvent` and `Usage` |
 | bytes | local, optional (`sse`) | https://github.com/tokio-rs/bytes | Chunk type of the SSE byte stream |
 | eventsource-stream | local, optional (`sse`) | https://github.com/jpopesculian/eventsource-stream | SSE parser behind `sse_stream` |
 | futures | local, optional (`sse`) | https://github.com/rust-lang/futures-rs | `Stream` and the in-memory `block_on` of `parse_sse_str` |

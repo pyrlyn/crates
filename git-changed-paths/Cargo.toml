@@ -5,7 +5,7 @@ edition = "2024"
 rust-version = "1.85"
 description = "Paths a git working tree changed relative to a base ref: commits, staged, unstaged and untracked files"
 license = "MIT"
-repository = "https://github.com/pyrlyn/crates-packages"
+repository = "https://github.com/pyrlyn/crates"
 
 [lints.rust]
 unsafe_code = "forbid"

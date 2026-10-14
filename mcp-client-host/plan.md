@@ -1,6 +1,6 @@
 # mcp-client-host
 
-https://github.com/pyrlyn/crates-packages
+https://github.com/pyrlyn/crates
 
 MCP client host over rmcp 3.x: `.mcp.json` discovery, fail-open `connect_all`, OAuth with an injectable token store, elicitation mapping and deferred tools.
 

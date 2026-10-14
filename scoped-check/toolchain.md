@@ -14,9 +14,9 @@
 
 | Package | Where | Source | Why here |
 | --- | --- | --- | --- |
-| git-changed-paths | local | https://github.com/pyrlyn/crates-packages | Change set against a base ref |
-| path-gates | local | https://github.com/pyrlyn/crates-packages | Changed paths to gates |
-| cargo-changed-packages | local | https://github.com/pyrlyn/crates-packages | Affected workspace packages |
+| git-changed-paths | local | https://github.com/pyrlyn/crates | Change set against a base ref |
+| path-gates | local | https://github.com/pyrlyn/crates | Changed paths to gates |
+| cargo-changed-packages | local | https://github.com/pyrlyn/crates | Affected workspace packages |
 | clap | local | https://github.com/clap-rs/clap | CLI parsing |
 | serde | local | https://github.com/serde-rs/serde | Config and JSON output |
 | serde_json | local | https://github.com/serde-rs/json | `plan --json` |

@@ -23,8 +23,8 @@ Cargo workspace of five small Rust crates shared by ketch and rtok:
 Each member directory has its own `AGENTS.md`. This file is the workspace root.
 
 `Cargo.toml` `repository` fields and the root README name
-`https://github.com/pyrlyn/crates-packages`. This checkout's `origin` is
-`git@github.com:listepo/crates-packages.git`.
+`https://github.com/pyrlyn/crates`. This checkout's `origin` is
+`git@github.com:pyrlyn/crates.git`.
 
 ## Commands
 

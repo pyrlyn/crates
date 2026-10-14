@@ -11,8 +11,8 @@
 
 | Package | Where | Source | Why here |
 | --- | --- | --- | --- |
-| llm-http | local (path) | https://github.com/pyrlyn/crates-packages | HTTP client, auth header, error mapping, retry and SSE framing |
-| llm-wire | local (path) | https://github.com/pyrlyn/crates-packages | `Provider`, `Request`, `ProviderEvent` and `ProviderError` |
+| llm-http | local (path) | https://github.com/pyrlyn/crates | HTTP client, auth header, error mapping, retry and SSE framing |
+| llm-wire | local (path) | https://github.com/pyrlyn/crates | `Provider`, `Request`, `ProviderEvent` and `ProviderError` |
 | async-openai | local | https://github.com/64bit/async-openai | Typed Responses request and stream-event shapes (`response-types` only) |
 | async-trait | local | https://github.com/dtolnay/async-trait | `Provider` is an async trait |
 | futures | local | https://github.com/rust-lang/futures-rs | `StreamExt` over the SSE frame stream |

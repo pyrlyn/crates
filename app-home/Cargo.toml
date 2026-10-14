@@ -5,7 +5,7 @@ edition = "2021"
 rust-version = "1.86"
 description = "Resolve the user home, an app's `$APP_HOME` or `~/.app`, and XDG config/data/cache/state dirs the same way on every OS"
 license.workspace = true
-repository = "https://github.com/pyrlyn/crates-packages"
+repository = "https://github.com/pyrlyn/crates"
 keywords = ["home", "xdg", "dirs", "tilde", "config"]
 categories = ["filesystem", "config"]
 

@@ -6,7 +6,7 @@ edition = "2024"
 rust-version = "1.98"
 description = "tracing setup for applications: a rotating JSON log, a human stderr log and optional OTLP traces, with secrets masked before any line or span leaves the process"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/pyrlyn/crates-packages"
+repository = "https://github.com/pyrlyn/crates"
 keywords = ["tracing", "logging", "redaction", "opentelemetry"]
 categories = ["development-tools::debugging"]
 # The member's plan and agent files are repository bookkeeping, not part of the published crate.
