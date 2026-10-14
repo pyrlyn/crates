@@ -55,6 +55,7 @@ on:
           - injecta-macros
           - injecta
           - sccache-r2
+          - app-home
       prerelease:
         description: "semver prerelease suffix, e.g. alpha.1 (empty: a normal release through release-plz)"
         default: ""
