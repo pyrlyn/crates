@@ -30,4 +30,4 @@ assert_eq!(outcome, Outcome::Allow { by: DecidedBy::Rule });
 ```
 
 Licence: GPL-3.0-or-later, or the royalty-free licence in
-[`LICENSE-ROYALTY-FREE.md`](../LICENSE-ROYALTY-FREE.md).
+[`LICENSE-ROYALTY-FREE.md`](../../LICENSE-ROYALTY-FREE.md).

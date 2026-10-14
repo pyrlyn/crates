@@ -6,37 +6,37 @@ Small, focused Rust crates shared by `ketch` and `rtok`.
 
 | Crate | What it does |
 | --- | --- |
-| [`agent-ext`](agent-ext) | Agent extension points: `SKILL.md` skills with a deferred skill tool, and Claude-Code-style shell hooks that fail open (not published yet) |
-| [`agent-host-config`](agent-host-config) | Register and unregister an MCP server in an agent host's JSON config file, changing only our entry |
-| [`agent-loop`](agent-loop) | Neutral agent turn state machine: provider stream, tool dispatch, approvals, interrupt |
-| [`abi-drift`](abi-drift) | Drift tests for generated bindings: regenerate a cbindgen header or csbindgen C# file, diff it against the committed copy, bless to rewrite |
-| [`app-home`](app-home) | Resolve the user home, `$APP_HOME` or `~/.app`, and XDG config/data/cache/state dirs the same way on every OS |
-| [`cargo-changed-packages`](cargo-changed-packages) | Workspace packages a set of changed paths affects, including reverse dependencies |
-| [`change-preview`](change-preview) | Preview what a command would change: diff or `--stat` of edits, size and file count of removals, totals |
-| [`operation-icons`](operation-icons) | Emoji icons for the verb of a status line and the fixed-width gutter they sit in |
-| [`config-schema`](config-schema) | Schema-checked TOML config: stale JSON Schema check, figment layering with per-key provenance, comment-preserving key edits (not published yet) |
-| [`fs-kit`](fs-kit) | One entry point for file and directory work: `\\?\`-free paths, atomic writes, tree usage, copy and removal, backups |
-| [`file-backup`](file-backup) | Copy a file to `<name>.bak-<unix-seconds>` beside it before replacing it |
-| [`gettext-catalog`](gettext-catalog) | gettext `.po` catalogs for an application's own strings: plural rules, named placeholders, language negotiation and per-message fallback |
-| [`git-changed-paths`](git-changed-paths) | Paths a git working tree changed relative to a base ref |
-| [`llm-catalog`](llm-catalog) | Model catalog for LLM agents: context windows, efforts, capabilities and prices merged from built-in rows, host config and a user price file |
-| [`llm-http`](llm-http) | HTTP plumbing for LLM provider wires: credential lookup, auth headers, error mapping, retry with backoff, SSE framing |
-| [`llm-wire`](llm-wire) | Provider contract and neutral request, event and tool types for LLM backends |
-| [`llm-wire-anthropic`](llm-wire-anthropic) | The Anthropic Messages wire for LLM agent loops: request translation (cache breakpoints, thinking, effort), SSE stream parser, streaming client |
-| [`llm-wire-openai`](llm-wire-openai) | OpenAI Chat Completions and Responses wires, also for every OpenAI-compatible endpoint |
-| [`mcp-client-host`](mcp-client-host) | MCP client host over rmcp: `.mcp.json` discovery, fail-open connect, OAuth with an injectable token store, elicitation, deferred tools |
-| [`keychain-secret`](keychain-secret) | Application secrets from an environment variable or the OS keychain, never a config file, with a test guard against the real keychain |
-| [`injecta`](injecta) | Compile-time dependency injection: one `container!` declaration, derive `Injectable`, no runtime registry |
-| [`injecta-macros`](injecta-macros) | Procedural macros behind `injecta` (`container!`, `#[derive(Injectable)]`, `#[injectable]`) |
-| [`path-gates`](path-gates) | Map changed paths to named gates by glob rules from a TOML config |
+| [`agent-ext`](rust/agent-ext) | Agent extension points: `SKILL.md` skills with a deferred skill tool, and Claude-Code-style shell hooks that fail open (not published yet) |
+| [`agent-host-config`](rust/agent-host-config) | Register and unregister an MCP server in an agent host's JSON config file, changing only our entry |
+| [`agent-loop`](rust/agent-loop) | Neutral agent turn state machine: provider stream, tool dispatch, approvals, interrupt |
+| [`abi-drift`](rust/abi-drift) | Drift tests for generated bindings: regenerate a cbindgen header or csbindgen C# file, diff it against the committed copy, bless to rewrite |
+| [`app-home`](rust/app-home) | Resolve the user home, `$APP_HOME` or `~/.app`, and XDG config/data/cache/state dirs the same way on every OS |
+| [`cargo-changed-packages`](rust/cargo-changed-packages) | Workspace packages a set of changed paths affects, including reverse dependencies |
+| [`change-preview`](rust/change-preview) | Preview what a command would change: diff or `--stat` of edits, size and file count of removals, totals |
+| [`operation-icons`](rust/operation-icons) | Emoji icons for the verb of a status line and the fixed-width gutter they sit in |
+| [`config-schema`](rust/config-schema) | Schema-checked TOML config: stale JSON Schema check, figment layering with per-key provenance, comment-preserving key edits (not published yet) |
+| [`fs-kit`](rust/fs-kit) | One entry point for file and directory work: `\\?\`-free paths, atomic writes, tree usage, copy and removal, backups |
+| [`file-backup`](rust/file-backup) | Copy a file to `<name>.bak-<unix-seconds>` beside it before replacing it |
+| [`gettext-catalog`](rust/gettext-catalog) | gettext `.po` catalogs for an application's own strings: plural rules, named placeholders, language negotiation and per-message fallback |
+| [`git-changed-paths`](rust/git-changed-paths) | Paths a git working tree changed relative to a base ref |
+| [`llm-catalog`](rust/llm-catalog) | Model catalog for LLM agents: context windows, efforts, capabilities and prices merged from built-in rows, host config and a user price file |
+| [`llm-http`](rust/llm-http) | HTTP plumbing for LLM provider wires: credential lookup, auth headers, error mapping, retry with backoff, SSE framing |
+| [`llm-wire`](rust/llm-wire) | Provider contract and neutral request, event and tool types for LLM backends |
+| [`llm-wire-anthropic`](rust/llm-wire-anthropic) | The Anthropic Messages wire for LLM agent loops: request translation (cache breakpoints, thinking, effort), SSE stream parser, streaming client |
+| [`llm-wire-openai`](rust/llm-wire-openai) | OpenAI Chat Completions and Responses wires, also for every OpenAI-compatible endpoint |
+| [`mcp-client-host`](rust/mcp-client-host) | MCP client host over rmcp: `.mcp.json` discovery, fail-open connect, OAuth with an injectable token store, elicitation, deferred tools |
+| [`keychain-secret`](rust/keychain-secret) | Application secrets from an environment variable or the OS keychain, never a config file, with a test guard against the real keychain |
+| [`injecta`](rust/injecta) | Compile-time dependency injection: one `container!` declaration, derive `Injectable`, no runtime registry |
+| [`injecta-macros`](rust/injecta-macros) | Procedural macros behind `injecta` (`container!`, `#[derive(Injectable)]`, `#[injectable]`) |
+| [`path-gates`](rust/path-gates) | Map changed paths to named gates by glob rules from a TOML config |
 | [`plugwright`](plugwright) | Plugin manager for Rust hosts: native (in-process or isolated) and Wasm (wasmtime, wasmi, wasmer) plugins from one manifest, cached builds, `#[plugin]`/`#[interface]` macros (separate workspace, not published yet) |
-| [`perm-rules`](perm-rules) | Permission rules for tool calls: `Tool(subject)` grammar, deny/allow/ask decision order, risk fallback |
-| [`sccache-r2`](sccache-r2) | Wire sccache to a Cloudflare R2 bucket from env vars: validate, export (GitHub Actions or shell), check the bucket, print stats; off without the secrets |
-| [`proc-sandbox`](proc-sandbox) | Confine a child process: Seatbelt on macOS, bubblewrap or Landlock plus seccomp on Linux, and a path guard for workspace roots |
-| [`scoped-check`](scoped-check) | Run only the check commands a change touches (binary) |
-| [`telemetry-setup`](telemetry-setup) | `tracing` setup: rotating JSON log, stderr log, optional OTLP traces, secrets masked before they leave the process |
-| [`sqlite-change-feed`](sqlite-change-feed) | Change feed for a SQLite database shared between processes: `PRAGMA data_version` through Diesel |
-| [`wasm-plugin-host`](wasm-plugin-host) | Run WebAssembly plugins with extism: a worker thread per plugin, memory cap, per-call deadlines, control lane before events |
+| [`perm-rules`](rust/perm-rules) | Permission rules for tool calls: `Tool(subject)` grammar, deny/allow/ask decision order, risk fallback |
+| [`sccache-r2`](rust/sccache-r2) | Wire sccache to a Cloudflare R2 bucket from env vars: validate, export (GitHub Actions or shell), check the bucket, print stats; off without the secrets |
+| [`proc-sandbox`](rust/proc-sandbox) | Confine a child process: Seatbelt on macOS, bubblewrap or Landlock plus seccomp on Linux, and a path guard for workspace roots |
+| [`scoped-check`](rust/scoped-check) | Run only the check commands a change touches (binary) |
+| [`telemetry-setup`](rust/telemetry-setup) | `tracing` setup: rotating JSON log, stderr log, optional OTLP traces, secrets masked before they leave the process |
+| [`sqlite-change-feed`](rust/sqlite-change-feed) | Change feed for a SQLite database shared between processes: `PRAGMA data_version` through Diesel |
+| [`wasm-plugin-host`](rust/wasm-plugin-host) | Run WebAssembly plugins with extism: a worker thread per plugin, memory cap, per-call deadlines, control lane before events |
 
 ## Commands
 
