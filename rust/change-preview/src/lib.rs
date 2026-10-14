@@ -69,14 +69,15 @@ impl Preview {
             return self;
         }
         let (mut insertions, mut deletions) = (0, 0);
-        for change in TextDiff::from_lines(before, after).iter_all_changes() {
+        let text_diff = TextDiff::from_lines(before, after);
+        for change in text_diff.iter_all_changes() {
             match change.tag() {
                 ChangeTag::Insert => insertions += 1,
                 ChangeTag::Delete => deletions += 1,
                 ChangeTag::Equal => {}
             }
         }
-        let diff = unified_diff(&path, before, after);
+        let diff = render_unified_diff(&path, &text_diff);
         self.edits.push(Edit {
             path,
             insertions,
@@ -198,8 +199,11 @@ pub fn unified_diff(path: &Path, before: &str, after: &str) -> String {
     if before == after {
         return String::new();
     }
-    TextDiff::from_lines(before, after)
-        .unified_diff()
+    render_unified_diff(path, &TextDiff::from_lines(before, after))
+}
+
+fn render_unified_diff(path: &Path, diff: &TextDiff<'_, '_, str>) -> String {
+    diff.unified_diff()
         .context_radius(3)
         .header(
             &format!("a/{}", path.display()),
