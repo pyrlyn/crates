@@ -33,6 +33,16 @@ let out: Option<serde_json::Value> =
 Inputs and outputs are JSON. An export the module does not have answers
 `Ok(None)`; only `Options::required_export` must exist.
 
-Extracted from cox's `cox-plugin` host so cox and scull share one engine.
+Packages on disk are the same for every application. User plugins live at
+`<home>/plugins/<id>/versions/<digest12>/`, with `current` and `previous`
+naming the active version and the one kept for rollback. A `link` file
+points at a development directory read in place. Project plugins live at
+`<project>/.<app>/plugins/<id>/` and lose an id clash to the user plugin.
+The application parses `plugin.toml` through `Manifest`; the crate checks
+the id, refuses a wasm path that leaves the package, and hashes the tree
+with `package_digest`.
+
+Extracted from cox's `cox-plugin` host, discovery and install layout so cox
+and scull share one engine and one package directory.
 
 Licensed under either of MIT or Apache-2.0 at your option.

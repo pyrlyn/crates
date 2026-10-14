@@ -9,7 +9,9 @@ The WebAssembly plugin host shared by cox and scull: extism under a memory cap,
 one worker thread per plugin, per-call deadlines, and a control lane served
 before an event lane. It knows nothing about what plugins are for; each
 application keeps its own manifest, exports and host functions and plugs them in
-through `HostEnv` and `Options`.
+through `HostEnv` and `Options`. The on-disk package layout (discovery,
+staging, `current`/`previous`, `link`, and `remove` confined to the plugins
+root) is generic over the application's manifest type and home directory.
 
 ## Rules
 
