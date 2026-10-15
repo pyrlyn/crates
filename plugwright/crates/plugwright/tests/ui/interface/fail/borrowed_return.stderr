@@ -1,0 +1,5 @@
+error: interface methods return owned values
+ --> tests/ui/interface/fail/borrowed_return.rs:5:46
+  |
+5 |     fn name(&mut self) -> plugwright::Result<&str>;
+  |                                              ^^^^

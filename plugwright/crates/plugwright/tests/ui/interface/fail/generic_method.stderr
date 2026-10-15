@@ -1,0 +1,5 @@
+error: interface methods cannot be generic
+ --> tests/ui/interface/fail/generic_method.rs:5:11
+  |
+5 |     fn run<T: Clone>(&mut self, value: T) -> plugwright::Result<()>;
+  |           ^^^^^^^^^^

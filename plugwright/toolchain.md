@@ -34,3 +34,4 @@
 | wasmer, wasmer-middlewares | local (`crates/plugwright-wasmer`, own lockfile) | https://github.com/wasmerio/wasmer | Wasm engine adapter outside the workspace |
 | windows-sys | local | https://github.com/microsoft/windows-rs | Job objects, integrity levels, module probes on Windows |
 | tempfile | local (dev) | https://github.com/Stebalien/tempfile | Test directories |
+| trybuild | local (dev) | https://github.com/dtolnay/trybuild | UI tests of `#[plugin]` / `#[interface]` diagnostics |

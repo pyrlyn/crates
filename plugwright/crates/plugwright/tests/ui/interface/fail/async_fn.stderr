@@ -1,0 +1,5 @@
+error: interface methods cannot be async
+ --> tests/ui/interface/fail/async_fn.rs:5:5
+  |
+5 |     async fn run(&mut self) -> plugwright::Result<()>;
+  |     ^^^^^

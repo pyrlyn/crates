@@ -1,0 +1,5 @@
+error: a plugin has one constructor
+  --> tests/ui/plugin/fail/two_constructors.rs:12:5
+   |
+12 |     fn make() -> Self {
+   |     ^^^^^^^^^^^^^^^^^

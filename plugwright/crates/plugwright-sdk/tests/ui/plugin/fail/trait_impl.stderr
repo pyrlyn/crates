@@ -1,0 +1,5 @@
+error: #[plugin] goes on an inherent `impl Type { ... }` block
+ --> tests/ui/plugin/fail/trait_impl.rs:6:6
+  |
+6 | impl Clone for S {
+  |      ^^^^^

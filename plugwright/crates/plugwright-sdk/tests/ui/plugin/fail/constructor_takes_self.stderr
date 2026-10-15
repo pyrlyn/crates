@@ -1,0 +1,5 @@
+error: the constructor cannot take `self`
+ --> tests/ui/plugin/fail/constructor_takes_self.rs:9:5
+  |
+9 |     fn make(&self) -> Self {
+  |     ^^^^^^^^^^^^^^^^^^^^^^

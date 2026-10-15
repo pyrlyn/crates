@@ -1,0 +1,5 @@
+error: expected string literal
+ --> tests/ui/plugin/fail/name_not_a_string.rs:8:25
+  |
+8 |     #[plugwright(name = b)]
+  |                         ^
