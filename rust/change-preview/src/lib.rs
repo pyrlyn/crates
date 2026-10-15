@@ -69,14 +69,15 @@ impl Preview {
             return self;
         }
         let (mut insertions, mut deletions) = (0, 0);
-        for change in TextDiff::from_lines(before, after).iter_all_changes() {
+        let text_diff = TextDiff::from_lines(before, after);
+        for change in text_diff.iter_all_changes() {
             match change.tag() {
                 ChangeTag::Insert => insertions += 1,
                 ChangeTag::Delete => deletions += 1,
                 ChangeTag::Equal => {}
             }
         }
-        let diff = unified_diff(&path, before, after);
+        let diff = render_unified_diff(&path, &text_diff);
         self.edits.push(Edit {
             path,
             insertions,
@@ -198,8 +199,11 @@ pub fn unified_diff(path: &Path, before: &str, after: &str) -> String {
     if before == after {
         return String::new();
     }
-    TextDiff::from_lines(before, after)
-        .unified_diff()
+    render_unified_diff(path, &TextDiff::from_lines(before, after))
+}
+
+fn render_unified_diff(path: &Path, diff: &TextDiff<'_, '_, str>) -> String {
+    diff.unified_diff()
         .context_radius(3)
         .header(
             &format!("a/{}", path.display()),
@@ -212,7 +216,8 @@ pub fn unified_diff(path: &Path, before: &str, after: &str) -> String {
 /// file headers. owo-colors decides per stream (tty, `NO_COLOR`, `CLICOLOR`, `TERM=dumb`), so
 /// a piped run stays plain. Lines with no marker pass through.
 pub fn paint(text: &str) -> String {
-    text.lines()
+    let mut painted = text
+        .lines()
         .map(|line| {
             if line.starts_with("+++") || line.starts_with("---") {
                 line.if_supports_color(Stream::Stdout, |t| t.bold())
@@ -231,7 +236,11 @@ pub fn paint(text: &str) -> String {
             }
         })
         .collect::<Vec<_>>()
-        .join("\n")
+        .join("\n");
+    if text.ends_with('\n') {
+        painted.push('\n');
+    }
+    painted
 }
 
 /// `1023 B`, `1.0 KB`, `1.5 MB`: one decimal past bytes, binary units.
@@ -381,6 +390,13 @@ mod tests {
         // Piped test output is not a terminal, so owo-colors leaves the text alone.
         let text = "--- a/x\n+++ b/x\n@@ -1 +1 @@\n-a\n+b\n1 file changed";
         assert_eq!(paint(text), text);
+    }
+
+    #[test]
+    fn paint_preserves_trailing_newlines() {
+        for text in ["+added\n", "--- a/x\n+++ b/x\n\n"] {
+            assert_eq!(paint(text), text);
+        }
     }
 
     #[test]

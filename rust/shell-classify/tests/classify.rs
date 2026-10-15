@@ -114,6 +114,25 @@ fn safe_locale_assignment_stays_read_only() {
     }
 }
 
+#[test]
+fn git_read_commands_with_output_or_external_helpers_are_not_read_only() {
+    for command in [
+        "git diff --output=report.patch",
+        "git diff --output report.patch",
+        "git diff '--output=report.patch'",
+        "git log --output=history.txt",
+        "git show --output snapshot.txt HEAD",
+        "git diff --ext-diff",
+        "git diff \"--ext-diff\"",
+        "git log -p --ext-diff",
+    ] {
+        assert_eq!(classify(command), Risk::Exec, "{command:?}");
+    }
+    for command in ["git diff --stat", "git log --oneline", "git show HEAD"] {
+        assert_eq!(classify(command), Risk::ReadOnly, "{command:?}");
+    }
+}
+
 /// On Windows without Git Bash the line is PowerShell (or `cmd`), which the
 /// bash grammar cannot parse. Such a line is `Exec` with opaque segments, so
 /// no allow rule matches it and the engine asks.

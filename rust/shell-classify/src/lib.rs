@@ -484,7 +484,12 @@ fn git_risk(args: &[String]) -> Risk {
         }
     }
     let has = |flag: &str| args.iter().any(|a| a == flag);
+    let effectful_read = args.iter().any(|a| {
+        let flag = unquote(a);
+        flag == "--output" || flag.starts_with("--output=") || flag == "--ext-diff"
+    });
     match sub {
+        Some("diff" | "log" | "show") if effectful_read => Risk::Exec,
         Some("status" | "diff" | "log" | "show" | "blame" | "rev-parse" | "ls-files") => {
             Risk::ReadOnly
         }
