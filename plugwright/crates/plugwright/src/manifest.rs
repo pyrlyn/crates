@@ -9,6 +9,7 @@ use crate::accel::Accel;
 use crate::error::{PluginError, Result, io_err};
 use crate::git::{GitRef, GitSource};
 use crate::sandbox::SandboxPolicy;
+use crate::trust::TrustPolicy;
 use crate::wasm::WasmLimits;
 
 /// Parsed `plugwright.toml`.
@@ -38,6 +39,8 @@ pub struct Settings {
     pub max_restarts: u32,
     /// `[settings.build]`: toolchain and build accelerators.
     pub build: Accel,
+    /// `[settings.trust]`: signature policy of every source without its own `[plugin.trust]`.
+    pub trust: TrustPolicy,
 }
 
 impl Default for Settings {
@@ -51,6 +54,7 @@ impl Default for Settings {
             runner: None,
             max_restarts: 3,
             build: Accel::default(),
+            trust: TrustPolicy::default(),
         }
     }
 }
@@ -163,6 +167,8 @@ pub struct PluginSpec {
     pub config: toml::Value,
     /// Expected sha256 of the artifact (required for nothing, checked when set).
     pub sha256: Option<String>,
+    /// Signature policy for this plugin's source; replaces `[settings.trust]` as a whole.
+    pub trust: Option<TrustPolicy>,
     /// Per-call timeout for isolated plugins.
     pub timeout_ms: Option<u64>,
     #[serde(default)]
@@ -194,6 +200,7 @@ impl PluginSpec {
             link_args: Vec::new(),
             config: empty_table(),
             sha256: None,
+            trust: None,
             timeout_ms: None,
             limits: WasmLimits::default(),
             enabled: true,
@@ -241,6 +248,9 @@ impl PluginSpec {
                 self.id
             )));
         }
+        if let Some(t) = &self.trust {
+            t.validate().map_err(|e| PluginError::Manifest(format!("plugin `{}`: {e}", self.id)))?;
+        }
         Ok(())
     }
 }
@@ -256,6 +266,7 @@ impl Manifest {
     pub fn parse(text: &str) -> Result<Self> {
         let m: Manifest = toml::from_str(text).map_err(|e| PluginError::Manifest(e.to_string()))?;
         m.settings.build.validate()?;
+        m.settings.trust.validate().map_err(|e| PluginError::Manifest(format!("[settings] {e}")))?;
         let mut ids = std::collections::HashSet::new();
         for p in &m.plugins {
             p.validate()?;
@@ -565,6 +576,30 @@ mod tests {
             let err = parse_err(&plugin(&format!("sha256 = \"{bad}\"")));
             assert_eq!(err, format!("plugin `p`: sha256 must be 64 hex characters, got `{bad}`"));
         }
+    }
+
+    #[test]
+    fn trust_policies_parse_per_source_and_are_validated() {
+        use crate::trust::Unsigned;
+        let key = crate::trust::minisign::KeyPair::generate_unencrypted_keypair().unwrap().pk.to_base64();
+        let text = format!(
+            "[settings.trust]\nkeys = [\"{key}\"]\n\
+             [[plugin]]\nid = \"a\"\nsource = {{ artifact = \"a.so\" }}\n\
+             [[plugin]]\nid = \"b\"\nsource = {{ path = \"b\" }}\n[plugin.trust]\nunsigned = \"warn\""
+        );
+        let m = Manifest::parse(&text).unwrap();
+        assert_eq!(m.settings.trust.keys, std::slice::from_ref(&key));
+        assert_eq!(m.settings.trust.unsigned_mode(), Unsigned::Deny, "listed keys default to deny");
+        assert_eq!(m.plugins[0].trust, None, "no own policy: the settings apply");
+        assert_eq!(m.plugins[1].trust.as_ref().map(|t| t.unsigned_mode()), Some(Unsigned::Warn));
+        assert_eq!(crate::ManagerOptions::from_manifest(&m).trust, m.settings.trust);
+        assert_eq!(Manifest::parse("").unwrap().settings.trust.unsigned_mode(), Unsigned::Allow);
+
+        assert!(parse_err("[settings.trust]\nkeys = [\"nope\"]").starts_with("[settings] trust key `nope`"));
+        assert!(parse_err("[settings.trust]\nunsigned = \"deny\"").contains("needs at least one key"));
+        assert!(parse_err(&plugin("[plugin.trust]\nunsigned = \"deny\"")).starts_with("plugin `p`: trust:"));
+        assert!(parse_err(&plugin("[plugin.trust]\nunsigned = \"never\"")).contains("unknown variant `never`"));
+        assert!(parse_err(&plugin("[plugin.trust]\nkey = []")).contains("unknown field `key`"));
     }
 
     #[test]
