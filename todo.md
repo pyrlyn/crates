@@ -9,6 +9,8 @@
 - T9. Robustness batch: dead gates, dropped paths, `./` stripping
 - T10. Fix crate metadata: license mix and repository URL drift
 - T20.3. wasm-plugin-host: host-function kit
+- T20.4. wasm-plugin-host: synchronize patched Extism and Wasmtime
+- T20.5. abi-drift: permit Extism-compatible cbindgen patch
 - T21. telemetry-setup: tracing setup with secret redaction
 - T13. app-home: one home, app-home and XDG resolver
 - T22.1. gettext-catalog: catalog parsing, plural rules and placeholders

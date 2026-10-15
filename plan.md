@@ -19,6 +19,8 @@ Cargo workspace of five small published crates shared by ketch and rtok — git-
 | T13 | in progress | P1 | 2 | 90% | Claude / opus-5.5 |
 | T20.2 | done | P1 | 3 | 100% | |
 | T20.3 | todo | P2 | 4 | 0% | |
+| T20.4 | in progress | P1 | 1 | 30% | Codex / GPT-6.1-sol |
+| T20.5 | in progress | P2 | 1 | 20% | Codex / GPT-6.1-sol |
 | T21 | in progress | P1 | 3 | 90% | Cursor / claude-opus-5.5 |
 | T22.1 | in progress | P1 | 2 | 90% | Cursor / claude-opus-5.5 |
 | T22.2 | in progress | P1 | 2 | 90% | Cursor / claude-opus-5.5 |
@@ -75,6 +77,20 @@ Plugin packages on disk, generic over the application's manifest type and home d
 ### T20.3. wasm-plugin-host: host-function kit
 
 What every application's host functions repeat: the `(u64) -> u64` JSON wire with an `{"Ok": …}` / `{"Err": …}` reply, the per-export refusal rule, the plugin key-value store with its quotas, and the outbound HTTP allow-list with its body cap. Ported from cox `crates/cox-plugin/src/hostfn.rs` and `net.rs`, leaving the cox-only functions (context, tools, model calls) in cox. Done when cox's kernel functions could be rebuilt on the kit with their tests passing here.
+
+### T20.4. wasm-plugin-host: synchronize patched Extism and Wasmtime
+
+Update the shared host's Extism and direct Wasmtime feature-unifier pins together with cox, following `rust/wasm-plugin-host/AGENTS.md`. Use the published Extism 1.41.0 / Wasmtime 49 line to include the upstream fixes for RustSec-2026-0359, 0362 and 0363. Keep the host API unchanged and do not publish a crate release manually.
+
+Files: `rust/wasm-plugin-host/Cargo.toml`, `Cargo.lock`, workspace `plan.md`, `todo.md`, `done.md`.
+Check: `cargo test -p wasm-plugin-host --locked`, workspace tests, clippy and fmt pass.
+
+### T20.5. abi-drift: permit Extism-compatible cbindgen patch
+
+Allow cbindgen 0.29.3 in abi-drift's existing semver range so the workspace can resolve Extism 1.41.0, which pins cbindgen exactly to 0.29.3. Keep the API and generated output unchanged.
+
+Files: `rust/abi-drift/Cargo.toml`, `Cargo.lock`, workspace `plan.md`, `todo.md`, `done.md`.
+Check: `cargo test -p abi-drift --locked` passes and the committed generated header remains unchanged.
 
 ### T21. telemetry-setup: tracing setup with secret redaction
 
