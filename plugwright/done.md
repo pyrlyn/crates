@@ -111,6 +111,31 @@ plus `call_json`. `PluginManager::{new, register_engine, load, load_all, unload,
 call_json, get, list}`; `load_all` never aborts on one failure. Version checks (D15).
 **Done when:** host demo loads all three backends through one API.
 
+### T44 — File watcher with automatic reload
+
+From idea F6. `PluginManager::reload` exists but has to be called by hand. Add an opt-in
+watcher (the `notify` crate) on plugin sources and artifacts that debounces changes and reloads
+the affected plugin. A failed rebuild or reload keeps the old instance and reports the error,
+never takes the host down. Done: the watcher is off by default, can be stopped, does not
+reload twice for one save, and tests cover a change that reloads and a broken change that keeps
+the old instance.
+
+Execution plan:
+
+1. `crates/plugwright/src/watch.rs`: `Watcher` over `notify-debouncer-mini` (one event per path
+   per quiet window). `PluginManager::watch` snapshots the loaded plugins: an artifact source
+   watches its parent directory and filters the file (editors replace files); a path source
+   watches the crate recursively minus `target/`, `.git/` and the cache dir; git sources are
+   skipped. Changed paths map to plugin ids on a channel.
+2. `PluginManager::reload_changed(&mut Watcher)` reloads the pending ids; a reload whose artifact
+   bytes are unchanged swaps nothing, so a save that does not change the output never reloads.
+   `Watcher::spawn` runs the same loop on a thread over `Arc<Mutex<PluginManager>>` and is stopped
+   by `Reloader::stop` or drop. Failures come back as `PluginError` values; the old instance stays.
+3. Tests: unit tests for path → id mapping and ignore rules; `examples/host/tests/e2e.rs` with a
+   real wasm artifact: no watcher → no reload, a change reloads once, a broken change keeps the
+   old instance and reports the error, a stopped watcher reloads nothing, the thread reloader.
+4. `mise run check`, `mise run test`; `notify-debouncer-mini` row in `toolchain.md`.
+
 ### T11 — Manifest + lockfile (C3)
 `plugwright.toml`: `[settings]` (cache dir, locked, offline, runner) and `[[plugin]]` (`id`, `kind`
 native|wasm, `source`, `version`, `isolation`, `engine`, `features`, `config` table, `[limits]`,

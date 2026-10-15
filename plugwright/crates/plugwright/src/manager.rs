@@ -22,6 +22,7 @@ use crate::native::{NativePlugin, Placement};
 use crate::plugin::{Plugin, PluginInfo, Release};
 use crate::relink::RelinkRequest;
 use crate::wasm::{ModuleCache, WasmEngine, WasmPlugin};
+use crate::watch::{Watch, WatchOptions, Watcher};
 
 /// Manager-wide configuration.
 #[derive(Debug, Clone)]
@@ -374,16 +375,68 @@ impl PluginManager {
     /// instance keeps serving, and keeps its lockfile pin, if the new one
     /// fails to build or load.
     pub fn reload(&mut self, id: &str) -> Result<&PluginInfo> {
+        self.refresh(id, true)?;
+        Ok(self.plugins[id].plugin.info())
+    }
+
+    /// `reload`; unless `force`, an artifact with the same bytes as the
+    /// loaded one swaps nothing. Returns whether the instance was swapped.
+    fn refresh(&mut self, id: &str, force: bool) -> Result<bool> {
         let spec = self.plugins.get(id).ok_or_else(|| PluginError::NotFound(id.to_owned()))?.spec.clone();
         let _span = tracing::info_span!("reload", plugin = %id).entered();
         let (artifact, entry) = self.resolve(&spec)?;
+        if !force && artifact.sha256 == self.plugins[id].artifact.sha256 {
+            tracing::debug!("artifact unchanged; nothing to reload");
+            return Ok(false);
+        }
         let plugin = self.instantiate(&spec, &artifact)?;
         self.pin(entry);
         if let Some(old) = self.plugins.insert(id.to_owned(), Loaded { spec, artifact, plugin }) {
             self.retire(id, old);
         }
         tracing::info!("plugin reloaded");
-        Ok(self.plugins[id].plugin.info())
+        Ok(true)
+    }
+
+    /// Watch the sources and artifacts of the plugins loaded now; plugins
+    /// loaded later are not watched. Nothing is watched unless this is called.
+    pub fn watch(&self, opts: &WatchOptions) -> Result<Watcher> {
+        let mut ignore = vec![self.opts.cache_dir.clone()];
+        ignore.extend(self.opts.lock_path.clone());
+        let mut watches = Vec::new();
+        for (id, l) in &self.plugins {
+            let resolved = match &l.spec.source {
+                Source::Artifact(p) | Source::Path(p) => self.resolve_path(p),
+                Source::Git(_) => PathBuf::new(),
+            };
+            match Watch::for_source(id, &l.spec.source, &resolved, &ignore)? {
+                Some(w) => watches.push(w),
+                None => tracing::debug!(plugin = %id, "git source: nothing local to watch"),
+            }
+        }
+        Watcher::new(watches, opts)
+    }
+
+    /// Reload the plugins `watcher` saw change, without waiting for more.
+    /// A plugin whose rebuilt artifact has the same bytes is left alone, so a
+    /// save that changes nothing does not reload. Returns every plugin that
+    /// was swapped or failed; a failed one keeps its old instance.
+    pub fn reload_changed(&mut self, watcher: &mut Watcher) -> Vec<(String, Result<()>)> {
+        let mut out = Vec::new();
+        for id in watcher.take() {
+            if !self.plugins.contains_key(&id) {
+                continue;
+            }
+            match self.refresh(&id, false) {
+                Ok(false) => {}
+                Ok(true) => out.push((id, Ok(()))),
+                Err(e) => {
+                    tracing::warn!(plugin = %id, error = %e, "reload after a change failed; the old instance keeps serving");
+                    out.push((id, Err(e)));
+                }
+            }
+        }
+        out
     }
 
     /// Bind plugin `id` for typed calls through an `#[interface]` client:

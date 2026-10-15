@@ -18,6 +18,7 @@
 | cc | local | https://github.com/rust-lang/cc-rs | Finds the linker for static-library relinking |
 | libc | local | https://github.com/rust-lang/libc | dlopen probes, rlimits, Seatbelt and Landlock/seccomp calls |
 | libloading | local | https://github.com/nagisa/rust_libloading | Loads native plugin libraries |
+| notify-debouncer-mini (notify) | local | https://github.com/notify-rs/notify | Opt-in watcher that reloads plugins when their files change |
 | proc-macro2 | local | https://github.com/dtolnay/proc-macro2 | `#[plugin]` / `#[interface]` macros |
 | quote | local | https://github.com/dtolnay/quote | `#[plugin]` / `#[interface]` macros |
 | syn | local | https://github.com/dtolnay/syn | `#[plugin]` / `#[interface]` macros |

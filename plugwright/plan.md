@@ -10,7 +10,6 @@ Research and sources: [research.md](research.md). Finished tasks T01–T42: [don
 | # | Status | Priority | Complexity | Readiness | Agent |
 | --- | --- | --- | --- | --- | --- |
 | T43 | in progress | P1 | 4 | 0% | Claude / claude-opus-5-5 |
-| T44 | in progress | P2 | 3 | 0% | Claude / claude-opus-5-5 |
 | T45 | in progress | P2 | 4 | 0% | Claude / claude-opus-5-5 |
 | T46 | in progress | P3 | 2 | 0% | Claude / claude-opus-5-5 |
 
@@ -24,15 +23,6 @@ signature is a `PluginError`, never a panic. Done: signing and verification live
 crate that can own them, the facade only wires the policy from the manifest, `doctor` reports
 the policy, and tests cover a valid signature, a wrong key, a tampered artifact and each policy
 mode. The signed precompiled-module cache (idea F5) builds on this later.
-
-### T44. File watcher with automatic reload
-
-From idea F6. `PluginManager::reload` exists but has to be called by hand. Add an opt-in
-watcher (the `notify` crate) on plugin sources and artifacts that debounces changes and reloads
-the affected plugin. A failed rebuild or reload keeps the old instance and reports the error,
-never takes the host down. Done: the watcher is off by default, can be stopped, does not
-reload twice for one save, and tests cover a change that reloads and a broken change that keeps
-the old instance.
 
 ### T45. Shared-memory transport for large payloads in isolated mode
 

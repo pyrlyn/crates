@@ -67,6 +67,33 @@ fn main() -> plugwright::Result<()> {
 }
 ```
 
+Reloading on change is opt-in. `watch` watches the plugins loaded at that moment (an artifact
+file, or a path source's crate minus `target/`); a save is debounced into one reload, an output
+with the same bytes reloads nothing, and a broken change keeps the old instance:
+
+```rust,no_run
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
+use plugwright::{PluginManager, WatchOptions};
+
+fn run(mut mgr: PluginManager) -> plugwright::Result<()> {
+    let mut watcher = mgr.watch(&WatchOptions::default())?;
+    // Either pump it from the host's own loop…
+    if watcher.wait(Duration::from_millis(100)) {
+        for (id, res) in mgr.reload_changed(&mut watcher) {
+            if let Err(e) = res {
+                eprintln!("{id}: {e}"); // still serving the old instance
+            }
+        }
+    }
+    // …or let a thread do it; stopping (or dropping) the reloader stops watching.
+    let mgr = Arc::new(Mutex::new(mgr));
+    let reloader = watcher.spawn(mgr.clone(), |id, res| eprintln!("{id} reloaded: {res:?}"))?;
+    reloader.stop();
+    Ok(())
+}
+```
+
 ## Plugin
 
 One source builds both a native library and a Wasm module:

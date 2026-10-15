@@ -3,12 +3,13 @@
 //! pays for compilation.
 
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex, mpsc};
 use std::time::Duration;
 
 use plugwright::builder::{BuildOptions, BuildRequest, Builder, Target};
 use plugwright::{
     Cache, Isolation, ManagerOptions, PluginError, PluginKind, PluginManager, PluginSpec, Release, RunnerCommand,
-    SandboxPolicy, Source, WasmError,
+    SandboxPolicy, Source, WasmError, WatchOptions,
 };
 
 /// `assert!(matches!(r, Err(p)))`, but a failure shows what came back instead.
@@ -685,4 +686,109 @@ fn second_load_of_the_same_file_gets_its_own_image() {
         assert!(logs.len() == 1 && logs[0].contains(g), "{logs:?}");
     }
     drop((a, b));
+}
+
+/// The wasm-hello module, built once, plus a custom section that changes its
+/// bytes (and so its hash) without changing what it does.
+fn hello_wasm(variant: u8) -> Vec<u8> {
+    let artifact = manager().prepare(&wasm("watch-src", "wasmi")).unwrap();
+    let mut bytes = std::fs::read(artifact.path).unwrap();
+    if variant > 0 {
+        // Custom section: id 0, size 3, name "t", one payload byte.
+        bytes.extend([0, 3, 1, b't', variant]);
+    }
+    bytes
+}
+
+/// Several writes in a row, as an editor's save does.
+fn save(path: &Path, bytes: &[u8]) {
+    use std::io::Write;
+    let mut f = std::fs::File::create(path).unwrap();
+    for chunk in bytes.chunks(bytes.len().div_ceil(3)) {
+        f.write_all(chunk).unwrap();
+        f.flush().unwrap();
+        std::thread::sleep(Duration::from_millis(10));
+    }
+}
+
+fn watched(dir: &Path) -> (PluginManager, PathBuf) {
+    let file = dir.join("hello.wasm");
+    std::fs::write(&file, hello_wasm(0)).unwrap();
+    let mut m = manager();
+    let mut s = PluginSpec::new("hello", PluginKind::Wasm, Source::Artifact(file.clone()));
+    s.engine = Some("wasmi".into());
+    m.load(s).unwrap();
+    // Events from before a watcher exists must not reach it.
+    std::thread::sleep(Duration::from_millis(300));
+    (m, file)
+}
+
+fn sha(m: &PluginManager) -> String {
+    m.list().next().unwrap().2.sha256.clone()
+}
+
+const WATCH: WatchOptions = WatchOptions { debounce: Duration::from_millis(150) };
+
+#[test]
+fn watcher_reloads_once_per_save_and_keeps_the_old_instance_on_a_broken_change() {
+    let tmp = tempfile::tempdir().unwrap();
+    let (mut m, file) = watched(tmp.path());
+    let first = sha(&m);
+    assert!(text(m.call("hello", "greet", b"w")).contains("call #1"));
+
+    // Off by default: without a watcher a change is not picked up.
+    save(&file, &hello_wasm(1));
+    std::thread::sleep(Duration::from_millis(500));
+    assert_eq!(sha(&m), first);
+    assert!(text(m.call("hello", "greet", b"w")).contains("call #2"), "same instance");
+    save(&file, &hello_wasm(0));
+    std::thread::sleep(Duration::from_millis(300));
+
+    let mut w = m.watch(&WATCH).unwrap();
+    // Same bytes as loaded: whatever the OS reports, nothing is swapped.
+    w.wait(Duration::from_millis(500));
+    assert!(m.reload_changed(&mut w).is_empty());
+
+    save(&file, &hello_wasm(2));
+    assert!(w.wait(Duration::from_secs(10)), "the save must be seen");
+    let res = m.reload_changed(&mut w);
+    assert_eq!(res.len(), 1, "{res:?}");
+    assert!(matches!(&res[0], (id, Ok(())) if id == "hello"), "{res:?}");
+    let second = sha(&m);
+    assert_ne!(second, first);
+    assert!(text(m.call("hello", "greet", b"w")).contains("call #1"), "fresh instance");
+    // Late events of the same save never reload a second time.
+    w.wait(Duration::from_millis(600));
+    assert!(m.reload_changed(&mut w).is_empty(), "one reload per save");
+    assert!(text(m.call("hello", "greet", b"w")).contains("call #2"));
+
+    save(&file, b"not wasm at all");
+    assert!(w.wait(Duration::from_secs(10)));
+    let res = m.reload_changed(&mut w);
+    assert!(matches!(&res[..], [(id, Err(PluginError::NotAPlugin { .. }))] if id == "hello"), "{res:?}");
+    assert_eq!(sha(&m), second, "the old instance stays");
+    assert!(text(m.call("hello", "greet", b"w")).contains("call #3"), "and keeps serving");
+    w.stop();
+}
+
+#[test]
+fn reloader_thread_reloads_in_the_background_until_stopped() {
+    let tmp = tempfile::tempdir().unwrap();
+    let (m, file) = watched(tmp.path());
+    let first = sha(&m);
+    let m = Arc::new(Mutex::new(m));
+    let w = m.lock().unwrap().watch(&WATCH).unwrap();
+    let (tx, rx) = mpsc::channel();
+    let reloader = w.spawn(m.clone(), move |id, r| tx.send((id.to_owned(), r.is_ok())).unwrap()).unwrap();
+
+    save(&file, &hello_wasm(3));
+    assert_eq!(rx.recv_timeout(Duration::from_secs(10)).unwrap(), ("hello".to_owned(), true));
+    let second = sha(&m.lock().unwrap());
+    assert_ne!(second, first);
+
+    reloader.stop();
+    save(&file, &hello_wasm(4));
+    std::thread::sleep(Duration::from_millis(600));
+    assert!(matches!(rx.try_recv(), Err(mpsc::TryRecvError::Disconnected)), "the thread is gone");
+    assert_eq!(sha(&m.lock().unwrap()), second, "a stopped watcher reloads nothing");
 }
