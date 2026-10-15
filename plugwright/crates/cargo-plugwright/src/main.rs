@@ -6,10 +6,15 @@
 //! cargo plugwright [--manifest PATH] [-v] call ID METHOD [INPUT|-]
 //! cargo plugwright [--manifest PATH] [-v] gc                  drop cache entries the lockfile does not use
 //! cargo plugwright [--manifest PATH] [-v] doctor              toolchain, targets, accelerators, sandbox
+//! cargo plugwright [-v] lib CRATE [--dynamic|--static] [--out-dir DIR]
+//! cargo plugwright [-v] wasm CRATE [--out-dir DIR]
+//! cargo plugwright [-v] plugin CRATE [--wasm] [--out-dir DIR]
 //! ```
 //!
 //! Without `--manifest`, `plugwright.toml` is searched for upwards from the
-//! current directory. `RUST_LOG` overrides `-v`.
+//! current directory. `lib`, `wasm` and `plugin` need no manifest: they take a
+//! crate of the cargo workspace around the current directory. `RUST_LOG`
+//! overrides `-v`.
 
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
@@ -22,6 +27,8 @@ use plugwright::{
 };
 use tracing_subscriber::EnvFilter;
 
+mod pack;
+
 const USAGE: &str = "usage: cargo plugwright [--manifest PATH] [-v] <command>
 
 commands:
@@ -30,7 +37,12 @@ commands:
   call ID METHOD [INPUT|-]    load one plugin and call it; `-` reads stdin
   methods ID                  list the methods a `#[plugin]` plugin exports
   gc                          remove cache entries the lockfile does not reference
-  doctor                      check toolchain, targets, accelerators and sandbox";
+  doctor                      check toolchain, targets, accelerators and sandbox
+
+workspace crates (no manifest; output in --out-dir, default ./dist):
+  lib CRATE [--dynamic|--static]  shared (default) or static library, whatever the crate declares
+  wasm CRATE                      wasm32-unknown-unknown module
+  plugin CRATE [--wasm]           the crate as a plugin, loaded once to check it";
 
 fn main() -> ExitCode {
     // Isolated plugins re-exec this binary as their runner.
@@ -82,6 +94,10 @@ fn main() -> ExitCode {
         ("methods", [id]) => manifest().and_then(|m| methods(&m, id)),
         ("gc", []) => manifest().and_then(|m| gc(&m)),
         ("doctor", []) => manifest().and_then(|m| doctor(&m)),
+        ("lib" | "wasm" | "plugin", args) => match pack::parse(&cmd, args) {
+            Ok(a) => pack::pack(&a),
+            Err(why) => return usage(&why),
+        },
         ("list" | "call" | "methods" | "gc" | "doctor", _) => return usage(&format!("bad arguments for `{cmd}`")),
         _ => return usage(&format!("unknown command `{cmd}`")),
     };
@@ -294,6 +310,7 @@ fn doctor(manifest: &Path) -> Result<bool, PluginError> {
             no_default_features: false,
             source_label: String::new(),
             in_process,
+            crate_type: None,
         };
         match builder.plan(&req) {
             Ok(p) if p.applied.is_empty() => row(true, label, "none"),

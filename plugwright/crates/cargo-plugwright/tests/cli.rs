@@ -81,7 +81,7 @@ fn help_and_version_succeed_without_a_manifest() {
         assert!(out.status.success(), "{flag}: {}", stderr(&out));
         let text = stdout(&out);
         assert!(text.starts_with("usage: cargo plugwright"), "{flag}: {text}");
-        for cmd in ["build", "list", "call", "methods", "gc", "doctor"] {
+        for cmd in ["build", "list", "call", "methods", "gc", "doctor", "lib", "wasm", "plugin"] {
             assert!(text.contains(&format!("\n  {cmd} ")), "{flag} lacks `{cmd}`:\n{text}");
         }
     }
@@ -94,7 +94,7 @@ fn help_and_version_succeed_without_a_manifest() {
 
 #[test]
 fn each_command_rejects_bad_arguments_with_usage() {
-    let cases: [(&[&str], &str); 12] = [
+    let cases: [(&[&str], &str); 15] = [
         (&[], "no command given"),
         (&["--manifest"], "--manifest needs a path"),
         (&["frobnicate"], "unknown command `frobnicate`"),
@@ -107,6 +107,9 @@ fn each_command_rejects_bad_arguments_with_usage() {
         (&["gc", "extra"], "bad arguments for `gc`"),
         (&["doctor", "extra"], "bad arguments for `doctor`"),
         (&["-v", "list", "x"], "bad arguments for `list`"),
+        (&["lib"], "`lib` needs a crate name"),
+        (&["wasm", "x", "--static"], "unknown option `--static` for `wasm`"),
+        (&["plugin", "x", "y"], "`plugin` takes one crate name"),
     ];
     let dir = project();
     let manifest = dir.path().join("plugwright.toml");

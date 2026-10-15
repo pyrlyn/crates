@@ -298,6 +298,26 @@ engines, `sandbox::capabilities()`, sccache/mold/Cranelift, the resolved plan fo
 in-process builds). Re-execs itself as the runner. `prepare` now persists the lockfile, so
 `build` updates it. Name free on crates.io (checked 2026-10-14, like `plugwright`).
 
+### T42 — CLI: build a workspace crate as a dynamic, static or Wasm library, or as a plugin
+Users want a library out of any crate of their cargo workspace without editing its `crate-type`
+and without a `plugwright.toml`. The crate is named, the CLI finds it in the workspace of the
+current directory (`cargo metadata --no-deps`), builds it through the plugwright cache and copies
+the result into `--out-dir` (default `./dist`):
+
+* `cargo plugwright lib CRATE [--dynamic|--static]` — `cdylib` (default) or `staticlib`, whatever
+  the crate declares (`cargo rustc --crate-type`).
+* `cargo plugwright wasm CRATE` — `cdylib` for `wasm32-unknown-unknown`.
+* `cargo plugwright plugin CRATE [--wasm]` — builds the crate as declared (a `staticlib` is
+  relinked), then opens it with `plugwright::Loader` to check the ABI and prints name and version.
+
+Done: the three commands work on the example crates, a crate name that is not in the workspace or
+has no library target is an error listing the workspace packages, tests cover the crate-type
+override (cache key and artifact) and every command end to end.
+**Result:** `BuildRequest::crate_type` (`cargo rustc --crate-type`, key material only when set);
+`plugwright_build::package::find_package` over `cargo_metadata`; `crates/cargo-plugwright/src/pack.rs`.
+Tests: builder override and key, package lookup, argument parsing and file names, and
+`crates/cargo-plugwright/tests/pack.rs` end to end on the example crates.
+
 ### T31–T34 — Macros (C4)
 `crates/plugwright-macros` (syn 2 / quote): `wire.rs` classifies parameter and return types once
 for both macros (D23). `#[plugin]` emits the impl with helper attributes stripped,

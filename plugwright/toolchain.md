@@ -14,6 +14,7 @@
 
 | Package | Where | Source | Why here |
 | --- | --- | --- | --- |
+| cargo_metadata | local | https://github.com/oli-obk/cargo_metadata | Finds a workspace crate by name for `cargo plugwright lib / wasm / plugin` |
 | cc | local | https://github.com/rust-lang/cc-rs | Finds the linker for static-library relinking |
 | libc | local | https://github.com/rust-lang/libc | dlopen probes, rlimits, Seatbelt and Landlock/seccomp calls |
 | libloading | local | https://github.com/nagisa/rust_libloading | Loads native plugin libraries |

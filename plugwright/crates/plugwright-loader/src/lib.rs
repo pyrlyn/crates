@@ -168,6 +168,7 @@ fn cargo_build(builder: &Builder, crate_dir: &Path, target: Target) -> Result<(S
         features: Vec::new(),
         no_default_features: false,
         in_process: target == Target::Native,
+        crate_type: None,
     })?;
     Ok((id, built))
 }
