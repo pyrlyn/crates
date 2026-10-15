@@ -43,3 +43,12 @@ Delivered as the `write` module of `fs-kit` instead of a crate of its own (creat
 ### T29. Refresh injecta's compile-fail diagnostic for Rust 1.99
 
 The `single_thread_is_not_sync` trybuild diagnostic depended on whether standard-library source was available: macOS printed extra `Scope::spawn` context that Linux CI omitted. The fixture now requires `Sync` through a local function, preserving the rejection of `SingleThread` containers with a stable diagnostic. The focused compile-fail test passes; the full workspace tests, clippy and formatting passed before this fixture adjustment.
+
+
+### T20.4. wasm-plugin-host: synchronize patched Extism and Wasmtime
+
+Updated the shared WASM host and cox to Extism 1.41.0 / Wasmtime 49, removing the four now-fixed Wasmtime advisory ignores. The host API remains unchanged. Verified focused and workspace tests, clippy, fmt, and CI on pyrlyn/crates#74; no crate was manually published.
+
+### T20.5. abi-drift: permit Extism-compatible cbindgen patch
+
+Lowered abi-drift's cbindgen minimum to 0.29.3, which Extism 1.41.0 pins exactly. Confirmed the API is compatible and generated C/C# outputs are unchanged. Verified abi-drift tests, workspace tests, clippy, fmt, and CI on pyrlyn/crates#74.

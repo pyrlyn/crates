@@ -26,7 +26,7 @@ csbindgen = ["dep:csbindgen"]
 # Versions are the ones scull and ketch lock; similar is change-preview's.
 [dependencies]
 # Library API only, without cbindgen's CLI.
-cbindgen = { version = "0.29.4", default-features = false, optional = true }
+cbindgen = { version = "0.29.3", default-features = false, optional = true }
 csbindgen = { version = "1.9.8", optional = true }
 similar = "3.2"
 thiserror = "2.0.21"
