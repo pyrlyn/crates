@@ -12,7 +12,6 @@ Research and sources: [research.md](research.md). Finished tasks T01–T42: [don
 | T43 | in progress | P1 | 4 | 0% | Claude / claude-opus-5-5 |
 | T44 | in progress | P2 | 3 | 0% | Claude / claude-opus-5-5 |
 | T45 | in progress | P2 | 4 | 0% | Claude / claude-opus-5-5 |
-| T46 | in progress | P3 | 2 | 0% | Claude / claude-opus-5-5 |
 
 ### T43. Artifact signatures and a trust policy per source
 
@@ -43,11 +42,3 @@ lengths and sizes it reports are validated before use, and a runner that dies mi
 `PluginError`. Done: works on macOS, Linux and Windows (Windows at least cross-linted),
 falls back to the pipe when shared memory is unavailable, and a perf case in
 `examples/host/benches/perf.rs` shows the gain on a large payload.
-
-### T46. `trybuild` UI tests for macro diagnostics
-
-From idea F9. `#[plugin]` and `#[interface]` diagnostics are checked only by unit tests on
-`expand`, which do not prove what a user sees from `rustc`. Add `trybuild` compile-fail tests
-with `.stderr` snapshots for the main misuse cases of both macros, plus a compile-pass case.
-Done: the tests run in `mise run test` and in CI, and every error path in
-`plugwright-macros` that a user can hit has a case.
