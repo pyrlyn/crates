@@ -12,6 +12,8 @@ keywords = ["plugin", "cargo", "cache"]
 plugwright-abi.workspace = true
 # Finds the C compiler driver / link.exe the way build scripts do.
 cc.workspace = true
+# Finds a workspace package by name (`cargo plugwright lib|wasm|plugin`).
+cargo_metadata.workspace = true
 plugwright-core.workspace = true
 serde.workspace = true
 serde_json.workspace = true

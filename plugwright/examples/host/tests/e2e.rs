@@ -274,6 +274,7 @@ fn cache_hits_and_invalidates_on_source_change() {
         no_default_features: false,
         source_label: "test".into(),
         in_process: true,
+        crate_type: None,
     };
     let a = builder.build(&req).unwrap();
     let b = builder.build(&req).unwrap();
@@ -378,6 +379,7 @@ fn prebuilt_formats_are_detected_by_content() {
         no_default_features: false,
         source_label: "test".into(),
         in_process: true,
+        crate_type: None,
     };
     let archive = builder.build(&req("static", "static-hello", Target::Native)).unwrap();
     let shared = builder.build(&req("shared", "native-hello", Target::Native)).unwrap();
@@ -446,6 +448,7 @@ fn cranelift_is_used_for_isolated_plugins_only() {
         no_default_features: false,
         source_label: "test".into(),
         in_process,
+        crate_type: None,
     };
     assert!(builder.plan(&req(false)).unwrap().applied.iter().any(|a| a == "cranelift"));
     assert!(!builder.plan(&req(true)).unwrap().applied.iter().any(|a| a == "cranelift"));
@@ -588,6 +591,7 @@ fn native_loader_builds_and_opens_dynamic_and_static_libraries() {
             no_default_features: false,
             source_label: "test".into(),
             in_process: true,
+            crate_type: None,
         })
         .unwrap();
     assert_eq!(std::fs::read(&archive.path).unwrap()[..8], *b"!<arch>\n");

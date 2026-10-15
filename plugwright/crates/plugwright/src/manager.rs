@@ -258,6 +258,7 @@ impl PluginManager {
             no_default_features: spec.no_default_features,
             source_label: label,
             in_process: spec.kind == PluginKind::Native && spec.effective_isolation() == Isolation::InProcess,
+            crate_type: None,
         })
     }
 

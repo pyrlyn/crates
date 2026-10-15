@@ -34,7 +34,7 @@ Workspace:
 | `plugwright-abi` | `#![no_std]`, zero deps: `#[repr(C)]` native decl table + core-Wasm ABI constants |
 | `plugwright-sdk` | plugin side: `trait Plugin` + `export_plugin!` emitting the native **or** Wasm ABI from the same source |
 | `plugwright-core` | host-side `Plugin` trait, `PluginInfo`, `Release`, `PluginError`/`WasmError`, logging sink |
-| `plugwright-build` | cargo builder, content-addressed cache, git sources, static-library relink, build acceleration (`accel`) |
+| `plugwright-build` | cargo builder (with a `crate-type` override), content-addressed cache, git sources, static-library relink, build acceleration (`accel`), workspace package lookup (`package`) |
 | `plugwright-native` | in-process loader, unload probe, artifact format detection (`format`) |
 | `plugwright-sandbox` | runner self-sandbox: Seatbelt / Landlock + seccomp / low integrity + job object |
 | `plugwright-isolate` | child-process isolation: protocol, runner, restart budget, timeouts |
@@ -44,7 +44,7 @@ Workspace:
 | `plugwright-wasmer` | wasmer adapter; **outside the workspace** with its own lockfile (see T13) |
 | `plugwright` | facade: manifest, lockfile, `PluginManager` on top of `plugwright-loader`, re-exports of every layer |
 | `plugwright-runner` | tiny binary: out-of-process runner for hosts that cannot re-exec themselves |
-| `cargo-plugwright` | `cargo plugwright build / list / call / gc / doctor` |
+| `cargo-plugwright` | `cargo plugwright build / list / call / methods / gc / doctor`; `lib / wasm / plugin` build a named workspace crate without a manifest |
 | `examples/native-hello` | native plugin (`greet`, `add`, `panic`, `crash`, `abort`, `sleep`, `print`, sandbox probes) |
 | `examples/static-hello` | the same contract as a `staticlib`, relinked by the host |
 | `examples/wasm-hello` | Wasm plugin (methods: `greet`, `reverse`, `loop`, `oom`, `trap`) |

@@ -4,7 +4,7 @@ pub mod client;
 pub mod manager;
 pub mod manifest;
 
-pub use plugwright_build::{accel, builder, cache, git, relink};
+pub use plugwright_build::{accel, builder, cache, git, package, relink};
 pub use plugwright_core::{error, logging, plugin};
 pub use plugwright_isolate as isolate;
 pub use plugwright_loader as loader;
@@ -17,7 +17,7 @@ pub use plugwright_native as native;
 pub use plugwright_sandbox as sandbox;
 pub use plugwright_wasm as wasm;
 
-pub use builder::{BuildOptions, BuildRequest, Builder, Target};
+pub use builder::{BuildOptions, BuildRequest, Builder, CrateType, Target};
 pub use cache::{Artifact, Cache};
 #[doc(hidden)]
 pub use client::__private;

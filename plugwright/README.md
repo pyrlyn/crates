@@ -26,7 +26,7 @@ Research and sources: [research.md](research.md). Tools and crates: [toolchain.m
 | `crates/plugwright-wasmer` | wasmer adapter — **outside the workspace**, own `Cargo.lock` |
 | `crates/plugwright` | facade: manifest, lockfile, `PluginManager`, re-exports |
 | `crates/plugwright-runner` | standalone runner for isolated plugins (when the host cannot re-exec itself) |
-| `crates/cargo-plugwright` | `cargo plugwright build / list / call / methods / gc / doctor` |
+| `crates/cargo-plugwright` | `cargo plugwright build / list / call / methods / gc / doctor / lib / wasm / plugin` |
 | `examples/native-hello` | native plugin: `greet`, `add`, `panic`, `crash`, `abort`, `sleep`, `print`, sandbox probes |
 | `examples/static-hello` | the same contract as a `staticlib`, relinked by the host |
 | `examples/wasm-hello` | Wasm plugin: `greet`, `reverse`, `loop`, `oom`, `trap` |
@@ -56,6 +56,19 @@ cd examples && cargo plugwright doctor
 
 ```bash
 cd examples && cargo plugwright call hello-isolated greet world
+```
+
+`lib`, `wasm` and `plugin` need no manifest. They take a crate of the cargo workspace around the
+current directory by name, build it through the plugwright cache in `<target-dir>/plugwright` and
+copy the result into `--out-dir` (default `./dist`). `lib` overrides the crate's own `crate-type`,
+so any library crate comes out as a shared or a static library; `plugin` keeps it, relinks a
+static library and loads the result once to check it.
+
+```bash
+cargo plugwright lib my-crate             # libmy_crate.so / .dylib / my_crate.dll
+cargo plugwright lib my-crate --static    # libmy_crate.a / my_crate.lib
+cargo plugwright wasm my-crate            # my_crate.wasm
+cargo plugwright plugin my-plugin --wasm  # built, loaded, checked
 ```
 
 ## Without a manifest
