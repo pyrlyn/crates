@@ -5,10 +5,9 @@ use std::path::{Component, Path, PathBuf};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
-use notify_debouncer_mini::notify::{self, RecommendedWatcher, RecursiveMode};
-use notify_debouncer_mini::{DebounceEventResult, Debouncer, new_debouncer};
+use notify::{Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher as _};
 
 use crate::error::{PluginError, Result, io_err};
 use crate::manager::PluginManager;
@@ -77,18 +76,26 @@ impl Watch {
 }
 
 enum Msg {
-    Changed(BTreeSet<String>),
+    Changed(BTreeSet<String>, Instant),
     Stop,
+}
+
+/// Reads never change a plugin, and inotify reports every open: counting them
+/// would make each reload (which reads the files) trigger the next one.
+fn is_change(kind: &EventKind) -> bool {
+    !matches!(kind, EventKind::Access(_))
 }
 
 /// Collects the ids of plugins whose files changed. Created by
 /// [`PluginManager::watch`]; nothing is watched until then. Dropping it (or
 /// [`Watcher::stop`]) stops watching.
 pub struct Watcher {
-    _debouncer: Debouncer<RecommendedWatcher>,
+    _watcher: RecommendedWatcher,
+    debounce: Duration,
     tx: Sender<Msg>,
     rx: Receiver<Msg>,
-    pending: BTreeSet<String>,
+    /// Plugin id → time of its latest change.
+    pending: BTreeMap<String, Instant>,
     /// Set by [`Reloader`]; only its thread reads it.
     stopped: bool,
 }
@@ -101,44 +108,67 @@ impl Watcher {
         }
         let (tx, rx) = mpsc::channel();
         let sink = tx.clone();
-        let handler = move |res: DebounceEventResult| match res {
-            Ok(events) => {
-                let ids: BTreeSet<String> = events
+        let handler = move |res: notify::Result<Event>| match res {
+            Ok(event) if is_change(&event.kind) => {
+                let ids: BTreeSet<String> = event
+                    .paths
                     .iter()
-                    .flat_map(|e| watches.iter().filter(|w| w.matches(&e.path)).map(|w| w.id.clone()))
+                    .flat_map(|p| watches.iter().filter(|w| w.matches(p)).map(|w| w.id.clone()))
                     .collect();
                 if !ids.is_empty() {
-                    tracing::debug!(?ids, "plugin files changed");
-                    let _ = sink.send(Msg::Changed(ids));
+                    tracing::debug!(?ids, kind = ?event.kind, "plugin files changed");
+                    let _ = sink.send(Msg::Changed(ids, Instant::now()));
                 }
             }
+            Ok(_) => {}
             Err(e) => tracing::warn!(error = %e, "file watcher error"),
         };
-        let mut debouncer = new_debouncer(opts.debounce, handler).map_err(watch_err(Path::new(".")))?;
+        let mut watcher =
+            RecommendedWatcher::new(handler, notify::Config::default()).map_err(watch_err(Path::new(".")))?;
         for (dir, recursive) in dirs {
             let mode = if recursive { RecursiveMode::Recursive } else { RecursiveMode::NonRecursive };
-            debouncer.watcher().watch(&dir, mode).map_err(watch_err(&dir))?;
+            watcher.watch(&dir, mode).map_err(watch_err(&dir))?;
         }
-        Ok(Watcher { _debouncer: debouncer, tx, rx, pending: BTreeSet::new(), stopped: false })
+        Ok(Watcher { _watcher: watcher, debounce: opts.debounce, tx, rx, pending: BTreeMap::new(), stopped: false })
     }
 
-    /// Block until a change is pending or `timeout` passes; true when one is.
+    /// Block until a change has settled (no new event on that plugin for the
+    /// debounce time) or `timeout` passes; true when one has.
     pub fn wait(&mut self, timeout: Duration) -> bool {
-        if self.pending.is_empty()
-            && let Ok(m) = self.rx.recv_timeout(timeout)
-        {
-            self.absorb(m);
+        let deadline = Instant::now().checked_add(timeout);
+        loop {
+            while let Ok(m) = self.rx.try_recv() {
+                self.absorb(m);
+            }
+            let now = Instant::now();
+            if self.stopped {
+                return false;
+            }
+            if self.pending.values().any(|t| now.duration_since(*t) >= self.debounce) {
+                return true;
+            }
+            let settles = self.pending.values().min().map(|t| *t + self.debounce);
+            let until = match (deadline, settles) {
+                (Some(d), Some(s)) => d.min(s),
+                (d, s) => d.or(s).unwrap_or(now + Duration::from_secs(3600)),
+            };
+            if deadline.is_some_and(|d| now >= d) {
+                return false;
+            }
+            if let Ok(m) = self.rx.recv_timeout(until.saturating_duration_since(now)) {
+                self.absorb(m);
+            }
         }
-        while let Ok(m) = self.rx.try_recv() {
-            self.absorb(m);
-        }
-        !self.pending.is_empty()
     }
 
-    /// Take the ids that changed since the last call, without waiting.
+    /// Take the ids whose changes have settled, without waiting.
     pub fn take(&mut self) -> BTreeSet<String> {
         self.wait(Duration::ZERO);
-        std::mem::take(&mut self.pending)
+        let now = Instant::now();
+        let (ready, busy) =
+            std::mem::take(&mut self.pending).into_iter().partition(|(_, t)| now.duration_since(*t) >= self.debounce);
+        self.pending = busy;
+        ready.into_keys().collect::<BTreeSet<_>>()
     }
 
     /// Stop watching; changes not yet taken are dropped.
@@ -146,7 +176,7 @@ impl Watcher {
 
     fn absorb(&mut self, msg: Msg) {
         match msg {
-            Msg::Changed(ids) => self.pending.extend(ids),
+            Msg::Changed(ids, at) => self.pending.extend(ids.into_iter().map(|id| (id, at))),
             Msg::Stop => self.stopped = true,
         }
     }
@@ -160,11 +190,8 @@ impl Watcher {
         let tx = self.tx.clone();
         let run = move || {
             while !self.stopped {
-                let Ok(m) = self.rx.recv() else { return };
-                self.absorb(m);
-                self.wait(Duration::ZERO);
-                if self.stopped {
-                    return;
+                if !self.wait(Duration::from_secs(3600)) {
+                    continue;
                 }
                 let Ok(mut m) = manager.lock() else {
                     tracing::error!("plugin manager mutex poisoned; watcher stops");
@@ -265,6 +292,21 @@ mod tests {
     }
 
     #[test]
+    fn only_writes_count_as_changes() {
+        use notify::event::{AccessKind, AccessMode, CreateKind, ModifyKind, RemoveKind};
+        assert!(!is_change(&EventKind::Access(AccessKind::Open(AccessMode::Read))));
+        assert!(!is_change(&EventKind::Access(AccessKind::Close(AccessMode::Read))));
+        for kind in [
+            EventKind::Create(CreateKind::File),
+            EventKind::Modify(ModifyKind::Any),
+            EventKind::Remove(RemoveKind::File),
+            EventKind::Any,
+        ] {
+            assert!(is_change(&kind), "{kind:?}");
+        }
+    }
+
+    #[test]
     fn a_burst_of_writes_is_one_change_and_other_files_are_none() {
         let dir = tempfile::tempdir().unwrap();
         let file = dir.path().join("p.wasm");
@@ -278,6 +320,9 @@ mod tests {
         let mut w = Watcher::new(watches, &WatchOptions { debounce: Duration::from_millis(150) }).unwrap();
         assert!(!w.wait(Duration::from_millis(400)), "nothing changed yet");
 
+        // Reads are what every reload does (inotify reports each open).
+        std::fs::read(&file).unwrap();
+        std::fs::read_dir(dir.path().join("krate")).unwrap().for_each(drop);
         std::fs::write(dir.path().join("unrelated.txt"), b"x").unwrap();
         std::fs::write(dir.path().join("krate/target/out"), b"x").unwrap();
         assert!(!w.wait(Duration::from_millis(600)), "{:?}", w.take());

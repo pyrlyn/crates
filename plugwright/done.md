@@ -122,8 +122,9 @@ the old instance.
 
 Execution plan:
 
-1. `crates/plugwright/src/watch.rs`: `Watcher` over `notify-debouncer-mini` (one event per path
-   per quiet window). `PluginManager::watch` snapshots the loaded plugins: an artifact source
+1. `crates/plugwright/src/watch.rs`: `Watcher` over `notify`, debounced per plugin (one change
+   per quiet window); read-only access events are ignored, since inotify reports every open and
+   each reload reads the files. `PluginManager::watch` snapshots the loaded plugins: an artifact source
    watches its parent directory and filters the file (editors replace files); a path source
    watches the crate recursively minus `target/`, `.git/` and the cache dir; git sources are
    skipped. Changed paths map to plugin ids on a channel.
@@ -134,7 +135,7 @@ Execution plan:
 3. Tests: unit tests for path → id mapping and ignore rules; `examples/host/tests/e2e.rs` with a
    real wasm artifact: no watcher → no reload, a change reloads once, a broken change keeps the
    old instance and reports the error, a stopped watcher reloads nothing, the thread reloader.
-4. `mise run check`, `mise run test`; `notify-debouncer-mini` row in `toolchain.md`.
+4. `mise run check`, `mise run test`; `notify` row in `toolchain.md`.
 
 ### T11 — Manifest + lockfile (C3)
 `plugwright.toml`: `[settings]` (cache dir, locked, offline, runner) and `[[plugin]]` (`id`, `kind`
