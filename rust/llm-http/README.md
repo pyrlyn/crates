@@ -35,6 +35,7 @@ All three are on by default, so a plain dependency gets everything above.
 | `keyring` | `http::resolve_key` (env var, then the platform keyring) | `keyring` |
 | `reqwest` | `http::client_with_timeout` | `reqwest` |
 | `sse` | the `sse` module (`sse_stream`, `parse_sse_str`) | `eventsource-stream`, `bytes`, `futures` |
+| `test-util` | the `cassette` module: record and replay HTTP bodies with secrets masked (off by default) | `serde`, `llm-wire/test-util` |
 
 A host that keeps secrets in its own store and sends requests through its own
 HTTP stack sets `default-features = false` and builds without `keyring`,
