@@ -11,7 +11,6 @@ Small, focused Rust crates shared by the creator's projects (`ketch`, `rtok`, `s
 | [`agent-loop`](rust/agent-loop) | Neutral agent turn state machine: provider stream, tool dispatch, approvals, interrupt |
 | [`abi-drift`](rust/abi-drift) | Drift tests for generated bindings: regenerate a cbindgen header or csbindgen C# file, diff it against the committed copy, bless to rewrite |
 | [`app-home`](rust/app-home) | Resolve the user home, `$APP_HOME` or `~/.app`, and XDG config/data/cache/state dirs the same way on every OS |
-| [`bless-check`](rust/bless-check) | Check that a committed generated file matches what the code renders now, or rewrite it when blessed (not published) |
 | [`cargo-changed-packages`](rust/cargo-changed-packages) | Workspace packages a set of changed paths affects, including reverse dependencies |
 | [`change-preview`](rust/change-preview) | Preview what a command would change: diff or `--stat` of edits, size and file count of removals, totals |
 | [`operation-icons`](rust/operation-icons) | Emoji icons for the verb of a status line and the fixed-width gutter they sit in |
