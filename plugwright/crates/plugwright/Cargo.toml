@@ -19,12 +19,14 @@ wasmi = ["plugwright-loader/wasmi"]
 plugwright-abi.workspace = true
 plugwright-core.workspace = true
 plugwright-sandbox.workspace = true
+plugwright-trust.workspace = true
 plugwright-build.workspace = true
 plugwright-native.workspace = true
 plugwright-isolate.workspace = true
 plugwright-wasm.workspace = true
 plugwright-macros.workspace = true
 plugwright-loader = { workspace = true, features = ["wasm"] }
+notify.workspace = true
 semver.workspace = true
 serde.workspace = true
 serde_json.workspace = true
@@ -32,8 +34,10 @@ toml.workspace = true
 tracing.workspace = true
 
 [dev-dependencies]
+plugwright-trust = { workspace = true, features = ["sign"] }
 tempfile.workspace = true
 tracing-subscriber.workspace = true
+trybuild.workspace = true
 
 [lints]
 workspace = true

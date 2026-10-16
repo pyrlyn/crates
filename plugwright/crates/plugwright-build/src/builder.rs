@@ -51,6 +51,22 @@ impl Target {
     }
 }
 
+/// A library kind to build instead of the `crate-type` the crate declares.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum CrateType {
+    Cdylib,
+    Staticlib,
+}
+
+impl CrateType {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            CrateType::Cdylib => "cdylib",
+            CrateType::Staticlib => "staticlib",
+        }
+    }
+}
+
 /// Global build knobs.
 #[derive(Debug, Clone)]
 pub struct BuildOptions {
@@ -91,6 +107,9 @@ pub struct BuildRequest {
     /// The artifact will be loaded into the host process, so plugin panics
     /// must unwind (rules out Cranelift, which aborts).
     pub in_process: bool,
+    /// Overrides the crate's own `crate-type` (`cargo rustc --crate-type`),
+    /// so any library crate can be built as a shared or static library.
+    pub crate_type: Option<CrateType>,
 }
 
 pub struct Builder {
@@ -155,6 +174,10 @@ impl Builder {
         let features: BTreeSet<&str> = req.features.iter().map(String::as_str).collect();
         put("features", &features.into_iter().collect::<Vec<_>>().join(","));
         put("no_default_features", &req.no_default_features.to_string());
+        // Only when set, so the keys of plain builds stay what they were.
+        if let Some(ct) = req.crate_type {
+            put("crate_type", ct.as_str());
+        }
         for (var, value) in output_env() {
             put(&var, &value);
         }
@@ -225,9 +248,13 @@ impl Builder {
         let target_dir = absolute(&self.cache.target_dir())?;
         let mut cmd = self.cargo_command();
         cmd.current_dir(&req.crate_dir);
-        cmd.arg("build")
-            .arg("--lib")
-            .arg("--message-format=json-render-diagnostics")
+        match req.crate_type {
+            // cargo reports the overridden type in `crate_types`, so the artifact
+            // is picked below exactly as for a declared one.
+            Some(ct) => cmd.args(["rustc", "--lib", "--crate-type", ct.as_str()]),
+            None => cmd.args(["build", "--lib"]),
+        };
+        cmd.arg("--message-format=json-render-diagnostics")
             .arg("--manifest-path")
             .arg(&manifest)
             .arg("--target-dir")
@@ -614,6 +641,7 @@ mod tests {
             no_default_features: false,
             source_label: "test".into(),
             in_process: false,
+            crate_type: None,
         }
     }
 
@@ -677,6 +705,8 @@ mod tests {
             ("dev profile", with(&|o, _| o.release = false)),
             ("a feature", with(&|_, r| r.features = vec!["a".into()])),
             ("no default features", with(&|_, r| r.no_default_features = true)),
+            ("staticlib", with(&|_, r| r.crate_type = Some(CrateType::Staticlib))),
+            ("cdylib", with(&|_, r| r.crate_type = Some(CrateType::Cdylib))),
             ("lto", with(&|o, _| o.accel.profile.lto = Some("fat".into()))),
             ("opt-level", with(&|o, _| o.accel.profile.opt_level = Some("1".into()))),
         ];
@@ -691,6 +721,20 @@ mod tests {
         // Neither the compiler cache nor the isolation mode (with LLVM) changes the bytes.
         assert_eq!(with(&|o, _| o.accel.sccache = crate::accel::Toggle::Off), base);
         assert_eq!(with(&|_, r| r.in_process = true), base);
+    }
+
+    #[test]
+    fn crate_type_override_builds_the_other_library_kind() {
+        let dir = tempfile::tempdir().unwrap();
+        let krate = dir.path().join("crate");
+        scratch_crate(&krate);
+        let b = builder(&dir.path().join("cache"), BuildOptions { release: false, ..BuildOptions::default() });
+        let ext = |r: &BuildRequest| b.build(r).unwrap().path.extension().unwrap().to_string_lossy().into_owned();
+        let declared = req(&krate);
+        assert_eq!(ext(&declared), std::env::consts::DLL_EXTENSION);
+        let archive = BuildRequest { crate_type: Some(CrateType::Staticlib), ..declared };
+        let want = if cfg!(target_env = "msvc") { "lib" } else { "a" };
+        assert_eq!(ext(&archive), want, "a cdylib crate built as a staticlib");
     }
 
     #[test]

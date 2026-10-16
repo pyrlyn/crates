@@ -61,6 +61,30 @@ calls `destroy` then drops the library, then removes the shadow file. Host log c
 **Done when:** a SIGSEGV and an `abort()` in the example plugin return errors, the host keeps
 running, and the next call succeeds after an automatic restart.
 
+### T45 — Shared-memory transport for large payloads in isolated mode
+
+From idea F8. Isolated plugins talk to the runner over stdin/stdout frames, so every large
+payload is copied through a pipe. Add a shared-memory path for payloads above a threshold,
+with the pipe kept as the control channel and the fallback. The runner is untrusted: offsets,
+lengths and sizes it reports are validated before use, and a runner that dies mid-call is a
+`PluginError`. Done: works on macOS, Linux and Windows (Windows at least cross-linted),
+falls back to the pipe when shared memory is unavailable, and a perf case in
+`examples/host/benches/perf.rs` shows the gain on a large payload.
+**Result:** `crates/plugwright-isolate/src/shm.rs` (D26): one fixed-size region per runner
+(`IsolationOptions::shm_size`, default 16 MiB; `0` disables), POSIX `shm_open` + `mmap` on Unix, a
+pagefile-backed section duplicated into the runner on Windows; raw `libc` / `windows-sys`, no new
+crate (`shared_memory` unmaintained since 2022, `memmap2` maps files only, `ipc-channel` heavy).
+HELLO offers `token | size | threshold`, the runner maps it before LOAD applies the sandbox and
+closes its descriptor, READY echoes the size, then the host unlinks the name. `CALL_SHM` /
+`OK_SHM` carry `offset, length`; payloads of at least `shm_threshold` (64 KiB) that fit use the
+region, the rest the pipe. The host checks every range against its own size and copies out; a bad
+one is a `Protocol` error that kills the runner.
+Tests: region round trip, bounds, token and size checks, unlink; the runner loop's HELLO and input
+bounds; the `/bin/sh` fake runner (echo through the region with the recorded requests, pipe
+fallback, eight hostile ranges, `OK_SHM` without a region, SIGKILL mid-call); e2e calls of 64 KiB−1
+to 16 MiB+1 under the default sandbox. Perf on an M-series Mac: a 4 MiB isolated `greet` takes
+2.5 ms over the pipe and 0.77 ms through shared memory. Windows: cross clippy only.
+
 ### T05 — Wasm abstraction (C4)
 `WasmEngine::compile(&[u8]) → Box<dyn WasmModule>`; `WasmModule::instantiate(&WasmLimits, HostLog)
 → Box<dyn WasmInstance>`; `WasmInstance::{call, read, write, begin_call}`; `WasmError`
@@ -110,6 +134,32 @@ SHA recorded in the lockfile; checkout dir completed atomically (marker file).
 plus `call_json`. `PluginManager::{new, register_engine, load, load_all, unload, reload, call,
 call_json, get, list}`; `load_all` never aborts on one failure. Version checks (D15).
 **Done when:** host demo loads all three backends through one API.
+
+### T44 — File watcher with automatic reload
+
+From idea F6. `PluginManager::reload` exists but has to be called by hand. Add an opt-in
+watcher (the `notify` crate) on plugin sources and artifacts that debounces changes and reloads
+the affected plugin. A failed rebuild or reload keeps the old instance and reports the error,
+never takes the host down. Done: the watcher is off by default, can be stopped, does not
+reload twice for one save, and tests cover a change that reloads and a broken change that keeps
+the old instance.
+
+Execution plan:
+
+1. `crates/plugwright/src/watch.rs`: `Watcher` over `notify`, debounced per plugin (one change
+   per quiet window); read-only access events are ignored, since inotify reports every open and
+   each reload reads the files. `PluginManager::watch` snapshots the loaded plugins: an artifact source
+   watches its parent directory and filters the file (editors replace files); a path source
+   watches the crate recursively minus `target/`, `.git/` and the cache dir; git sources are
+   skipped. Changed paths map to plugin ids on a channel.
+2. `PluginManager::reload_changed(&mut Watcher)` reloads the pending ids; a reload whose artifact
+   bytes are unchanged swaps nothing, so a save that does not change the output never reloads.
+   `Watcher::spawn` runs the same loop on a thread over `Arc<Mutex<PluginManager>>` and is stopped
+   by `Reloader::stop` or drop. Failures come back as `PluginError` values; the old instance stays.
+3. Tests: unit tests for path → id mapping and ignore rules; `examples/host/tests/e2e.rs` with a
+   real wasm artifact: no watcher → no reload, a change reloads once, a broken change keeps the
+   old instance and reports the error, a stopped watcher reloads nothing, the thread reloader.
+4. `mise run check`, `mise run test`; `notify` row in `toolchain.md`.
 
 ### T11 — Manifest + lockfile (C3)
 `plugwright.toml`: `[settings]` (cache dir, locked, offline, runner) and `[[plugin]]` (`id`, `kind`
@@ -245,6 +295,28 @@ so plugin output lands on stderr. Compile + clippy for `x86_64-pc-windows-msvc`.
 ### T23 — Secure defaults (C2)
 `Isolation::default() = Process`; demo manifest marks the in-process plugin explicitly.
 
+### T43 — Artifact signatures and a trust policy per source
+From idea F1. Today the host trusts any artifact it builds or fetches. Add detached signatures
+(ed25519, minisign format) for plugin artifacts and a per-source trust policy in the manifest:
+which public keys a source accepts, and whether an unsigned artifact is refused, warned about or
+allowed. Verification runs before an artifact is mapped or compiled, and a failed or missing
+signature is a `PluginError`, never a panic. Done: signing and verification live in the lowest
+crate that can own them, the facade only wires the policy from the manifest, `doctor` reports
+the policy, and tests cover a valid signature, a wrong key, a tampered artifact and each policy
+mode. The signed precompiled-module cache (idea F5) builds on this later.
+**Result:** new crate `plugwright-trust` (D25): `TrustPolicy { keys, unsigned }`,
+`Unsigned::{Deny, Warn, Allow}` (default deny with keys, allow without), `verify` of
+`<artifact>.minisig` with `minisign-verify` (streamed, prehashed only, signature read capped at
+4 KiB, comments never echoed), `sign_file` behind feature `sign` (`minisign`);
+`PluginError::Signature`. A present but malformed, untrusted or mismatching signature fails in
+every mode; only a missing one follows `unsigned`. Facade: `[settings.trust]`, `[plugin.trust]`
+(replaces the default for that source), keys validated at parse, `ManagerOptions::trust`;
+`resolve` verifies before the sha256 pin, relinking, Wasm compilation and mapping. `doctor`
+prints the default policy and every override. Tests: the crate's unit tests (valid, wrong key,
+tampered artifact and trusted comment, malformed and oversized signature, each mode, no keys),
+manifest parsing, a manager load refused before compile and before format sniffing, and the
+doctor rows in `crates/cargo-plugwright/tests/cli.rs`.
+
 ### T24 — Tests and docs (C2)
 New example methods and e2e tests; README security table and platform notes rewritten; clippy for
 `aarch64-unknown-linux-gnu` and `x86_64-pc-windows-msvc`.
@@ -298,6 +370,26 @@ engines, `sandbox::capabilities()`, sccache/mold/Cranelift, the resolved plan fo
 in-process builds). Re-execs itself as the runner. `prepare` now persists the lockfile, so
 `build` updates it. Name free on crates.io (checked 2026-10-14, like `plugwright`).
 
+### T42 — CLI: build a workspace crate as a dynamic, static or Wasm library, or as a plugin
+Users want a library out of any crate of their cargo workspace without editing its `crate-type`
+and without a `plugwright.toml`. The crate is named, the CLI finds it in the workspace of the
+current directory (`cargo metadata --no-deps`), builds it through the plugwright cache and copies
+the result into `--out-dir` (default `./dist`):
+
+* `cargo plugwright lib CRATE [--dynamic|--static]` — `cdylib` (default) or `staticlib`, whatever
+  the crate declares (`cargo rustc --crate-type`).
+* `cargo plugwright wasm CRATE` — `cdylib` for `wasm32-unknown-unknown`.
+* `cargo plugwright plugin CRATE [--wasm]` — builds the crate as declared (a `staticlib` is
+  relinked), then opens it with `plugwright::Loader` to check the ABI and prints name and version.
+
+Done: the three commands work on the example crates, a crate name that is not in the workspace or
+has no library target is an error listing the workspace packages, tests cover the crate-type
+override (cache key and artifact) and every command end to end.
+**Result:** `BuildRequest::crate_type` (`cargo rustc --crate-type`, key material only when set);
+`plugwright_build::package::find_package` over `cargo_metadata`; `crates/cargo-plugwright/src/pack.rs`.
+Tests: builder override and key, package lookup, argument parsing and file names, and
+`crates/cargo-plugwright/tests/pack.rs` end to end on the example crates.
+
 ### T31–T34 — Macros (C4)
 `crates/plugwright-macros` (syn 2 / quote): `wire.rs` classifies parameter and return types once
 for both macros (D23). `#[plugin]` emits the impl with helper attributes stripped,
@@ -312,3 +404,18 @@ generated code stays small. The `macros` feature adds serde_json to plugins: was
 macro unit tests for every compile error. Dedup candidates not taken (closures/constructors/serde
 enums fit better) are listed in research.md §9.4.
 
+
+### T46 — `trybuild` UI tests for macro diagnostics (C2)
+From idea F9. `#[plugin]` and `#[interface]` diagnostics are checked only by unit tests on
+`expand`, which do not prove what a user sees from `rustc`. Add `trybuild` compile-fail tests
+with `.stderr` snapshots for the main misuse cases of both macros, plus a compile-pass case.
+Done: the tests run in `mise run test` and in CI, and every error path in
+`plugwright-macros` that a user can hit has a case.
+**Result:** `crates/plugwright-sdk/tests/ui.rs` runs `tests/ui/plugin/` (19 compile-fail cases and
+a compile-pass case through a renamed SDK path); `crates/plugwright/tests/ui.rs` runs
+`tests/ui/interface/` (13 compile-fail cases and a compile-pass case on a fake `Invoke`). Cases
+cover the item and argument parse errors, unknown macro and helper arguments, and every
+`syn::Error` in `plugin.rs`, `interface.rs` and `wire.rs`. `cargo test --workspace` picks them up,
+so CI needs no change. The unit tests on `expand` stay. Regenerate snapshots with
+`TRYBUILD=overwrite`. Known imprecise span, recorded as is: a trait method without a return type
+(`fn f(&mut self);`) reports the missing `Result` at `#[interface]`, not at the method.

@@ -12,7 +12,7 @@
 set -euo pipefail
 level="$1" pre="$2" package="$3"
 [[ "$pre" =~ ^[0-9A-Za-z.-]+$ ]] || { echo "bad prerelease suffix: $pre" >&2; exit 1; }
-manifest="$package/Cargo.toml"
+manifest="rust/$package/Cargo.toml"
 [ -f "$manifest" ] || { echo "no $manifest" >&2; exit 1; }
 current="$(cargo metadata --no-deps --format-version 1 \
   | jq -r --arg p "$package" '.packages[] | select(.name == $p) | .version')"
@@ -29,14 +29,14 @@ version="$core-$pre"
 python3 - "$package" "$version" <<'PY'
 import glob, re, sys
 package, version = sys.argv[1], sys.argv[2]
-path = f"{package}/Cargo.toml"
+path = f"rust/{package}/Cargo.toml"
 text = open(path).read()
 text, n = re.subn(r'(?m)^version = "[^"]*"', f'version = "{version}"', text, count=1)
 if n != 1:
     sys.exit(f"{path}: no package version line")
 open(path, "w").write(text)
 dep = re.compile(r'(?m)^(%s\s*=\s*\{[^}\n]*\bversion\s*=\s*")=?[^"]*(")' % re.escape(package))
-for other in glob.glob("*/Cargo.toml") + ["Cargo.toml"]:
+for other in glob.glob("rust/*/Cargo.toml") + ["Cargo.toml"]:
     if other == path:
         continue
     t = open(other).read()

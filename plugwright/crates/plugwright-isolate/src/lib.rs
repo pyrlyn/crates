@@ -12,6 +12,11 @@
 //! so even the library's initialisers run confined.
 //!
 //! Frame: `u32 LE body length | u8 tag | (u32 LE field length | field bytes)*`.
+//!
+//! Payloads of at least [`IsolationOptions::shm_threshold`] bytes skip the pipe:
+//! they travel through a shared memory region the host offers in HELLO, and the
+//! frame carries only `offset, length`. The pipe stays the control channel and
+//! the fallback when no region could be set up or a payload does not fit.
 
 use std::collections::VecDeque;
 use std::ffi::OsStr;
@@ -34,16 +39,23 @@ pub const RUNNER_ARG: &str = "--plugwright-runner";
 const MAGIC: &[u8] = b"PLUGWRT1";
 const MAX_FRAME: usize = 64 << 20;
 
+mod shm;
+use shm::Region;
+
 mod tag {
     pub const HELLO: u8 = 1;
     pub const LOAD: u8 = 2;
     pub const CALL: u8 = 3;
     pub const SHUTDOWN: u8 = 4;
+    /// `method | u64 LE length`: the input is the start of the shared region.
+    pub const CALL_SHM: u8 = 5;
     pub const READY: u8 = 10;
     pub const LOADED: u8 = 11;
     pub const OK: u8 = 12;
     pub const ERR: u8 = 13;
     pub const LOG: u8 = 14;
+    /// `u64 LE offset | u64 LE length` of the output in the shared region.
+    pub const OK_SHM: u8 = 15;
 }
 
 mod err_kind {
@@ -109,6 +121,11 @@ fn field_str(f: &[Vec<u8>], i: usize) -> Result<String> {
     String::from_utf8(field(f, i)?.to_vec()).map_err(|_| PluginError::Protocol(format!("field {i} is not UTF-8")))
 }
 
+fn field_u64(f: &[Vec<u8>], i: usize) -> Result<u64> {
+    let bytes = field(f, i)?.try_into().map_err(|_| PluginError::Protocol(format!("field {i} is not a u64")))?;
+    Ok(u64::from_le_bytes(bytes))
+}
+
 // ---------------------------------------------------------------------------
 // Runner side
 // ---------------------------------------------------------------------------
@@ -145,6 +162,8 @@ fn serve(input: &mut dyn Read, out: &Out) -> i32 {
         write_frame(&mut **w, tag, fields).is_ok()
     };
     let mut plugin: Option<NativePlugin> = None;
+    // The host's region and the output size from which replies go through it.
+    let mut shm: Option<(Region, u64)> = None;
     loop {
         let (t, f) = match read_frame(input) {
             Ok(Some(frame)) => frame,
@@ -155,7 +174,13 @@ fn serve(input: &mut dyn Read, out: &Out) -> i32 {
             }
         };
         let ok = match t {
-            tag::HELLO if f.first().map(Vec::as_slice) == Some(MAGIC) => send(tag::READY, &[MAGIC]),
+            tag::HELLO if f.first().map(Vec::as_slice) == Some(MAGIC) => {
+                shm = runner_shm(&f);
+                match &shm {
+                    Some((r, _)) => send(tag::READY, &[MAGIC, &(r.len() as u64).to_le_bytes()]),
+                    None => send(tag::READY, &[MAGIC]),
+                }
+            }
             tag::HELLO => {
                 eprintln!("plugwright-runner: bad handshake");
                 return 3;
@@ -172,8 +197,9 @@ fn serve(input: &mut dyn Read, out: &Out) -> i32 {
                     Err(e) => send(tag::ERR, &[&[err_kind::LOAD], e.to_string().as_bytes()]),
                 }
             }
-            tag::CALL => {
-                let reply = match (&mut plugin, field_str(&f, 0), field(&f, 1)) {
+            tag::CALL | tag::CALL_SHM => {
+                let input = if t == tag::CALL { field(&f, 1) } else { shm_input(shm.as_ref(), &f) };
+                let reply = match (&mut plugin, field_str(&f, 0), input) {
                     (None, ..) => Err((err_kind::OTHER, "no plugin loaded".to_owned())),
                     (_, Err(e), _) | (_, _, Err(e)) => Err((err_kind::OTHER, e.to_string())),
                     (Some(p), Ok(method), Ok(input)) => p.call(&method, input).map_err(|e| match e {
@@ -183,7 +209,12 @@ fn serve(input: &mut dyn Read, out: &Out) -> i32 {
                     }),
                 };
                 match reply {
-                    Ok(bytes) => send(tag::OK, &[&bytes]),
+                    Ok(bytes) => match &shm {
+                        Some((r, threshold)) if bytes.len() as u64 >= *threshold && r.write(&bytes) => {
+                            send(tag::OK_SHM, &[&0u64.to_le_bytes(), &(bytes.len() as u64).to_le_bytes()])
+                        }
+                        _ => send(tag::OK, &[&bytes]),
+                    },
                     Err((kind, msg)) => send(tag::ERR, &[&[kind], msg.as_bytes()]),
                 }
             }
@@ -200,6 +231,26 @@ fn serve(input: &mut dyn Read, out: &Out) -> i32 {
             return 4; // host went away
         }
     }
+}
+
+/// Map the region a HELLO offers (`magic | token | u64 size | u64 threshold`).
+/// Runs before LOAD, so before the sandbox could forbid opening it.
+fn runner_shm(f: &[Vec<u8>]) -> Option<(Region, u64)> {
+    let token = f.get(1)?;
+    let (size, threshold) = (usize::try_from(field_u64(f, 2).ok()?).ok()?, field_u64(f, 3).ok()?);
+    match Region::open(token, size) {
+        Ok(r) => Some((r, threshold)),
+        Err(e) => {
+            eprintln!("plugwright-runner: shared memory unavailable, using the pipe: {e}");
+            None
+        }
+    }
+}
+
+/// The input of a CALL_SHM: the first `length` bytes of the region.
+fn shm_input<'a>(shm: Option<&'a (Region, u64)>, f: &[Vec<u8>]) -> Result<&'a [u8]> {
+    let (r, _) = shm.ok_or_else(|| PluginError::Protocol("no shared memory".into()))?;
+    r.prefix(field_u64(f, 1)?).ok_or_else(|| PluginError::Protocol("shared memory input out of range".into()))
 }
 
 /// Sandbox the runner, then load the plugin in place. Returns the plugin and
@@ -314,6 +365,10 @@ pub struct IsolationOptions {
     /// Restarts allowed inside `restart_window` before the plugin is disabled.
     pub max_restarts: u32,
     pub restart_window: Duration,
+    /// Size of the shared memory region per runner; `0` keeps every payload on the pipe.
+    pub shm_size: usize,
+    /// Payloads of at least this many bytes go through shared memory when they fit.
+    pub shm_threshold: usize,
 }
 
 impl Default for IsolationOptions {
@@ -324,6 +379,9 @@ impl Default for IsolationOptions {
             load_timeout: Duration::from_secs(10),
             max_restarts: 3,
             restart_window: Duration::from_secs(60),
+            shm_size: 16 << 20,
+            // About one pipe buffer: below it the pipe costs no extra context switches.
+            shm_threshold: 64 << 10,
         }
     }
 }
@@ -337,6 +395,8 @@ struct RunnerProc {
     child: Child,
     stdin: ChildStdin,
     rx: Receiver<Msg>,
+    /// Set once the runner has mapped the region.
+    shm: Option<Region>,
 }
 
 /// A native plugin running in a child process. Implements [`Plugin`].
@@ -397,7 +457,18 @@ impl IsolatedPlugin {
         if let Some(v) = std::env::var_os("SystemRoot") {
             cmd.env("SystemRoot", v);
         }
+        let mut shm = match self.opts.shm_size {
+            0 => None,
+            size => Region::create(size)
+                .inspect_err(|e| tracing::warn!(plugin = %self.id, error = %e, "no shared memory; using the pipe"))
+                .ok(),
+        };
         let mut child = cmd.spawn().map_err(|e| PluginError::Load(format!("cannot spawn runner {exe:?}: {e}")))?;
+        let offer = shm.as_ref().and_then(|r| {
+            r.token(&child)
+                .inspect_err(|e| tracing::warn!(plugin = %self.id, error = %e, "cannot share memory; using the pipe"))
+                .ok()
+        });
         let stdin = child.stdin.take().expect("piped");
         let mut stdout = child.stdout.take().expect("piped");
         let stderr = child.stderr.take().expect("piped");
@@ -438,12 +509,27 @@ impl IsolatedPlugin {
             }
         });
 
-        self.proc = Some(RunnerProc { child, stdin, rx });
+        self.proc = Some(RunnerProc { child, stdin, rx, shm: None });
         let timeout = self.opts.load_timeout;
-        let (t, f) = self.request(tag::HELLO, &[MAGIC], timeout)?;
+        let size = shm.as_ref().map_or(0, Region::len) as u64;
+        let (size, threshold) = (size.to_le_bytes(), (self.opts.shm_threshold as u64).to_le_bytes());
+        let mut hello: Vec<&[u8]> = vec![MAGIC];
+        if let Some(token) = &offer {
+            hello.extend([token.as_slice(), &size, &threshold]);
+        }
+        let (t, f) = self.request(tag::HELLO, &hello, timeout)?;
         if t != tag::READY || f.first().map(Vec::as_slice) != Some(MAGIC) {
             self.kill();
             return Err(PluginError::Protocol("runner handshake failed".into()));
+        }
+        if let Some(r) = shm.as_mut().filter(|_| offer.is_some()) {
+            // The runner has opened it or never will: drop the name so nothing else can.
+            r.unlink();
+            if f.get(1).map(Vec::as_slice) == Some(size.as_slice()) {
+                self.proc.as_mut().expect("just started").shm = shm.take();
+            } else {
+                tracing::warn!(plugin = %self.id, "runner did not map shared memory; using the pipe");
+            }
         }
         let artifact = self
             .artifact
@@ -553,6 +639,21 @@ impl IsolatedPlugin {
         self.start()
     }
 
+    /// Copy a reply out of the region after checking the runner's range
+    /// against the region's real size; `None` for anything malformed.
+    fn read_shm(&self, f: &[Vec<u8>]) -> Option<Vec<u8>> {
+        let region = self.proc.as_ref()?.shm.as_ref()?;
+        if f.len() != 2 {
+            return None;
+        }
+        region.read(field_u64(f, 0).ok()?, field_u64(f, 1).ok()?)
+    }
+
+    /// Size of the live runner's shared memory region, if it mapped one.
+    pub fn shared_memory(&self) -> Option<usize> {
+        self.proc.as_ref()?.shm.as_ref().map(Region::len)
+    }
+
     /// PID of the live runner, if any.
     pub fn pid(&self) -> Option<u32> {
         self.proc.as_ref().map(|p| p.child.id())
@@ -590,9 +691,19 @@ impl Plugin for IsolatedPlugin {
     fn call(&mut self, method: &str, input: &[u8]) -> Result<Vec<u8>> {
         self.ensure_running()?;
         let timeout = self.opts.call_timeout;
-        let (t, f) = self.request(tag::CALL, &[method.as_bytes(), input], timeout)?;
+        let shared = input.len() >= self.opts.shm_threshold
+            && self.proc.as_ref().and_then(|p| p.shm.as_ref()).is_some_and(|r| r.write(input));
+        let (t, f) = if shared {
+            self.request(tag::CALL_SHM, &[method.as_bytes(), &(input.len() as u64).to_le_bytes()], timeout)?
+        } else {
+            self.request(tag::CALL, &[method.as_bytes(), input], timeout)?
+        };
         match t {
             tag::OK => Ok(f.into_iter().next().unwrap_or_default()),
+            tag::OK_SHM => self.read_shm(&f).ok_or_else(|| {
+                self.kill();
+                PluginError::Protocol("shared memory reply out of range".into())
+            }),
             tag::ERR => {
                 let kind = field(&f, 0)?.first().copied().unwrap_or(err_kind::OTHER);
                 let message = field_str(&f, 1)?;
@@ -892,17 +1003,29 @@ mod tests {
         /// drains the host's requests so its writes never hit a closed pipe.
         const REPLAY: &str = "exec 3<&0\n/bin/cat <&3 >/dev/null 3<&- &\nexec /bin/cat \"$0.replies\"";
 
+        /// Like [`REPLAY`], but the host's requests are kept in `runner.requests`.
+        const RECORD: &str = "exec 3<&0\n/bin/cat <&3 >\"$0.requests\" 3<&- &\nexec /bin/cat \"$0.replies\"";
+
+        /// Shared memory the host offers every fake runner, and the threshold for using it.
+        const SHM: usize = 1 << 16;
+        const THRESHOLD: usize = 1 << 10;
+
         fn spawn(script: &str, replies: &[u8], sink: LogSink) -> Result<IsolatedPlugin> {
+            spawn_in(tempfile::tempdir().unwrap().path(), script, replies, sink)
+        }
+
+        fn spawn_in(dir: &Path, script: &str, replies: &[u8], sink: LogSink) -> Result<IsolatedPlugin> {
             use std::os::unix::fs::PermissionsExt;
-            let dir = tempfile::tempdir().unwrap();
-            let runner = dir.path().join("runner");
-            std::fs::write(dir.path().join("runner.replies"), replies).unwrap();
+            let runner = dir.join("runner");
+            std::fs::write(dir.join("runner.replies"), replies).unwrap();
             let opts = IsolationOptions {
                 runner: RunnerCommand::Path(runner.clone()),
                 call_timeout: Duration::from_secs(20),
                 load_timeout: Duration::from_secs(20),
                 max_restarts: 0,
                 restart_window: Duration::from_secs(60),
+                shm_size: SHM,
+                shm_threshold: THRESHOLD,
             };
             let _spawn = spawn_lock();
             std::fs::write(&runner, format!("#!/bin/sh\n{script}\n")).unwrap();
@@ -939,6 +1062,111 @@ mod tests {
 
         fn loaded() -> Vec<u8> {
             loaded_with(b"fake", b"1.2.3", plugwright_core::plugin::host_sdk_version().to_string().as_bytes())
+        }
+
+        /// READY from a runner that mapped the offered region.
+        fn ready_shm() -> Vec<u8> {
+            frame(tag::READY, &[MAGIC, &(SHM as u64).to_le_bytes()])
+        }
+
+        fn ok_shm(offset: u64, len: u64) -> Vec<u8> {
+            frame(tag::OK_SHM, &[&offset.to_le_bytes(), &len.to_le_bytes()])
+        }
+
+        /// The first `n` requests a [`RECORD`] runner saw.
+        fn requests(dir: &Path, n: usize) -> Vec<Frame> {
+            let deadline = Instant::now() + Duration::from_secs(10);
+            loop {
+                let bytes = std::fs::read(dir.join("runner.requests")).unwrap_or_default();
+                let mut r = Cursor::new(bytes);
+                let mut frames = Vec::new();
+                while let Ok(Some(f)) = read_frame(&mut r) {
+                    frames.push(f);
+                }
+                if frames.len() >= n {
+                    return frames;
+                }
+                assert!(Instant::now() < deadline, "{} of {n} requests recorded", frames.len());
+                std::thread::sleep(Duration::from_millis(10));
+            }
+        }
+
+        #[test]
+        fn large_payloads_travel_through_the_region_and_small_ones_through_the_pipe() {
+            let dir = tempfile::tempdir().unwrap();
+            let input: Vec<u8> = (0..4000u32).map(|i| i as u8).collect();
+            // The fake cannot write the region, so its reply points at the input the host put there.
+            let replies = [ready_shm(), loaded(), ok_shm(0, 4000), ok_shm(10, 5), frame(tag::OK, &[b"small"])];
+            let mut p = spawn_in(dir.path(), RECORD, &replies.concat(), Arc::new(|_, _| {})).unwrap();
+            assert_eq!(p.shared_memory(), Some(SHM));
+            assert_eq!(p.call("big", &input).unwrap(), input);
+            assert_eq!(p.call("big", &input).unwrap(), &input[10..15], "replies may point anywhere inside");
+            assert_eq!(p.call("small", &input[..THRESHOLD - 1]).unwrap(), b"small");
+            drop(p);
+
+            let sent = requests(dir.path(), 6);
+            let tags: Vec<u8> = sent.iter().map(|(t, _)| *t).collect();
+            assert_eq!(tags, [tag::HELLO, tag::LOAD, tag::CALL_SHM, tag::CALL_SHM, tag::CALL, tag::SHUTDOWN]);
+            let hello = &sent[0].1;
+            assert_eq!(hello.len(), 4, "magic, token, size, threshold");
+            assert_eq!(
+                (hello[2].as_slice(), hello[3].as_slice()),
+                (&(SHM as u64).to_le_bytes()[..], &(THRESHOLD as u64).to_le_bytes()[..])
+            );
+            assert_eq!(sent[2].1, [b"big".to_vec(), 4000u64.to_le_bytes().to_vec()], "no payload on the pipe");
+            assert_eq!(sent[4].1, [b"small".to_vec(), input[..THRESHOLD - 1].to_vec()]);
+            let e = Region::open(&hello[1], SHM).err().expect("the name is gone once READY came back");
+            assert_eq!(e.kind(), io::ErrorKind::NotFound);
+        }
+
+        #[test]
+        fn a_runner_that_did_not_map_the_region_gets_everything_through_the_pipe() {
+            let dir = tempfile::tempdir().unwrap();
+            let input = vec![7u8; SHM + 1];
+            let replies = [ready(), loaded(), frame(tag::OK, &[b"a"]), ok_shm(0, 1)];
+            let mut p = spawn_in(dir.path(), RECORD, &replies.concat(), Arc::new(|_, _| {})).unwrap();
+            assert_eq!(p.shared_memory(), None);
+            assert_eq!(p.call("big", &input).unwrap(), b"a");
+            let e = p.call("big", b"").unwrap_err();
+            assert!(matches!(&e, PluginError::Protocol(m) if m == "shared memory reply out of range"), "{e}");
+            assert!(p.pid().is_none(), "a reply through a region that was never set up kills the runner");
+            let sent = requests(dir.path(), 3);
+            assert_eq!((sent[2].0, &sent[2].1[1]), (tag::CALL, &input));
+        }
+
+        #[test]
+        fn hostile_offsets_and_lengths_are_protocol_errors_that_kill_the_runner() {
+            let len = SHM as u64;
+            let bad = [
+                ok_shm(len, 1),
+                ok_shm(0, len + 1),
+                ok_shm(1, len),
+                ok_shm(u64::MAX, 2),
+                ok_shm(2, u64::MAX),
+                frame(tag::OK_SHM, &[&[0; 7], &1u64.to_le_bytes()]),
+                frame(tag::OK_SHM, &[&0u64.to_le_bytes()]),
+                frame(tag::OK_SHM, &[&0u64.to_le_bytes(), &1u64.to_le_bytes(), b"extra"]),
+            ];
+            for reply in bad {
+                let mut p = spawn_ok(&[ready_shm(), loaded(), reply.clone()].concat(), Arc::new(|_, _| {}));
+                assert_eq!(p.shared_memory(), Some(SHM));
+                let e = p.call("greet", &[1; THRESHOLD]).unwrap_err();
+                assert!(
+                    matches!(&e, PluginError::Protocol(m) if m == "shared memory reply out of range"),
+                    "{reply:?}: {e}"
+                );
+                assert!(p.pid().is_none(), "{reply:?}");
+                assert!(matches!(p.call("greet", b""), Err(PluginError::Disabled(_))));
+            }
+        }
+
+        #[test]
+        fn a_runner_dying_mid_call_is_a_crash() {
+            let script = "exec 3<&0\n/bin/cat <&3 >/dev/null 3<&- &\n/bin/cat \"$0.replies\"\nkill -KILL $$";
+            let mut p = spawn(script, &[ready_shm(), loaded()].concat(), Arc::new(|_, _| {})).unwrap();
+            let e = p.call("greet", &[1; THRESHOLD]).unwrap_err();
+            assert!(matches!(&e, PluginError::Crashed(m) if m.contains("killed by SIGKILL (9)")), "{e}");
+            assert!(p.pid().is_none() && p.shared_memory().is_none(), "the region goes with the runner");
         }
 
         #[test]
@@ -1132,6 +1360,47 @@ mod tests {
             let (t, f) = &replies[2];
             assert_eq!((*t, f[0].as_slice()), (tag::ERR, [err_kind::LOAD].as_slice()));
             assert!(String::from_utf8_lossy(&f[1]).contains("expected"), "a JSON error: {:?}", f[1]);
+        }
+
+        #[cfg(unix)]
+        #[test]
+        fn hello_with_a_region_maps_it_and_echoes_its_size() {
+            let host = Region::create(1 << 16).unwrap();
+            let token = host.name_token();
+            let (size, threshold) = ((1u64 << 16).to_le_bytes(), 9u64.to_le_bytes());
+            let (code, replies) = run(&[(tag::HELLO, &[MAGIC, &token, &size, &threshold])], b"");
+            assert_eq!((code, replies), (0, vec![(tag::READY, vec![MAGIC.to_vec(), size.to_vec()])]));
+            // Anything unusable leaves the runner on the pipe instead of failing the handshake.
+            let too_big = (1u64 << 17).to_le_bytes();
+            for fields in [
+                &[MAGIC, b"/pw-missing", &size, &threshold][..],
+                &[MAGIC, &token, &too_big, &threshold],
+                &[MAGIC, &token, &size],
+                &[MAGIC, &token, b"short", &threshold],
+            ] {
+                assert_eq!(run(&[(tag::HELLO, fields)], b""), (0, vec![(tag::READY, vec![MAGIC.to_vec()])]));
+            }
+        }
+
+        #[cfg(unix)]
+        #[test]
+        fn shared_memory_input_is_bounds_checked() {
+            let host = Region::create(1 << 16).unwrap();
+            assert!(host.write(b"input"));
+            let shm = Some((Region::open(&host.name_token(), 1 << 16).unwrap(), 0));
+            let call = |len: &[u8]| vec![b"m".to_vec(), len.to_vec()];
+            assert_eq!(shm_input(shm.as_ref(), &call(&5u64.to_le_bytes())).unwrap(), b"input");
+            let protocol = |r: Result<&[u8]>| match r {
+                Err(PluginError::Protocol(m)) => m,
+                other => panic!("{other:?}"),
+            };
+            assert_eq!(protocol(shm_input(None, &call(&5u64.to_le_bytes()))), "no shared memory");
+            assert_eq!(
+                protocol(shm_input(shm.as_ref(), &call(&(1u64 << 17).to_le_bytes()))),
+                "shared memory input out of range"
+            );
+            assert_eq!(protocol(shm_input(shm.as_ref(), &call(b"short"))), "field 1 is not a u64");
+            assert_eq!(protocol(shm_input(shm.as_ref(), &[b"m".to_vec()])), "missing field 1");
         }
 
         #[test]

@@ -21,7 +21,9 @@ use crate::native::format::{self, Format};
 use crate::native::{NativePlugin, Placement};
 use crate::plugin::{Plugin, PluginInfo, Release};
 use crate::relink::RelinkRequest;
+use crate::trust::TrustPolicy;
 use crate::wasm::{ModuleCache, WasmEngine, WasmPlugin};
+use crate::watch::{Watch, WatchOptions, Watcher};
 
 /// Manager-wide configuration.
 #[derive(Debug, Clone)]
@@ -34,6 +36,8 @@ pub struct ManagerOptions {
     pub allow_local_git: bool,
     /// Where to persist resolved SHAs and hashes; `None` keeps the lock in memory.
     pub lock_path: Option<PathBuf>,
+    /// Signature policy of specs without their own `trust`.
+    pub trust: TrustPolicy,
 }
 
 impl ManagerOptions {
@@ -46,6 +50,7 @@ impl ManagerOptions {
             isolation: IsolationOptions::default(),
             allow_local_git: false,
             lock_path: None,
+            trust: TrustPolicy::default(),
         }
     }
 
@@ -64,6 +69,7 @@ impl ManagerOptions {
             o.isolation.runner = RunnerCommand::Path(m.resolve(r));
         }
         o.lock_path = Some(m.lock_path());
+        o.trust = s.trust.clone();
         o
     }
 }
@@ -189,8 +195,9 @@ impl PluginManager {
             }
         };
 
-        // The pin covers what the user supplied or cargo produced, i.e. the
-        // static library itself when it is relinked below.
+        // Both checks cover what the user supplied or cargo produced, i.e. the
+        // static library itself when it is relinked below, before anything maps it.
+        spec.trust.as_ref().unwrap_or(&self.opts.trust).verify(&spec.id, &artifact.path)?;
         if let Some(expected) = &spec.sha256 {
             verify_sha256(&artifact.path, expected)?;
         }
@@ -258,6 +265,7 @@ impl PluginManager {
             no_default_features: spec.no_default_features,
             source_label: label,
             in_process: spec.kind == PluginKind::Native && spec.effective_isolation() == Isolation::InProcess,
+            crate_type: None,
         })
     }
 
@@ -373,16 +381,68 @@ impl PluginManager {
     /// instance keeps serving, and keeps its lockfile pin, if the new one
     /// fails to build or load.
     pub fn reload(&mut self, id: &str) -> Result<&PluginInfo> {
+        self.refresh(id, true)?;
+        Ok(self.plugins[id].plugin.info())
+    }
+
+    /// `reload`; unless `force`, an artifact with the same bytes as the
+    /// loaded one swaps nothing. Returns whether the instance was swapped.
+    fn refresh(&mut self, id: &str, force: bool) -> Result<bool> {
         let spec = self.plugins.get(id).ok_or_else(|| PluginError::NotFound(id.to_owned()))?.spec.clone();
         let _span = tracing::info_span!("reload", plugin = %id).entered();
         let (artifact, entry) = self.resolve(&spec)?;
+        if !force && artifact.sha256 == self.plugins[id].artifact.sha256 {
+            tracing::debug!("artifact unchanged; nothing to reload");
+            return Ok(false);
+        }
         let plugin = self.instantiate(&spec, &artifact)?;
         self.pin(entry);
         if let Some(old) = self.plugins.insert(id.to_owned(), Loaded { spec, artifact, plugin }) {
             self.retire(id, old);
         }
         tracing::info!("plugin reloaded");
-        Ok(self.plugins[id].plugin.info())
+        Ok(true)
+    }
+
+    /// Watch the sources and artifacts of the plugins loaded now; plugins
+    /// loaded later are not watched. Nothing is watched unless this is called.
+    pub fn watch(&self, opts: &WatchOptions) -> Result<Watcher> {
+        let mut ignore = vec![self.opts.cache_dir.clone()];
+        ignore.extend(self.opts.lock_path.clone());
+        let mut watches = Vec::new();
+        for (id, l) in &self.plugins {
+            let resolved = match &l.spec.source {
+                Source::Artifact(p) | Source::Path(p) => self.resolve_path(p),
+                Source::Git(_) => PathBuf::new(),
+            };
+            match Watch::for_source(id, &l.spec.source, &resolved, &ignore)? {
+                Some(w) => watches.push(w),
+                None => tracing::debug!(plugin = %id, "git source: nothing local to watch"),
+            }
+        }
+        Watcher::new(watches, opts)
+    }
+
+    /// Reload the plugins `watcher` saw change, without waiting for more.
+    /// A plugin whose rebuilt artifact has the same bytes is left alone, so a
+    /// save that changes nothing does not reload. Returns every plugin that
+    /// was swapped or failed; a failed one keeps its old instance.
+    pub fn reload_changed(&mut self, watcher: &mut Watcher) -> Vec<(String, Result<()>)> {
+        let mut out = Vec::new();
+        for id in watcher.take() {
+            if !self.plugins.contains_key(&id) {
+                continue;
+            }
+            match self.refresh(&id, false) {
+                Ok(false) => {}
+                Ok(true) => out.push((id, Ok(()))),
+                Err(e) => {
+                    tracing::warn!(plugin = %id, error = %e, "reload after a change failed; the old instance keeps serving");
+                    out.push((id, Err(e)));
+                }
+            }
+        }
+        out
     }
 
     /// Bind plugin `id` for typed calls through an `#[interface]` client:
@@ -652,6 +712,61 @@ mod tests {
         // The pin is case-insensitive; once it matches, the content check runs.
         s.sha256 = Some(TEXT_SHA.to_uppercase());
         not_a_plugin(m.load(s));
+    }
+
+    #[test]
+    fn signatures_are_checked_before_an_artifact_is_compiled_or_mapped() {
+        use crate::trust::minisign::KeyPair;
+        use crate::trust::{Unsigned, sign_file, signature_path};
+
+        let dir = tempfile::tempdir().unwrap();
+        let lock = dir.path().join("plugwright.lock");
+        let signer = KeyPair::generate_unencrypted_keypair().unwrap();
+        let stranger = KeyPair::generate_unencrypted_keypair().unwrap();
+        let mut o = ManagerOptions::new(dir.path());
+        o.lock_path = Some(lock.clone());
+        o.trust = TrustPolicy { keys: vec![signer.pk.to_base64()], unsigned: None };
+        let mut m = PluginManager::new(o).unwrap();
+        m.register_engine(Arc::new(RefusingEngine("compiled")));
+        let wasm = file(dir.path(), "m.wasm", CORE_WASM);
+        let mut s = artifact("w", PluginKind::Wasm, &wasm);
+        s.engine = Some("refusing".into());
+        let sig_err = |r: Result<&PluginInfo>| match r {
+            Err(PluginError::Signature { path, reason }) => {
+                assert_eq!(path, wasm);
+                reason
+            }
+            Err(e) => panic!("expected a signature error, got {e:?}"),
+            Ok(i) => panic!("expected a signature error, loaded {}", i.name),
+        };
+
+        // The manifest-wide policy lists a key, so an unsigned artifact is refused.
+        assert!(sig_err(m.load(s.clone())).contains("refuses unsigned artifacts"));
+        sign_file(&wasm, &stranger.sk, None).unwrap();
+        assert!(sig_err(m.load(s.clone())).contains("does not trust"));
+        sign_file(&wasm, &signer.sk, None).unwrap();
+        std::fs::write(&wasm, b"\0asm\x01\0\0\0\0").unwrap();
+        assert!(sig_err(m.load(s.clone())).contains("does not match its signature"));
+        assert!(!lock.exists(), "a refused artifact is not pinned");
+
+        // Signed by the trusted key: the check passes and the engine gets the module.
+        std::fs::write(&wasm, CORE_WASM).unwrap();
+        sign_file(&wasm, &signer.sk, None).unwrap();
+        let compiled =
+            |r: Result<&PluginInfo>| matches!(r, Err(PluginError::Wasm(WasmError::Compile(m))) if m == "compiled");
+        assert!(compiled(m.load(s.clone())));
+
+        // A plugin's own policy replaces the manifest-wide one for its source.
+        std::fs::remove_file(signature_path(&wasm)).unwrap();
+        s.trust = Some(TrustPolicy { keys: vec![], unsigned: Some(Unsigned::Warn) });
+        assert!(compiled(m.load(s.clone())));
+        s.trust = Some(TrustPolicy { keys: vec![stranger.pk.to_base64()], unsigned: Some(Unsigned::Deny) });
+        assert!(sig_err(m.load(s)).contains("plugin `w` refuses unsigned"));
+
+        // A native artifact is refused before its format is even sniffed.
+        let lib = file(dir.path(), "notes.dll", b"just text");
+        let err = m.load(artifact("n", PluginKind::Native, &lib)).unwrap_err();
+        assert!(matches!(&err, PluginError::Signature { path, .. } if *path == lib), "{err}");
     }
 
     #[test]

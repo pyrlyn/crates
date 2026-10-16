@@ -1,0 +1,11 @@
+error: plugin methods cannot be async
+ --> tests/ui/plugin/fail/async_fn.rs:7:5
+  |
+7 |     async fn new() -> Self {
+  |     ^^^^^
+
+error: plugin methods cannot be async
+  --> tests/ui/plugin/fail/async_fn.rs:11:5
+   |
+11 |     async fn run(&self) {}
+   |     ^^^^^

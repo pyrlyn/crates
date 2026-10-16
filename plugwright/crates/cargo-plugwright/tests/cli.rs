@@ -65,6 +65,20 @@ fn list_and_doctor_report_without_building() {
 }
 
 #[test]
+fn doctor_reports_the_trust_policy_of_every_source() {
+    let dir = project();
+    let key = "RWQf6LRCGA9i53mlYecO4IzT51TGPpvWucNSCh1CBM0QTaLn73Y7GFO3";
+    let manifest = format!(
+        "[settings.trust]\nunsigned = \"warn\"\n{NEVER_BUILT}[plugin.trust]\nkeys = [\"{key}\"]\nunsigned = \"deny\"\n"
+    );
+    std::fs::write(dir.path().join("plugwright.toml"), manifest).unwrap();
+    let text = stdout(&run_in(dir.path(), &["doctor"]));
+    assert!(text.contains("trust        unsigned warned about, no keys"), "{text}");
+    assert!(text.contains("trust        prebuilt: unsigned refused, keys RWQf6LRCGA9i…"), "{text}");
+    assert_eq!(text.matches(" trust ").count(), 2, "plugins without a policy of their own are not listed:\n{text}");
+}
+
+#[test]
 fn bad_usage_exits_with_2() {
     assert_eq!(run(&["frobnicate"]).status.code(), Some(2));
     assert_eq!(run(&["call", "only-id"]).status.code(), Some(2));
@@ -81,7 +95,7 @@ fn help_and_version_succeed_without_a_manifest() {
         assert!(out.status.success(), "{flag}: {}", stderr(&out));
         let text = stdout(&out);
         assert!(text.starts_with("usage: cargo plugwright"), "{flag}: {text}");
-        for cmd in ["build", "list", "call", "methods", "gc", "doctor"] {
+        for cmd in ["build", "list", "call", "methods", "gc", "doctor", "lib", "wasm", "plugin"] {
             assert!(text.contains(&format!("\n  {cmd} ")), "{flag} lacks `{cmd}`:\n{text}");
         }
     }
@@ -94,7 +108,7 @@ fn help_and_version_succeed_without_a_manifest() {
 
 #[test]
 fn each_command_rejects_bad_arguments_with_usage() {
-    let cases: [(&[&str], &str); 12] = [
+    let cases: [(&[&str], &str); 15] = [
         (&[], "no command given"),
         (&["--manifest"], "--manifest needs a path"),
         (&["frobnicate"], "unknown command `frobnicate`"),
@@ -107,6 +121,9 @@ fn each_command_rejects_bad_arguments_with_usage() {
         (&["gc", "extra"], "bad arguments for `gc`"),
         (&["doctor", "extra"], "bad arguments for `doctor`"),
         (&["-v", "list", "x"], "bad arguments for `list`"),
+        (&["lib"], "`lib` needs a crate name"),
+        (&["wasm", "x", "--static"], "unknown option `--static` for `wasm`"),
+        (&["plugin", "x", "y"], "`plugin` takes one crate name"),
     ];
     let dir = project();
     let manifest = dir.path().join("plugwright.toml");

@@ -9,7 +9,9 @@ use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
 use plugwright_abi::wasm::{EXPORT_MEMORY, IMPORT_LOG, IMPORT_MODULE};
-use wasmtime::{Caller, Config, Engine, Extern, Instance, Linker, Memory, Module, ResourceLimiter, Store, Trap, Val};
+use wasmtime::{
+    Caller, Config, Engine, Extern, Instance, Linker, Memory, Module, ResourceLimiter, Store, Trap, UpdateDeadline, Val,
+};
 
 use plugwright_core::logging::LogSink;
 use plugwright_wasm::{MAX_GUEST_LOG, WasmEngine, WasmError, WasmInstance, WasmLimits, WasmModule, WasmVal, stored};
@@ -55,21 +57,43 @@ impl Ticker {
         let handle = std::thread::Builder::new()
             .name("plugwright-wasmtime-epoch".into())
             .spawn(move || {
-                let mut next = Instant::now() + TICK;
+                let mut clock = EpochClock::new(Instant::now());
                 while !s.load(Ordering::Acquire) {
-                    let now = Instant::now();
-                    if now >= next {
+                    let (ticks, wait) = clock.advance(Instant::now());
+                    for _ in 0..ticks {
                         engine.increment_epoch();
-                        next = (next + TICK).max(now);
-                    } else {
-                        // Parked rather than asleep, so `drop` does not wait out a tick.
-                        std::thread::park_timeout(next - now);
                     }
+                    // Parked rather than asleep, so `drop` does not wait out a tick.
+                    std::thread::park_timeout(wait);
                 }
             })
             .map_err(|e| WasmError::Instantiate(format!("cannot start epoch thread: {e}")))?;
         *running = Some(Running { stop, handle });
         Ok(())
+    }
+}
+
+/// Maps wall time to epoch ticks. Deadlines are counted in ticks, so a
+/// wakeup that comes late (a loaded machine, timer coalescing) must catch up
+/// on every tick it missed, or a 300 ms timeout stretches to seconds.
+struct EpochClock {
+    start: Instant,
+    ticks: u64,
+}
+
+impl EpochClock {
+    fn new(start: Instant) -> Self {
+        EpochClock { start, ticks: 0 }
+    }
+
+    /// Ticks to add at `now`, and how long until the next one is due.
+    fn advance(&mut self, now: Instant) -> (u64, Duration) {
+        let elapsed = now.saturating_duration_since(self.start).as_nanos();
+        let tick = TICK.as_nanos();
+        let due = (elapsed / tick) as u64;
+        let add = due.saturating_sub(self.ticks);
+        self.ticks = self.ticks.max(due);
+        (add, Duration::from_nanos((tick - elapsed % tick) as u64))
     }
 }
 
@@ -178,6 +202,20 @@ impl ResourceLimiter for Limiter {
 struct State {
     limiter: Limiter,
     log: LogSink,
+    /// Wall-clock end of the current call, when it has a timeout.
+    deadline: Option<Instant>,
+}
+
+/// Ticks only approximate time (the ticker catches up in bursts after a
+/// stall), so a reached epoch deadline is confirmed on the real clock.
+fn on_epoch_deadline(deadline: Option<Instant>, now: Instant) -> UpdateDeadline {
+    match deadline {
+        Some(d) if now < d => {
+            let left = (d - now).as_nanos().div_ceil(TICK.as_nanos());
+            UpdateDeadline::Continue(u64::try_from(left).unwrap_or(u64::MAX).max(1))
+        }
+        _ => UpdateDeadline::Interrupt,
+    }
 }
 
 impl WasmModule for WtModule {
@@ -185,9 +223,10 @@ impl WasmModule for WtModule {
         self.ticker.ensure_running()?;
         let mut store = Store::new(
             &self.engine,
-            State { limiter: Limiter { max_memory: limits.max_memory_bytes, hit: false }, log },
+            State { limiter: Limiter { max_memory: limits.max_memory_bytes, hit: false }, log, deadline: None },
         );
         store.limiter(|s| &mut s.limiter);
+        store.epoch_deadline_callback(|ctx| Ok(on_epoch_deadline(ctx.data().deadline, Instant::now())));
         let mut linker = Linker::new(&self.engine);
         linker
             .func_wrap(IMPORT_MODULE, IMPORT_LOG, |mut caller: Caller<'_, State>, level: i32, ptr: i32, len: i32| {
@@ -257,6 +296,7 @@ impl WasmInstance for WtInstance {
             None => u64::MAX / 2,
         };
         self.store.set_epoch_deadline(ticks);
+        self.store.data_mut().deadline = self.limits.timeout.map(|t| Instant::now() + t);
         Ok(())
     }
 
@@ -287,6 +327,32 @@ impl WasmInstance for WtInstance {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_late_wakeup_catches_up_on_every_missed_tick() {
+        let t0 = Instant::now();
+        let ms = |n| t0 + Duration::from_millis(n);
+        let mut c = EpochClock::new(t0);
+        assert_eq!(c.advance(ms(5)), (0, Duration::from_millis(5)));
+        assert_eq!(c.advance(ms(10)), (1, TICK));
+        // Asleep for 45 ms instead of 10: all four missed ticks at once.
+        assert_eq!(c.advance(ms(55)), (4, Duration::from_millis(5)));
+        assert_eq!(c.advance(ms(55)), (0, Duration::from_millis(5)), "never counted twice");
+        // So a 300 ms deadline (30 ticks) passes after 300 ms however the wakeups fall.
+        assert_eq!(c.advance(ms(300)).0, 30 - 5);
+        assert_eq!(c.advance(t0).0, 0, "time never runs backwards");
+    }
+
+    #[test]
+    fn a_reached_epoch_deadline_stops_only_once_the_wall_clock_has() {
+        let t0 = Instant::now();
+        let ms = |n| t0 + Duration::from_millis(n);
+        // A catch-up burst reached the deadline 95 ms early: run 10 more ticks.
+        assert!(matches!(on_epoch_deadline(Some(ms(100)), ms(5)), UpdateDeadline::Continue(10)));
+        assert!(matches!(on_epoch_deadline(Some(ms(100)), ms(99)), UpdateDeadline::Continue(1)));
+        assert!(matches!(on_epoch_deadline(Some(ms(100)), ms(100)), UpdateDeadline::Interrupt));
+        assert!(matches!(on_epoch_deadline(None, ms(1)), UpdateDeadline::Interrupt));
+    }
 
     /// `(module (memory (export "memory") 1))`.
     const ONE_PAGE: &[u8] = b"\0asm\x01\0\0\0\x05\x03\x01\x00\x01\x07\x0a\x01\x06memory\x02\x00";
