@@ -26,6 +26,7 @@ plugwright-isolate.workspace = true
 plugwright-wasm.workspace = true
 plugwright-macros.workspace = true
 plugwright-loader = { workspace = true, features = ["wasm"] }
+notify.workspace = true
 semver.workspace = true
 serde.workspace = true
 serde_json.workspace = true
