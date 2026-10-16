@@ -65,6 +65,20 @@ fn list_and_doctor_report_without_building() {
 }
 
 #[test]
+fn doctor_reports_the_trust_policy_of_every_source() {
+    let dir = project();
+    let key = "RWQf6LRCGA9i53mlYecO4IzT51TGPpvWucNSCh1CBM0QTaLn73Y7GFO3";
+    let manifest = format!(
+        "[settings.trust]\nunsigned = \"warn\"\n{NEVER_BUILT}[plugin.trust]\nkeys = [\"{key}\"]\nunsigned = \"deny\"\n"
+    );
+    std::fs::write(dir.path().join("plugwright.toml"), manifest).unwrap();
+    let text = stdout(&run_in(dir.path(), &["doctor"]));
+    assert!(text.contains("trust        unsigned warned about, no keys"), "{text}");
+    assert!(text.contains("trust        prebuilt: unsigned refused, keys RWQf6LRCGA9i…"), "{text}");
+    assert_eq!(text.matches(" trust ").count(), 2, "plugins without a policy of their own are not listed:\n{text}");
+}
+
+#[test]
 fn bad_usage_exits_with_2() {
     assert_eq!(run(&["frobnicate"]).status.code(), Some(2));
     assert_eq!(run(&["call", "only-id"]).status.code(), Some(2));

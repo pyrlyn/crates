@@ -13,6 +13,8 @@ Wasm modules through a pluggable engine layer (wasmtime and wasmi built in, wasm
   target, profile, features, `RUSTFLAGS` and output-changing accelerators; a hit does not run
   cargo at all. Every artifact is verified by sha256 on load. Git branches/tags are pinned to
   SHAs in `plugwright.lock`.
+* **Trust** artifacts by detached minisign (ed25519) signatures, with a policy per source
+  (`[settings.trust]`, `[plugin.trust]`) checked before anything is mapped or compiled.
 * **Load** through one trait, [`Plugin`], whatever the backend: [`IsolatedPlugin`] (sandboxed
   child process, the default), [`NativePlugin`] (in-process) or [`WasmPlugin`]. Artifact formats
   are detected from their content (ELF, Mach-O incl. fat, PE, `ar`, Wasm), not the file name.
@@ -195,6 +197,34 @@ profile = { opt_level = "2", codegen_units = 16, lto = "off", debug = 0, strip =
   `build.rustflags` via `--config` (a `target.<triple>.rustflags` in your cargo config would
   take precedence over it).
 
+## Signatures
+
+An artifact `libhello.so` is signed by `libhello.so.minisig` next to it, as written by
+`minisign -S -m libhello.so` or by `plugwright::trust::sign_file` (feature `sign` of
+`plugwright-trust`). The policy says which public keys a source accepts and what happens to an
+artifact without a signature:
+
+```toml
+[settings.trust]                           # every source without its own policy
+keys = ["RWQf6LRCGA9i53mlYecO4IzT51TGPpvWucNSCh1CBM0QTaLn73Y7GFO3"]
+unsigned = "deny"                          # deny | warn | allow; default deny with keys, allow without
+
+[[plugin]]
+id = "local"
+source = { path = "plugins/local" }
+trust = { unsigned = "allow" }             # replaces [settings.trust] for this source
+```
+
+* A signature that is present but malformed, made by a key the source does not trust, or not
+  matching the artifact is a `PluginError::Signature` in every mode; only a missing one follows
+  `unsigned`.
+* The check runs before the `sha256` pin, before a static library is relinked, before a Wasm
+  module is compiled and before a native library is mapped or a runner spawned.
+* Artifacts built from `path` and `git` sources come out of the local cargo build unsigned: a
+  manifest that denies unsigned artifacts gives such plugins their own policy.
+* Only prehashed signatures (the minisign default since 0.9) are accepted, so an artifact is
+  streamed, never read whole into memory.
+
 ## `cargo plugwright`
 
 ```text
@@ -206,7 +236,8 @@ cargo plugwright [--manifest PATH] [-v] doctor
 ```
 
 `doctor` checks the toolchain, the Wasm target, the relink linker, Wasm engines, what the
-sandbox enforces on this OS, sccache / mold / Cranelift, and what `[settings.build]` resolves to.
+sandbox enforces on this OS, sccache / mold / Cranelift, what `[settings.build]` resolves to,
+and the trust policy of every source.
 
 ## Security model
 
@@ -214,6 +245,7 @@ sandbox enforces on this OS, sccache / mold / Cranelift, and what `[settings.bui
 |---|---|---|
 | malicious plugin source (`build.rs`, proc-macros) | build only manifests you trust; `--locked` / `--offline`; SHAs pinned in the lockfile | build-time code runs with your privileges |
 | tampered cached artifact | sha256 recorded at build and checked on every load; `sha256` pin for prebuilt artifacts (checked before relinking) | attacker who can write both cache and lockfile |
+| forged or swapped prebuilt artifact | minisign signature checked against the source's trusted keys before mapping, relinking or compiling (`[settings.trust]`, `[plugin.trust]`) | a stolen signing key; a file swapped between the check and the load by someone who can write it |
 | native crash, abort, hang | default `isolation = "process"`: runner with cleared env, no core dumps, call timeout, restart budget | — |
 | native plugin reaching out | runner sandboxes itself before `dlopen`: no writes, network or new processes, reads allow-listed (macOS Seatbelt; Linux `no_new_privs` + Landlock + seccomp) | Windows: low integrity + job object only, reads and network stay open; Linux without Landlock: file access open (reported, `require = true` makes it an error) |
 | native panic | SDK wraps every entry in `catch_unwind`; builder forces `panic = "unwind"`; Cranelift never used in-process | plugins not built with the SDK |
