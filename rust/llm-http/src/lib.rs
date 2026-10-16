@@ -11,8 +11,9 @@
 //!
 //! # Features
 //!
-//! All three are on by default. A host that keeps secrets in its own store
-//! and sends requests through its own HTTP stack turns them off
+//! `keyring`, `reqwest` and `sse` are on by default; `test-util` is not. A host
+//! that keeps secrets in its own store and sends requests through its own HTTP
+//! stack turns the three off
 //! (`default-features = false`) and builds without `keyring`, `reqwest` or
 //! `eventsource-stream`.
 //!
@@ -21,6 +22,7 @@
 //! | `keyring` | `http::resolve_key` (env var, then the platform keyring) | `keyring` |
 //! | `reqwest` | `http::client_with_timeout` | `reqwest` |
 //! | `sse` | the `sse` module (`sse_stream`, `parse_sse_str`) | `eventsource-stream`, `bytes`, `futures` |
+//! | `test-util` | the `cassette` module (record and replay HTTP bodies, secrets masked); off by default | `serde`, `llm-wire/test-util` |
 //!
 //! Always available: `http::resolve_key_with` (the lookup injected),
 //! `keyring_enabled`, `bearer`, `api_key`, `error_message`,
@@ -32,6 +34,8 @@
 //! tokio's timer cannot run there; `retry::stream_with_retry_with` takes the
 //! backoff sleep from the caller instead.
 
+#[cfg(feature = "test-util")]
+pub mod cassette;
 pub mod http;
 pub mod retry;
 #[cfg(feature = "sse")]

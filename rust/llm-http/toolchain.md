@@ -18,6 +18,7 @@
 | http | local | https://github.com/hyperium/http | `HeaderValue` and `StatusCode` for the auth headers and `map_http_error`, with no HTTP client |
 | keyring | local, optional (`keyring`) | https://github.com/open-source-cooperative/keyring-rs | Platform credential store lookup |
 | reqwest | local, optional (`reqwest`) | https://github.com/seanmonstar/reqwest | Client builder of `client_with_timeout` (`rustls-tls` only) |
+| serde | local, optional (`test-util`) | https://github.com/serde-rs/serde | Serialises the cassette fixture file |
 | serde_json | local | https://github.com/serde-rs/json | Reads the `error.message` envelope of an error body |
 | tokio | local | https://github.com/tokio-rs/tokio | `mpsc`, `select!` and `join!` in the retry loop; `sleep` (`time`) everywhere but wasm32-unknown-unknown |
 | tokio-util | local | https://github.com/tokio-rs/tokio | `CancellationToken` in the retry loop |

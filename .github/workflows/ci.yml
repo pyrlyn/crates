@@ -100,6 +100,7 @@ jobs:
           # features gate. The workspace run above only sees default features.
           cargo test -p llm-http --no-default-features --locked
           cargo clippy -p llm-http --no-default-features --all-targets --locked -- -D warnings
+          cargo test -p llm-http --no-default-features --features test-util --locked
           if cargo tree -p llm-http --no-default-features -e normal --target all --prefix none --locked \
             | grep -E '^(keyring|reqwest|eventsource-stream) v'; then
             echo "llm-http --no-default-features links a crate its features gate" >&2
