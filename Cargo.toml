@@ -5,5 +5,13 @@ resolver = "2"
 # plugwright (wasmtime and wasmer pin cranelift versions this workspace does not need).
 exclude = ["rust/injecta/bench", "plugwright"]
 
+# cargo-workspaces (`cargo ws`, from mise.toml). Releases stay with bump.yml/release.yml; this is
+# for `cargo ws publish --publish-as-is --dry-run` and dependency-ordered publishing. Tags follow
+# the repo's `<crate>-v<version>` form, no global tag.
+[workspace.metadata.workspaces]
+allow_branch = "main"
+individual_tag_prefix = "%n-v"
+no_global_tag = true
+
 [workspace.package]
 license = "GPL-3.0-or-later"
