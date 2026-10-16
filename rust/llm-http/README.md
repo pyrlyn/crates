@@ -28,7 +28,7 @@ fn auth_header() -> Result<reqwest::header::HeaderValue, llm_wire::ProviderError
 
 ## Features
 
-All three are on by default, so a plain dependency gets everything above.
+`keyring`, `reqwest` and `sse` are on by default, so a plain dependency gets them; `test-util` is off.
 
 | Feature | Gates | Pulls in |
 | --- | --- | --- |
