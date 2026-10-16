@@ -16,7 +16,7 @@
 | --- | --- | --- | --- |
 | cargo_metadata | local | https://github.com/oli-obk/cargo_metadata | Finds a workspace crate by name for `cargo plugwright lib / wasm / plugin` |
 | cc | local | https://github.com/rust-lang/cc-rs | Finds the linker for static-library relinking |
-| libc | local | https://github.com/rust-lang/libc | dlopen probes, rlimits, Seatbelt and Landlock/seccomp calls |
+| libc | local | https://github.com/rust-lang/libc | dlopen probes, rlimits, Seatbelt and Landlock/seccomp calls, POSIX shared memory for isolated calls |
 | libloading | local | https://github.com/nagisa/rust_libloading | Loads native plugin libraries |
 | minisign-verify | local | https://github.com/jedisct1/rust-minisign-verify | Verifies artifact signatures before loading (zero dependencies) |
 | minisign | local (optional, feature `sign` of `plugwright-trust`) | https://github.com/jedisct1/rust-minisign | Signs artifacts and generates keys |
@@ -34,5 +34,5 @@
 | wasmtime | local | https://github.com/bytecodealliance/wasmtime | Wasm engine (feature `wasmtime`) |
 | wasmi, wasmi_core | local | https://github.com/wasmi-labs/wasmi | Wasm interpreter (feature `wasmi`) |
 | wasmer, wasmer-middlewares | local (`crates/plugwright-wasmer`, own lockfile) | https://github.com/wasmerio/wasmer | Wasm engine adapter outside the workspace |
-| windows-sys | local | https://github.com/microsoft/windows-rs | Job objects, integrity levels, module probes on Windows |
+| windows-sys | local | https://github.com/microsoft/windows-rs | Job objects, integrity levels, module probes, shared memory sections on Windows |
 | tempfile | local (dev) | https://github.com/Stebalien/tempfile | Test directories |

@@ -82,6 +82,7 @@ Crate graph: `core ← {sandbox, trust, build, native, wasm} ← {isolate, wasmt
 | D23 | Typed calls through proc macros over the existing byte ABI: `#[plugin]` (guest) and `#[interface]` (host) share one wire convention decided **syntactically** from the signature (`&str`/`String` → UTF-8, `&[u8]`/`Vec<u8>` → bytes, ≥ 2 params → JSON array/object, other → JSON) | no ABI change (ABI_VERSION stays 1), raw callers keep working, binary payloads stay copy-free; a trait-based encoding cannot tell `String` from `T: Serialize` without specialization. Cost: aliases of `String` travel as JSON — documented |
 | D24 | `#[interface]` keeps the trait as written (methods return `plugwright::Result<T>`) and generates `<Trait>Client<I: Invoke>`; `Invoke` is implemented for `Bound` (via the manager), `dyn Plugin`, `&mut T`, `Box<T>` | an honest signature (every call can fail), mockable trait, calls through the manager keep logging/timeouts/restarts |
 | D25 | Artifact signatures are detached minisign files (`<artifact>.minisig`, prehashed ed25519), verified with `minisign-verify` against a per-source `TrustPolicy` before the sha256 pin, relinking, compiling or mapping; signing (`minisign`) is an opt-in feature | the format and tool users already have; zero dependencies on the host's load path, while signing's scrypt and password prompt stay out of hosts; a check before anything runs the artifact's code |
+| D26 | Isolated payloads of at least `shm_threshold` bytes travel through one fixed-size shared memory region per runner (POSIX `shm_open` / a pagefile-backed section), mapped by the runner before LOAD applies the sandbox; frames carry `offset, length`, the pipe stays the control channel and the fallback | a 4 MiB call no longer streams through a pipe twice; mapping before the sandbox needs no new sandbox rule, and with the name unlinked and every descriptor closed nothing can resize the region under the host. Raw `libc` / `windows-sys`: `shared_memory` is unmaintained, `memmap2` maps files only, `ipc-channel` is heavy |
 
 
 ## 3. Security model
@@ -100,6 +101,6 @@ Crate graph: `core ← {sandbox, trust, build, native, wasm} ← {isolate, wasmt
 | ABI confusion | `abi_version` first field, `struct_size`, every slot checked, unknown status → error | — |
 | Wasm guest escape | engine sandbox, no WASI, single `log` import, bounds-checked host reads | engine bugs |
 | Wasm DoS | fuel, memory limiter, wall-clock timeout on all engines, stack limit, instance discarded on trap | wasmer on Windows: a timed-out worker is abandoned and stopped by fuel |
-| protocol confusion (isolated) | length-limited frames, magic handshake, stdout redirect (fd 1 on unix; std handle + CRT fd 1 on Windows) | — |
+| protocol confusion (isolated) | length-limited frames, magic handshake, stdout redirect (fd 1 on unix; std handle + CRT fd 1 on Windows); shared memory ranges from the runner checked against the host's own region size and copied out, a bad one kills the runner (D26) | — |
 | git URL tricks | scheme allowlist, `protocol.ext.allow=never`, no terminal prompts, no submodules | — |
 
