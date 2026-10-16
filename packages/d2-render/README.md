@@ -151,7 +151,7 @@ native backend honours `theme`, `pad`, `salt`, `no_xml_tag`,
 | `omit_version(bool)` | `--omit-version` |
 | `salt(str)` | `--salt` |
 | `animate_interval_ms(u32)` | `--animate-interval` |
-| `stamp(bool)` | none: records a source hash, see [Freshness](#freshness) |
+| `stamp(bool)` | none: records a source hash, see Freshness below |
 
 The CLI backend always adds `--watch=false`, so a `D2_WATCH` in the
 environment cannot turn a render into a server that never exits.
@@ -391,8 +391,10 @@ scripted stand-ins, so they run everywhere.
 
 ## License
 
-Code written for this crate is MIT, like the rest of this repository's
-crates. The files under `src/native/` are a Rust rewrite of parts of D2
-(Copyright 2022 Terrastruct, Inc.) and stay under the
-[Mozilla Public License 2.0](https://mozilla.org/MPL/2.0/), as stated at
-the top of each file; hence `license = "MIT AND MPL-2.0"`.
+`license = "MIT AND MPL-2.0"`. Code written for this crate is under the MIT
+license ([LICENSE-MIT](https://github.com/listepo/crates-packages/blob/main/packages/d2-render/LICENSE-MIT)).
+The files under `src/native/` are a Rust rewrite of parts of D2 (Copyright
+2022 Terrastruct, Inc.) and stay under the Mozilla Public License 2.0
+([LICENSE-MPL-2.0](https://github.com/listepo/crates-packages/blob/main/packages/d2-render/LICENSE-MPL-2.0)),
+as stated at the top of each of those files. Both license texts ship in the
+crate package.

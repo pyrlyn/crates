@@ -6,8 +6,22 @@ rust-version = "1.86"
 description = "Render D2 diagrams to SVG/PNG in pure Rust (or through the optional d2 CLI backend), with diagnostics and freshness checks"
 license = "MIT AND MPL-2.0"
 repository = "https://github.com/listepo/crates-packages"
-keywords = ["d2", "diagram", "svg", "render"]
-categories = ["visualization", "command-line-utilities"]
+homepage = "https://github.com/listepo/crates-packages/tree/main/packages/d2-render"
+documentation = "https://docs.rs/d2-render"
+readme = "README.md"
+keywords = ["d2", "d2lang", "diagram", "svg", "renderer"]
+categories = ["visualization", "rendering", "graphics"]
+# Sources, examples, tests (with their small fixtures) and both license texts.
+# AGENTS.md is contributor tooling and stays out of the package.
+include = [
+    "/src/**/*.rs",
+    "/examples/*.rs",
+    "/tests/**/*.rs",
+    "/tests/fixtures/*.d2",
+    "/README.md",
+    "/LICENSE-MIT",
+    "/LICENSE-MPL-2.0",
+]
 
 [features]
 default = ["native"]
@@ -101,3 +115,5 @@ required-features = ["watch"]
 
 [package.metadata.docs.rs]
 all-features = true
+# `docsrs` turns on `doc_cfg`, so feature-gated items carry a feature badge.
+rustdoc-args = ["--cfg", "docsrs"]
