@@ -61,6 +61,30 @@ calls `destroy` then drops the library, then removes the shadow file. Host log c
 **Done when:** a SIGSEGV and an `abort()` in the example plugin return errors, the host keeps
 running, and the next call succeeds after an automatic restart.
 
+### T45 — Shared-memory transport for large payloads in isolated mode
+
+From idea F8. Isolated plugins talk to the runner over stdin/stdout frames, so every large
+payload is copied through a pipe. Add a shared-memory path for payloads above a threshold,
+with the pipe kept as the control channel and the fallback. The runner is untrusted: offsets,
+lengths and sizes it reports are validated before use, and a runner that dies mid-call is a
+`PluginError`. Done: works on macOS, Linux and Windows (Windows at least cross-linted),
+falls back to the pipe when shared memory is unavailable, and a perf case in
+`examples/host/benches/perf.rs` shows the gain on a large payload.
+**Result:** `crates/plugwright-isolate/src/shm.rs` (D26): one fixed-size region per runner
+(`IsolationOptions::shm_size`, default 16 MiB; `0` disables), POSIX `shm_open` + `mmap` on Unix, a
+pagefile-backed section duplicated into the runner on Windows; raw `libc` / `windows-sys`, no new
+crate (`shared_memory` unmaintained since 2022, `memmap2` maps files only, `ipc-channel` heavy).
+HELLO offers `token | size | threshold`, the runner maps it before LOAD applies the sandbox and
+closes its descriptor, READY echoes the size, then the host unlinks the name. `CALL_SHM` /
+`OK_SHM` carry `offset, length`; payloads of at least `shm_threshold` (64 KiB) that fit use the
+region, the rest the pipe. The host checks every range against its own size and copies out; a bad
+one is a `Protocol` error that kills the runner.
+Tests: region round trip, bounds, token and size checks, unlink; the runner loop's HELLO and input
+bounds; the `/bin/sh` fake runner (echo through the region with the recorded requests, pipe
+fallback, eight hostile ranges, `OK_SHM` without a region, SIGKILL mid-call); e2e calls of 64 KiB−1
+to 16 MiB+1 under the default sandbox. Perf on an M-series Mac: a 4 MiB isolated `greet` takes
+2.5 ms over the pipe and 0.77 ms through shared memory. Windows: cross clippy only.
+
 ### T05 — Wasm abstraction (C4)
 `WasmEngine::compile(&[u8]) → Box<dyn WasmModule>`; `WasmModule::instantiate(&WasmLimits, HostLog)
 → Box<dyn WasmInstance>`; `WasmInstance::{call, read, write, begin_call}`; `WasmError`

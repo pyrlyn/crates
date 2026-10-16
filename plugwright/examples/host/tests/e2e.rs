@@ -107,6 +107,30 @@ fn isolated_plugin_survives_crashes_and_timeouts() {
     assert_err!(m.call("iso", "greet", b""), PluginError::Disabled(_));
 }
 
+/// The runner maps the region before LOAD confines it, and keeps using it after.
+#[test]
+fn large_payloads_go_through_shared_memory_under_the_sandbox() {
+    use plugwright::{IsolatedPlugin, NativeLoader, Plugin};
+    let o = options();
+    let artifact =
+        NativeLoader::new(&o.cache_dir).unwrap().build(workspace().join("examples/native-hello")).unwrap().path;
+    let policy = SandboxPolicy::default();
+    let mut p =
+        IsolatedPlugin::spawn("shm", &artifact, b"{}", o.isolation.clone(), policy, Arc::new(|_, _| {})).unwrap();
+    assert!(p.info().sandbox.is_some(), "sandboxed");
+    assert_eq!(p.shared_memory(), Some(o.isolation.shm_size));
+
+    for len in [o.isolation.shm_threshold - 1, o.isolation.shm_threshold, 4 << 20] {
+        let name = "x".repeat(len);
+        let out = String::from_utf8(p.call("greet", name.as_bytes()).unwrap()).unwrap();
+        assert!(out.starts_with(&format!("Hello, {name}!")), "{len} bytes");
+    }
+    // Larger than the region: the pipe carries it.
+    let name = "y".repeat(o.isolation.shm_size + 1);
+    assert!(String::from_utf8(p.call("greet", name.as_bytes()).unwrap()).unwrap().contains(&name));
+    assert_eq!(p.shared_memory(), Some(o.isolation.shm_size), "the runner survived every call");
+}
+
 /// Spawn a TCP listener so `connect` has a reachable target.
 fn listener() -> (std::net::TcpListener, String) {
     let l = std::net::TcpListener::bind("127.0.0.1:0").unwrap();

@@ -88,6 +88,13 @@ fn cases() -> Vec<Case> {
                 Box::new(move || drop(black_box(m.call("n", "greet", b"x").unwrap())))
             }),
         },
+        // The same 4 MiB call with the pipe only and through shared memory.
+        Case { name: "call/native-isolated/4mib-pipe", budget: ms(25), kind: Hot(|_| large_isolated_call(0)) },
+        Case {
+            name: "call/native-isolated/4mib-shm",
+            budget: ms(8),
+            kind: Hot(|_| large_isolated_call(ManagerOptions::new(".").isolation.shm_size)),
+        },
         Case {
             name: "call/wasm/wasmtime",
             budget: us(20),
@@ -356,10 +363,24 @@ fn wasmi_loader() -> WasmLoader {
 }
 
 fn manager() -> PluginManager {
+    PluginManager::new(manager_options()).unwrap()
+}
+
+fn manager_options() -> ManagerOptions {
     let examples = Path::new(env!("CARGO_MANIFEST_DIR")).join("..").canonicalize().unwrap();
     let mut o = ManagerOptions::new(examples);
     o.cache_dir = cache_dir();
-    PluginManager::new(o).unwrap()
+    o
+}
+
+/// One isolated `greet` with a 4 MiB name, whose reply is as large.
+fn large_isolated_call(shm_size: usize) -> Box<dyn FnMut()> {
+    let mut o = manager_options();
+    o.isolation.shm_size = shm_size;
+    let mut m = PluginManager::new(o).unwrap();
+    m.load(native_spec(Isolation::Process)).unwrap();
+    let name = vec![b'x'; 4 << 20];
+    Box::new(move || drop(black_box(m.call("n", "greet", &name).unwrap())))
 }
 
 fn native_spec(isolation: Isolation) -> PluginSpec {
