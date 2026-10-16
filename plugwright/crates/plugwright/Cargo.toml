@@ -37,6 +37,7 @@ tracing.workspace = true
 plugwright-trust = { workspace = true, features = ["sign"] }
 tempfile.workspace = true
 tracing-subscriber.workspace = true
+trybuild.workspace = true
 
 [lints]
 workspace = true

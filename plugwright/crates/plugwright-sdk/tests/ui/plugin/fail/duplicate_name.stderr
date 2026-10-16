@@ -1,0 +1,5 @@
+error: two methods are exported as `run`
+  --> tests/ui/plugin/fail/duplicate_name.rs:11:8
+   |
+11 |     fn run_again(&self) {}
+   |        ^^^^^^^^^

@@ -1,0 +1,5 @@
+error: plugin methods take `&self` or `&mut self`
+ --> tests/ui/plugin/fail/self_by_value.rs:8:16
+  |
+8 |     fn consume(self) {}
+  |                ^^^^

@@ -84,6 +84,7 @@ thiserror = "2.0.21"
 toml = "1.1.8"
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+trybuild = "1.0.122"
 wasmi = "2.0.0"
 wasmi_core = "2.0.0"
 wasmtime = { version = "49.0.2", default-features = false, features = ["cranelift", "runtime", "std"] }

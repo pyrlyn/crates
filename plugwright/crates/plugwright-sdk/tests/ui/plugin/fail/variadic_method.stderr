@@ -1,0 +1,5 @@
+error: plugin methods cannot be variadic
+ --> tests/ui/plugin/fail/variadic_method.rs:8:44
+  |
+8 |     unsafe extern "C" fn run(&self, n: u8, _: ...) {
+  |                                            ^^^^^^
