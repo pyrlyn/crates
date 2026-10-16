@@ -1,0 +1,12 @@
+# config-schema — completed tasks
+
+### T1. The crate: schema check, layering with provenance, in-place edits
+
+Extracted from cox, rtok, ketch and aulo (aulo plan T1.14), Phase A: the crate and its tests only; no app uses it yet (T2, T3).
+
+- `schema`: the stale-schema check. ketch's `assert_schema_current` (bless variable, CRLF tolerance, `$comment`, `null` dropped) with aulo's more complete `drop_null` (it also collapses `anyOf: [T, null]`) and cox's rule of serializing the schema with `serde_json`. It returns an error that names the file and the variable instead of panicking.
+- `layers`: figment layering. `Named` from rtok (keeps the inner metadata, so a file layer still reports its path), provenance from aulo (`Value::tag` walk over the merged value, covering every leaf) in place of rtok's per-key `find_metadata` over a hand-kept key list, and aulo's error that names the layer. File layers skip a missing file and never search parent directories (cox's note on `Toml::file`). Overrides drop `null` entries so an unset flag cannot blank a key (rtok built a `Dict` of only the `Some` flags by hand). `find_up` and `git_root` are the same walk rtok and cox each wrote.
+- `env`: rtok's and cox's resolvers merged. Names are matched against the defaults' key tree with cox's longest-known-name rule, so no leaf table or alias list is kept; rtok's comma lists for array keys and `VAR=` as an empty list; cox's ignore list; each variable is its own layer so provenance names it (aulo reported the variable too). aulo's `__` separator is not needed. Variables are injected in tests, never set.
+- `edit` and `reveal`: rtok's `assign` (swap the value in place, keeping padding and the trailing comment; explicit walk that errors on a scalar instead of panicking; inline tables) over cox's `entry(..)` trick, rtok's `reveal_commented_key` for commented reference files, cox's `toml_from_json`, and atomic write with symlink-following and permission keeping (rtok wrote atomically through its own SDK; cox used `fs::write`). The edit is planned first (`before`/`after`, so a dry run and a diff need no extra code) and an own-file result is validated by deserializing it as the config type, which replaces rtok's hand-written value rules with the types' own constraints. `plan_edit_foreign` and `read_entry` serve the rule for files another program owns.
+
+Check: `cargo test -p config-schema` (44 tests), `cargo clippy --all-targets -- -D warnings`, `cargo fmt --check`, `cargo +1.86 check` green.

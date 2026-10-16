@@ -1,0 +1,17 @@
+[package]
+name = "workspace-graph"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.98"
+description = "Load a Cargo workspace's direct dependency graph and assert rules over it in tests"
+license = "MIT"
+repository = "https://github.com/pyrlyn/crates"
+# Consumed by path from sibling checkouts only; release-plz skips it.
+publish = false
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[dependencies]
+cargo_metadata = "0.23.1"
+thiserror = "2.0.21"

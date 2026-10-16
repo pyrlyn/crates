@@ -1,0 +1,32 @@
+[package]
+name = "llm-catalog"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.98"
+description = "A model catalog for LLM agents: context windows, efforts, capabilities and prices merged from built-in rows, host config and a user price file"
+license = "GPL-3.0-or-later OR LicenseRef-Royalty-Free"
+repository = "https://github.com/pyrlyn/crates"
+keywords = ["llm", "agent", "models", "pricing"]
+categories = ["data-structures"]
+readme = "README.md"
+exclude = ["AGENTS.md", "done.md", "ideas.md", "justfile", "plan.md", "roadmap.md", "todo.md", "toolchain.md"]
+
+[dependencies]
+llm-wire = { path = "../llm-wire", version = "0.1.0" }
+figment = { version = "0.10", default-features = false, features = ["toml"] }
+schemars = "1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "2"
+
+[lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+dbg_macro = "warn"
+todo = "warn"
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"

@@ -1,0 +1,23 @@
+error[E0277]: `App` does not hold a `Handler` it can lend
+  --> tests/ui/get_transient.rs:14:17
+   |
+14 |     let _ = app.get::<Handler>();
+   |                 ^^^ `Handler` is not an `instance`, `singleton` or `scoped` entry of `App`
+   |
+help: the trait `ProvideRef<Handler>` is not implemented for `App`
+  --> tests/ui/get_transient.rs:6:1
+   |
+ 6 | / injecta::container! {
+ 7 | |     struct App {
+   | |______________^
+   = note: `get` borrows cached values only; `transient` values are built on every call: use `resolve::<Handler>()`
+   = note: if `Handler` is not registered at all, declare it in `injecta::container!`
+note: required by a bound in `injecta::Resolve::get`
+  --> src/provide.rs
+   |
+   |     fn get<T>(&self) -> &T
+   |        --- required by a bound in this associated function
+   |     where
+   |         Self: ProvideRef<T>,
+   |               ^^^^^^^^^^^^^ required by this bound in `Resolve::get`
+   = note: this error originates in the macro `injecta::container` (in Nightly builds, run with -Z macro-backtrace for more info)

@@ -1,0 +1,5 @@
+error: async constructors are not supported: build the value before the container and register it as `instance`
+ --> tests/ui/async_constructor.rs:6:5
+  |
+6 |     async fn connect() -> Self {
+  |     ^^^^^

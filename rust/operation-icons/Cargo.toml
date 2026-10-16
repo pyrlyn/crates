@@ -1,0 +1,16 @@
+[package]
+name = "operation-icons"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.86"
+description = "Emoji icons for the verb of a status line, and the fixed-width gutter that keeps lines with and without an icon aligned"
+license.workspace = true
+repository = "https://github.com/pyrlyn/crates"
+keywords = ["cli", "emoji", "terminal", "status"]
+categories = ["command-line-interface"]
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[dependencies]
+unicode-width = "0.2"

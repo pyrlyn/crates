@@ -1,0 +1,5 @@
+error: an interface trait cannot be generic
+ --> tests/ui/interface/fail/generic_trait.rs:4:11
+  |
+4 | trait Calc<T> {
+  |           ^^^

@@ -1,0 +1,30 @@
+event: response.created
+data: {"type":"response.created","sequence_number":0,"response":{"id":"resp_003","object":"response","status":"in_progress","model":"gpt-5.1","output":[]}}
+
+event: response.output_item.added
+data: {"type":"response.output_item.added","sequence_number":1,"output_index":0,"item":{"id":"fc_001","type":"function_call","status":"in_progress","call_id":"call_ReadA1","name":"read","arguments":""}}
+
+event: response.function_call_arguments.delta
+data: {"type":"response.function_call_arguments.delta","sequence_number":2,"item_id":"fc_001","output_index":0,"delta":"{\"path\":\"a.rs\"}"}
+
+event: response.function_call_arguments.done
+data: {"type":"response.function_call_arguments.done","sequence_number":3,"item_id":"fc_001","output_index":0,"name":"read","arguments":"{\"path\":\"a.rs\"}"}
+
+event: response.output_item.done
+data: {"type":"response.output_item.done","sequence_number":4,"output_index":0,"item":{"id":"fc_001","type":"function_call","status":"completed","call_id":"call_ReadA1","name":"read","arguments":"{\"path\":\"a.rs\"}"}}
+
+event: response.output_item.added
+data: {"type":"response.output_item.added","sequence_number":5,"output_index":1,"item":{"id":"fc_002","type":"function_call","status":"in_progress","call_id":"call_ReadB2","name":"read","arguments":""}}
+
+event: response.function_call_arguments.delta
+data: {"type":"response.function_call_arguments.delta","sequence_number":6,"item_id":"fc_002","output_index":1,"delta":"{\"path\":\"b.rs\"}"}
+
+event: response.function_call_arguments.done
+data: {"type":"response.function_call_arguments.done","sequence_number":7,"item_id":"fc_002","output_index":1,"name":"read","arguments":"{\"path\":\"b.rs\"}"}
+
+event: response.output_item.done
+data: {"type":"response.output_item.done","sequence_number":8,"output_index":1,"item":{"id":"fc_002","type":"function_call","status":"completed","call_id":"call_ReadB2","name":"read","arguments":"{\"path\":\"b.rs\"}"}}
+
+event: response.completed
+data: {"type":"response.completed","sequence_number":9,"response":{"id":"resp_003","object":"response","status":"completed","model":"gpt-5.1","output":[{"id":"fc_001","type":"function_call","status":"completed","call_id":"call_ReadA1","name":"read","arguments":"{\"path\":\"a.rs\"}"},{"id":"fc_002","type":"function_call","status":"completed","call_id":"call_ReadB2","name":"read","arguments":"{\"path\":\"b.rs\"}"}],"usage":{"input_tokens":600,"input_tokens_details":{"cached_tokens":0},"output_tokens":40,"output_tokens_details":{"reasoning_tokens":0},"total_tokens":640}}}
+

@@ -1,0 +1,65 @@
+---
+source: llm-wire-openai/src/chat.rs
+expression: body
+---
+{
+  "model": "gemini-3.8-flash",
+  "messages": [
+    {
+      "role": "system",
+      "content": "<tool specs>\n\nYou are cox."
+    },
+    {
+      "role": "user",
+      "content": "read both files"
+    },
+    {
+      "role": "assistant",
+      "tool_calls": [
+        {
+          "id": "01ARZ3NDEKTSV4RRFFQ69G5FA1",
+          "type": "function",
+          "function": {
+            "name": "read",
+            "arguments": "{\"path\":\"a.rs\"}"
+          },
+          "extra_content": {
+            "google": {
+              "thought_signature": "sig-a"
+            }
+          }
+        },
+        {
+          "id": "01ARZ3NDEKTSV4RRFFQ69G5FA2",
+          "type": "function",
+          "function": {
+            "name": "read",
+            "arguments": "{\"path\":\"b.rs\"}"
+          }
+        }
+      ]
+    }
+  ],
+  "stream": true,
+  "stream_options": {
+    "include_usage": true
+  },
+  "max_tokens": 16384,
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "read",
+        "description": "Read a file",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

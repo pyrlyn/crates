@@ -1,0 +1,12 @@
+[package]
+name = "static-hello"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+# A static library: plugwright relinks it into a shared library before loading.
+[lib]
+crate-type = ["staticlib"]
+
+[dependencies]
+plugwright-sdk.workspace = true

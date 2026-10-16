@@ -1,0 +1,20 @@
+[package]
+name = "text-sanitize"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.86"
+description = "Make untrusted text safe to print: strips terminal escape sequences, control characters, bidi overrides and invisible characters"
+license = "GPL-3.0-or-later OR LicenseRef-Royalty-Free"
+repository = "https://github.com/pyrlyn/crates"
+keywords = ["sanitize", "terminal", "ansi", "bidi", "security"]
+categories = ["command-line-interface", "text-processing"]
+readme = "README.md"
+exclude = ["AGENTS.md", "done.md", "ideas.md", "justfile", "plan.md", "roadmap.md", "todo.md", "toolchain.md"]
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"

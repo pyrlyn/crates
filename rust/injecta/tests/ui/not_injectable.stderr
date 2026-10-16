@@ -1,0 +1,13 @@
+error[E0277]: `Plain` cannot be built by a container
+ --> tests/ui/not_injectable.rs:5:19
+  |
+5 |         transient Plain,
+  |                   ^^^^^ `Plain` is not `Injectable`
+  |
+help: the trait `Injectable<App>` is not implemented for `Plain`
+ --> tests/ui/not_injectable.rs:1:1
+  |
+1 | struct Plain;
+  | ^^^^^^^^^^^^
+  = note: add `#[derive(injecta::Injectable)]` to `Plain`, or put `#[injecta::injectable]` on an `impl` block with one `#[inject]` constructor
+  = note: for a foreign type or a trait object, register a factory instead: `singleton Arc<dyn Trait> = |c| Arc::new(c.build::<Impl>())`
