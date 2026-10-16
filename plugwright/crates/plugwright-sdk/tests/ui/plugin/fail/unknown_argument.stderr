@@ -1,0 +1,5 @@
+error: unknown argument; expected one of: crate, no_export
+ --> tests/ui/plugin/fail/unknown_argument.rs:6:10
+  |
+6 | #[plugin(client = Remote)]
+  |          ^^^^^^

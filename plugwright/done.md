@@ -378,3 +378,18 @@ generated code stays small. The `macros` feature adds serde_json to plugins: was
 macro unit tests for every compile error. Dedup candidates not taken (closures/constructors/serde
 enums fit better) are listed in research.md §9.4.
 
+
+### T46 — `trybuild` UI tests for macro diagnostics (C2)
+From idea F9. `#[plugin]` and `#[interface]` diagnostics are checked only by unit tests on
+`expand`, which do not prove what a user sees from `rustc`. Add `trybuild` compile-fail tests
+with `.stderr` snapshots for the main misuse cases of both macros, plus a compile-pass case.
+Done: the tests run in `mise run test` and in CI, and every error path in
+`plugwright-macros` that a user can hit has a case.
+**Result:** `crates/plugwright-sdk/tests/ui.rs` runs `tests/ui/plugin/` (19 compile-fail cases and
+a compile-pass case through a renamed SDK path); `crates/plugwright/tests/ui.rs` runs
+`tests/ui/interface/` (13 compile-fail cases and a compile-pass case on a fake `Invoke`). Cases
+cover the item and argument parse errors, unknown macro and helper arguments, and every
+`syn::Error` in `plugin.rs`, `interface.rs` and `wire.rs`. `cargo test --workspace` picks them up,
+so CI needs no change. The unit tests on `expand` stay. Regenerate snapshots with
+`TRYBUILD=overwrite`. Known imprecise span, recorded as is: a trait method without a return type
+(`fn f(&mut self);`) reports the missing `Result` at `#[interface]`, not at the method.

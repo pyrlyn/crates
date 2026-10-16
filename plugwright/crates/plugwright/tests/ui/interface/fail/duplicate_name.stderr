@@ -1,0 +1,5 @@
+error: two methods call `run`
+ --> tests/ui/interface/fail/duplicate_name.rs:8:8
+  |
+8 |     fn run_again(&mut self) -> plugwright::Result<()>;
+  |        ^^^^^^^^^

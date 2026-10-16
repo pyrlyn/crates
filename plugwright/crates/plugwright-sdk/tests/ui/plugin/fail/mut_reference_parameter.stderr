@@ -1,0 +1,11 @@
+error: `&mut` parameters cannot cross the plugin boundary; take the value or `&T`
+ --> tests/ui/plugin/fail/mut_reference_parameter.rs:7:20
+  |
+7 |     fn new(config: &mut Vec<u8>) -> Self {
+  |                    ^^^^^^^^^^^^
+
+error: `&mut` parameters cannot cross the plugin boundary; take the value or `&T`
+  --> tests/ui/plugin/fail/mut_reference_parameter.rs:12:25
+   |
+12 |     fn fill(&self, out: &mut String) {
+   |                         ^^^^^^^^^^^

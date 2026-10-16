@@ -1,0 +1,5 @@
+error: a plugin type cannot be generic
+ --> tests/ui/plugin/fail/generic_type.rs:7:5
+  |
+7 | impl<T> S<T> {}
+  |     ^^^
