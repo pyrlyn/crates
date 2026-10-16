@@ -1,0 +1,7 @@
+impl,full_cold_s,crate_only_clean_s,touch_rebuild_s,bin_bytes,stripped_bytes,loc_total,loc_wiring
+baseline,0.46,0.31,0.32,436688,343144,104,46
+injecta,3.35,1.68,1.78,440096,343096,97,23
+nject,10.04,1.94,1.08,436608,343120,99,37
+shaku,5.67,1.03,0.52,490144,378144,165,22
+teloc,3.53,0.46,0.47,461088,360048,106,17
+dill,4.34,0.76,0.68,568560,431056,97,21

@@ -1,0 +1,19 @@
+[package]
+name = "cargo-plugwright"
+description = "cargo subcommand for plugwright: build, list, call and diagnose plugins"
+version.workspace = true
+edition.workspace = true
+# wasmtime 49 needs 1.96.
+rust-version = "1.96"
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+plugwright = { workspace = true, features = ["wasmtime", "wasmi"] }
+tracing-subscriber.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

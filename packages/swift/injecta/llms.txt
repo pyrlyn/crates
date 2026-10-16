@@ -1,0 +1,29 @@
+# Injecta (Swift)
+
+> Compile-time dependency injection for Swift 6. Declare a container once with `@Container`, mark the types it builds `@Injectable`, and read entries as properties. The macros write the wiring as plain initializer calls; a build-tool plugin checks the whole graph across files. A missing entry, a cycle or a misuse is a compile error at its line. A singleton read is one atomic load: no registry, dictionary, lock or task-local on the resolve path.
+
+Generated from GUIDE.md and AGENTS.md by `INJECTA_BLESS=1 swift test --filter DocsTests`; do not edit.
+
+## Docs
+
+- [Guide](GUIDE.md): the user guide
+- [Full text](llms-full.txt): the guide and the agent rules in one file
+- [Agent rules](AGENTS.md): how to use and how to change Injecta
+- [Example container](Tests/InjectaTests/Fixtures.swift): app graph, request scope, main-actor graph
+
+## Guide sections
+
+- Quick start
+- Entries
+- Injectable types
+- Scopes
+- Lazy and factories
+- Overrides for tests and previews
+- Swift concurrency
+- The plugin
+- Compile-time errors
+- Introspection
+- Extension points
+- Performance
+- Anti-patterns
+- Limits

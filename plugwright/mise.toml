@@ -1,0 +1,28 @@
+# Rust comes from rust-toolchain.toml (rustup), like the rest of pyrlyn/crates.
+
+[tasks.check]
+run = ["cargo fmt --all --check", "cargo clippy --workspace --all-targets -- -D warnings"]
+
+[tasks.test]
+run = "cargo test --workspace"
+
+[tasks.demo]
+description = "Build plugins through plugwright and run the host demo"
+run = "cargo run -p plugwright-host -- --manifest examples/plugwright.toml demo"
+
+[tasks.doctor]
+description = "Check toolchain, targets, accelerators and sandbox support"
+run = "cargo run -q -p cargo-plugwright -- plugwright --manifest examples/plugwright.toml doctor"
+
+[tasks.install]
+description = "Install the `cargo plugwright` subcommand"
+run = "cargo install --locked --path crates/cargo-plugwright"
+
+[tasks.test-wasmer]
+description = "Test the wasmer adapter (separate lockfile, heavy build)"
+dir = "crates/plugwright-wasmer"
+run = "cargo test"
+
+[tasks.perf]
+description = "Performance tests with budgets (release host; PLUGWRIGHT_PERF_SCALE widens budgets)"
+run = "cargo bench -p plugwright-host --bench perf"

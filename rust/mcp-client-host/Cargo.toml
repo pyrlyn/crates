@@ -1,0 +1,46 @@
+[package]
+name = "mcp-client-host"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.98"
+description = "MCP client host: .mcp.json discovery, fail-open connect_all, OAuth with an injectable token store, elicitation mapping and deferred tools over rmcp"
+license = "GPL-3.0-or-later OR LicenseRef-Royalty-Free"
+repository = "https://github.com/pyrlyn/crates"
+keywords = ["mcp", "client", "oauth", "agent"]
+categories = ["development-tools"]
+readme = "README.md"
+exclude = ["AGENTS.md", "done.md", "ideas.md", "justfile", "plan.md", "roadmap.md", "todo.md", "toolchain.md"]
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+
+[features]
+# The OS keyring as a token store; off by default so a host that injects its
+# own store does not build the platform keychain bindings.
+keyring = ["dep:keyring"]
+
+[dependencies]
+async-trait = "0.1"
+# `auth` is the OAuth flow; the transports are stdio child processes and
+# Streamable HTTP through reqwest.
+rmcp = { version = "3.2", features = ["client", "auth", "transport-child-process", "transport-streamable-http-client-reqwest"] }
+# `preserve_order`: a form's questions are asked in the order the server wrote
+# its schema properties, which the default map would sort.
+serde_json = { version = "1", features = ["preserve_order"] }
+tokio = { version = "1", features = ["io-util", "net", "process", "rt", "sync", "time"] }
+tokio-util = "0.7"
+thiserror = "2"
+# rmcp 3.x implements its HTTP client trait for reqwest 0.13; `elicit` uses its
+# re-exported `Url` to normalize a server's URL before a person is asked.
+reqwest = { version = "0.13", default-features = false, features = ["default-tls", "system-proxy"] }
+keyring = { version = "4", optional = true }
+
+[dev-dependencies]
+tempfile = "3"
+tokio = { version = "1", features = ["macros"] }
+wiremock = "0.6"

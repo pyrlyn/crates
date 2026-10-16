@@ -46,8 +46,9 @@ jobs:
           done
           exit $bad
 
-  # pyrlyn/ci ci-rust.yml: fmt once, then clippy, check and tests per target of its shared
-  # matrix (Linux x86_64 + aarch64, macOS aarch64, Windows x86_64; build-only macOS x86_64).
+  # pyrlyn/ci ci-rust.yml: fmt once, then clippy, check and tests per target: Linux x86_64 +
+  # aarch64, macOS aarch64, Windows x86_64. The shared matrix at this pin still builds macOS
+  # x86_64, so the targets are listed here: Intel macOS is not supported.
   # file-backup is std-only and shared by ketch and rtok on all three platforms. The toolchain
   # is rust-toolchain.toml's channel, pinned exactly (every job fails on another rustc).
   rust:
@@ -57,8 +58,21 @@ jobs:
       actions: write # cancel-run on failure
     with:
       rust-version: "1.99.0" # rust-toolchain.toml channel = "1.99.0"
+      matrix: >-
+        [
+        {"os": "ubuntu-latest", "target": "x86_64-unknown-linux-gnu"},
+        {"os": "ubuntu-24.04-arm", "target": "aarch64-unknown-linux-gnu"},
+        {"os": "macos-latest", "target": "aarch64-apple-darwin"},
+        {"os": "windows-latest", "target": "x86_64-pc-windows-msvc"}
+        ]
       feature-args: ""
       clippy-args: --locked
+      # speech-capture links ALSA through cpal's alsa-sys on Linux.
+      setup-command: |
+        if [ "$RUNNER_OS" = Linux ]; then
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libasound2-dev pkg-config
+        fi
       # Publishing happens only from release.yml on a version-bump merge. Every other push
       # proves the crate is publish-ready, so a broken publish breaks here, not at release.
       test-command: |
@@ -66,4 +80,104 @@ jobs:
         if [ "$TARGET" = x86_64-unknown-linux-gnu ]; then
           cargo publish --dry-run -p file-backup --locked
           cargo publish --dry-run -p change-preview --locked
+          cargo publish --dry-run -p operation-icons --locked
+          cargo publish --dry-run -p fs-kit --locked
+          cargo publish --dry-run -p wasm-plugin-host --locked
+          cargo publish --dry-run -p telemetry-setup --locked
+          # The workspace run builds default features only; OTLP export is opt-in.
+          cargo test -p telemetry-setup --features otlp --locked
+          cargo publish --dry-run -p gettext-catalog --locked
+          cargo publish --dry-run -p sqlite-change-feed --locked
+          cargo publish --dry-run -p abi-drift --locked
+          cargo publish --dry-run -p keychain-secret --locked
+          # injecta needs injecta-macros on crates.io first (exact path+version dep),
+          # so only the macros crate can dry-run until its first release.
+          cargo publish --dry-run -p injecta-macros --locked
+          cargo publish --dry-run -p sccache-r2 --locked
+          cargo publish --dry-run -p app-home --locked
+          # A host with its own secret store and HTTP stack (Mailune) builds llm-http without
+          # its default features, so that build is tested and must not link the crates those
+          # features gate. The workspace run above only sees default features.
+          cargo test -p llm-http --no-default-features --locked
+          cargo clippy -p llm-http --no-default-features --all-targets --locked -- -D warnings
+          if cargo tree -p llm-http --no-default-features -e normal --target all --prefix none --locked \
+            | grep -E '^(keyring|reqwest|eventsource-stream) v'; then
+            echo "llm-http --no-default-features links a crate its features gate" >&2
+            exit 1
+          fi
+          # Mailune's browser build: llm-wire and the slim llm-http must compile for wasm.
+          rustup target add wasm32-unknown-unknown
+          cargo build -p llm-wire --target wasm32-unknown-unknown --locked
+          cargo build -p llm-http --no-default-features --target wasm32-unknown-unknown --locked
         fi
+
+  # plugwright is a separate workspace (own Cargo.lock and rust-toolchain.toml: wasmtime and
+  # wasmer pin cranelift versions the root workspace does not need), so the rust job above never
+  # sees it. Its tests build plugins with cargo and load them, which is slow, so a pull request
+  # that does not touch plugwright/ or this file skips the work; pushes to main always run it.
+  # Windows is cross-linted locally only (plugwright/AGENTS.md); the wasmer adapter has its own
+  # lockfile and stays a local `mise run test-wasmer`.
+  plugwright:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: bash
+        working-directory: plugwright
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Changed paths
+        id: changed
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.base_ref }}
+        run: |
+          if [ "$EVENT" != pull_request ]; then
+            echo run=true >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git rev-parse -q --verify "origin/$BASE^{commit}" > /dev/null \
+            || { echo "base branch origin/$BASE not found" >&2; exit 1; }
+          # Paths are relative to the repository root whatever the working directory is.
+          if git diff --name-only "origin/$BASE...HEAD" | grep -qE '^(plugwright/|\.github/workflows/ci\.yml$)'; then
+            echo run=true >> "$GITHUB_OUTPUT"
+          else
+            echo run=false >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Toolchain
+        if: steps.changed.outputs.run == 'true'
+        # Installs the channel, components and wasm target from plugwright/rust-toolchain.toml.
+        run: rustup toolchain install && rustc -V
+
+      - uses: Swatinem/rust-cache@v2
+        if: steps.changed.outputs.run == 'true'
+        with:
+          workspaces: plugwright
+
+      - name: fmt
+        if: steps.changed.outputs.run == 'true'
+        run: cargo fmt --all --check
+
+      - name: clippy
+        if: steps.changed.outputs.run == 'true'
+        run: |
+          cargo clippy --workspace --all-targets --locked -- -D warnings
+          # Native-only builds must not pull the Wasm crates (plugwright/AGENTS.md).
+          cargo clippy -p plugwright-loader --no-default-features --all-targets --locked -- -D warnings
+          cargo clippy -p plugwright-sdk -p wasm-hello --target wasm32-unknown-unknown --locked -- -D warnings
+
+      - name: test
+        if: steps.changed.outputs.run == 'true'
+        run: |
+          cargo test --workspace --locked
+          # Smoke run of the performance cases (no budgets without --bench).
+          cargo test -p plugwright-host --benches --locked

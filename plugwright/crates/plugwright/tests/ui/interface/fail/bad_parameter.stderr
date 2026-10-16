@@ -1,0 +1,11 @@
+error: `&mut` parameters cannot cross the plugin boundary; take the value or `&T`
+ --> tests/ui/interface/fail/bad_parameter.rs:5:29
+  |
+5 |     fn fill(&mut self, out: &mut String) -> plugwright::Result<()>;
+  |                             ^^^^^^^^^^^
+
+error: parameters must have a concrete type that serde can decode
+ --> tests/ui/interface/fail/bad_parameter.rs:6:34
+  |
+6 |     fn by_impl(&mut self, value: impl Into<String>) -> plugwright::Result<()>;
+  |                                  ^^^^^^^^^^^^^^^^^

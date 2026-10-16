@@ -1,0 +1,28 @@
+# injecta
+
+> Compile-time dependency injection for Rust. You declare a container once with `container!`, derive `Injectable` on your types, and call `resolve`. Every dependency is checked by the compiler: a missing provider, a dependency cycle or a singleton that depends on a request-scoped value does not compile. There is no runtime registry, no `TypeId` map, no locks and no `dyn` on the resolve path: a resolve compiles to constructor calls and `Arc` clones, within about 1 ns of hand-written wiring on the comparison benchmark.
+
+Generated from GUIDE.md by `just docs`; do not edit.
+
+## Docs
+
+- [Guide](GUIDE.md): the user guide; also the crate-level rustdoc, every example is a doctest
+- [Full text](llms-full.txt): the guide and the agent rules in one file
+- [Agent rules](AGENTS.md): how to use and how to change injecta
+- [Example](examples/web_app.rs): root container plus a per-request scope
+
+## Guide sections
+
+- Quick start
+- The four lifetimes
+- Which tool to use
+- Borrowing cached values
+- Constructors
+- Scopes
+- Overrides for tests
+- Compile-time errors
+- Extension points
+- Features
+- Generic code
+- Anti-patterns
+- Limits (by design)

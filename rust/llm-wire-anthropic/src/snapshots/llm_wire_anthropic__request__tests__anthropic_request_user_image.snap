@@ -1,0 +1,70 @@
+---
+source: crates/cox-provider-anthropic/src/request.rs
+expression: "build_body(&req, cfg(None))"
+---
+{
+  "model": "claude-sonnet-5",
+  "max_tokens": 16384,
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "what is in this screenshot?"
+        },
+        {
+          "type": "image",
+          "source": {
+            "type": "base64",
+            "media_type": "image/png",
+            "data": "iVBORw0KGgo="
+          }
+        }
+      ]
+    }
+  ],
+  "stream": true,
+  "output_config": {
+    "effort": "high"
+  },
+  "system": [
+    {
+      "type": "text",
+      "text": "<tool specs>"
+    },
+    {
+      "type": "text",
+      "text": "You are cox.",
+      "cache_control": {
+        "type": "ephemeral",
+        "ttl": "5m"
+      }
+    },
+    {
+      "type": "text",
+      "text": "date: 2026-09-02"
+    }
+  ],
+  "tools": [
+    {
+      "name": "read",
+      "description": "Read a file",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  ],
+  "tool_choice": {
+    "type": "auto"
+  },
+  "thinking": {
+    "type": "adaptive"
+  },
+  "fallbacks": "default"
+}

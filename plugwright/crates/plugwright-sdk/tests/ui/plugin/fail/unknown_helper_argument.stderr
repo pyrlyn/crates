@@ -1,0 +1,5 @@
+error: unknown argument; expected one of: skip, init, name
+ --> tests/ui/plugin/fail/unknown_helper_argument.rs:8:18
+  |
+8 |     #[plugwright(rename = "b")]
+  |                  ^^^^^^

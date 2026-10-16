@@ -1,0 +1,32 @@
+[package]
+name = "agent-host-config"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.98.1" # rtok's MSRV, the first consumer
+description = "Register and unregister MCP servers in agent hosts' JSON config files, changing only our entry"
+license = "GPL-3.0-or-later OR LicenseRef-Royalty-Free"
+repository = "https://github.com/pyrlyn/crates"
+keywords = ["mcp", "agents", "config", "json"]
+categories = ["development-tools", "config"]
+readme = "README.md"
+exclude = ["AGENTS.md", "done.md", "ideas.md", "justfile", "plan.md", "roadmap.md", "todo.md", "toolchain.md"]
+
+[dependencies]
+anyhow = "1.0.104"
+file-backup = { path = "../file-backup", version = "0.2.0" }
+# `cst`: edit the host's file as text, so every byte outside our entry (formatting, comments,
+# key order, number spelling) survives. Same version as rtok's `rtok-mcp`.
+jsonc-parser = { version = "0.33.2", features = ["cst", "serde_json"] }
+# `preserve_order`: an entry is written with its keys in the order the caller built them.
+serde_json = { version = "1.0.151", features = ["preserve_order"] }
+
+[dev-dependencies]
+tempfile = "3"
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"

@@ -1,0 +1,5 @@
+error: `scoped` is only valid inside a `scope` block; in the root container use `singleton`
+ --> tests/ui/scoped_in_root.rs:7:9
+  |
+7 |         scoped std::sync::Arc<Session>,
+  |         ^^^^^^

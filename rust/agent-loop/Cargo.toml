@@ -1,0 +1,37 @@
+[package]
+name = "agent-loop"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.98"
+description = "A neutral LLM agent turn loop: submissions in, events out, with tool dispatch, approvals and interrupt behind traits"
+license = "GPL-3.0-or-later OR LicenseRef-Royalty-Free"
+repository = "https://github.com/pyrlyn/crates"
+keywords = ["llm", "agent", "tools", "streaming"]
+categories = ["asynchronous"]
+readme = "README.md"
+exclude = ["AGENTS.md", "done.md", "ideas.md", "justfile", "plan.md", "roadmap.md", "todo.md", "toolchain.md"]
+
+[dependencies]
+llm-wire = { path = "../llm-wire", version = "0.1.0" }
+async-trait = "0.1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0", features = ["preserve_order"] }
+thiserror = "2"
+tokio = { version = "1", default-features = false, features = ["macros", "rt", "sync", "time"] }
+tokio-util = "0.7"
+
+[dev-dependencies]
+llm-wire = { path = "../llm-wire", version = "0.1.0", features = ["test-util"] }
+pretty_assertions = "1.4"
+
+[lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+dbg_macro = "warn"
+todo = "warn"
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"

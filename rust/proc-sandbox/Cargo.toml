@@ -1,0 +1,39 @@
+[package]
+name = "proc-sandbox"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.98"
+description = "Confine a child process: Seatbelt on macOS, bubblewrap or Landlock plus seccomp on Linux, and a path guard for workspace roots"
+license = "GPL-3.0-or-later OR LicenseRef-Royalty-Free"
+repository = "https://github.com/pyrlyn/crates"
+keywords = ["sandbox", "seatbelt", "bubblewrap", "landlock", "seccomp"]
+categories = ["os", "filesystem"]
+readme = "README.md"
+exclude = ["AGENTS.md", "done.md", "ideas.md", "justfile", "plan.md", "roadmap.md", "todo.md", "toolchain.md"]
+
+[dependencies]
+thiserror = "2"
+
+# Linux confinement without bwrap: Landlock for the filesystem, seccomp for the
+# network. Linux-only crates, so gated on the target.
+[target.'cfg(target_os = "linux")'.dependencies]
+landlock = "0.4.7"
+seccompiler = "0.5"
+# why: only for its `libc` re-export; the rest of nix is not used.
+nix = { version = "0.31", default-features = false }
+
+[dev-dependencies]
+tempfile = "3"
+
+# `unsafe_code` is denied; the two places that need it (the `pre_exec` hook in
+# `sandbox::command`, the Landlock ABI probe) carry a targeted `allow` with a
+# `// why:` comment.
+[lints.rust]
+unsafe_code = "deny"
+missing_docs = "warn"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"

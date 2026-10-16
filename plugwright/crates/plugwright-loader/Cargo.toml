@@ -1,0 +1,33 @@
+[package]
+name = "plugwright-loader"
+description = "Compile and load plugwright plugins (cdylib, staticlib, Wasm) with only the checks that keep the host sound"
+version.workspace = true
+edition.workspace = true
+# wasmtime 49 needs 1.96.
+rust-version = "1.96"
+license.workspace = true
+repository.workspace = true
+keywords = ["plugin", "dylib", "wasm", "loader"]
+categories = ["development-tools", "wasm"]
+
+[features]
+default = ["wasmtime", "wasmi"]
+# `WasmLoader` and Wasm support in `Loader`; without it only native code loads.
+wasm = ["dep:plugwright-wasm"]
+wasmtime = ["wasm", "dep:plugwright-wasmtime"]
+wasmi = ["wasm", "dep:plugwright-wasmi"]
+
+[dependencies]
+plugwright-core.workspace = true
+plugwright-build.workspace = true
+plugwright-native.workspace = true
+plugwright-wasm = { workspace = true, optional = true }
+plugwright-wasmtime = { workspace = true, optional = true }
+plugwright-wasmi = { workspace = true, optional = true }
+tracing.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

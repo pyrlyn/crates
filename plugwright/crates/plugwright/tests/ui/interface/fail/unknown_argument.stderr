@@ -1,0 +1,5 @@
+error: unknown argument; expected one of: crate, client
+ --> tests/ui/interface/fail/unknown_argument.rs:3:13
+  |
+3 | #[interface(no_export)]
+  |             ^^^^^^^^^

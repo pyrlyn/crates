@@ -1,0 +1,39 @@
+---
+source: llm-wire-openai/src/chat.rs
+expression: body
+---
+{
+  "model": "qwen3-coder",
+  "messages": [
+    {
+      "role": "system",
+      "content": "<tool specs>\n\nYou are cox."
+    },
+    {
+      "role": "user",
+      "content": "read a.rs"
+    }
+  ],
+  "stream": true,
+  "stream_options": {
+    "include_usage": true
+  },
+  "max_tokens": 16384,
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "read",
+        "description": "Read a file",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+    Finished `bench` profile [optimized] target(s) in 0.05s
+     Running benches/resolve.rs (target/release/deps/resolve-bde5b35bbd70c2d4)
+Timer precision: 41 ns
+resolve                fastest       │ slowest       │ median        │ mean          │ samples │ iters
+├─ baseline                          │               │               │               │         │
+│  ├─ cold             70 ns         │ 305.6 ns      │ 71.32 ns      │ 72.77 ns      │ 500     │ 16000
+│  ├─ singleton        3.602 ns      │ 8.118 ns      │ 3.622 ns      │ 3.703 ns      │ 500     │ 1024000
+│  ╰─ transient_graph  8.403 ns      │ 25.16 ns      │ 8.485 ns      │ 8.53 ns       │ 500     │ 256000
+├─ dill                              │               │               │               │         │
+│  ├─ cold             2.041 µs      │ 61.29 µs      │ 2.249 µs      │ 2.494 µs      │ 500     │ 500
+│  ├─ singleton        44.28 ns      │ 56.33 ns      │ 45.92 ns      │ 46.17 ns      │ 500     │ 64000
+│  ╰─ transient_graph  471 ns        │ 619.5 ns      │ 515.3 ns      │ 517.3 ns      │ 500     │ 8000
+├─ injecta                           │               │               │               │         │
+│  ├─ cold             87.58 ns      │ 277 ns        │ 89.53 ns      │ 90.63 ns      │ 500     │ 32000
+│  ├─ singleton        3.765 ns      │ 12.91 ns      │ 3.846 ns      │ 3.853 ns      │ 500     │ 512000
+│  ╰─ transient_graph  8.809 ns      │ 9.299 ns      │ 9.053 ns      │ 9.025 ns      │ 500     │ 256000
+├─ nject                             │               │               │               │         │
+│  ├─ cold             73.91 ns      │ 82.38 ns      │ 75.21 ns      │ 75.59 ns      │ 500     │ 32000
+│  ├─ singleton        3.724 ns      │ 12.67 ns      │ 3.805 ns      │ 3.853 ns      │ 500     │ 512000
+│  ╰─ transient_graph  7.996 ns      │ 10.27 ns      │ 8.16 ns       │ 8.235 ns      │ 500     │ 256000
+├─ shaku                             │               │               │               │         │
+│  ├─ cold             541.6 ns      │ 6.916 µs      │ 624.6 ns      │ 669.2 ns      │ 500     │ 500
+│  ├─ singleton        3.846 ns      │ 4.945 ns      │ 3.887 ns      │ 3.905 ns      │ 500     │ 512000
+│  ╰─ transient_graph  66.75 ns      │ 71.3 ns       │ 68.05 ns      │ 68.27 ns      │ 500     │ 32000
+╰─ teloc                             │               │               │               │         │
+   ├─ cold             82.36 ns      │ 299.1 ns      │ 83.68 ns      │ 85.06 ns      │ 500     │ 32000
+   ├─ singleton        3.724 ns      │ 4.986 ns      │ 3.805 ns      │ 3.842 ns      │ 500     │ 512000
+   ╰─ transient_graph  10.11 ns      │ 13.85 ns      │ 10.27 ns      │ 10.33 ns      │ 500     │ 256000
+

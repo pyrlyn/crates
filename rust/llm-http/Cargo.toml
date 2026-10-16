@@ -1,0 +1,65 @@
+[package]
+name = "llm-http"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.98"
+description = "HTTP plumbing for LLM provider wires: credential lookup, auth headers, error mapping, retry with backoff and SSE framing"
+license = "GPL-3.0-or-later OR LicenseRef-Royalty-Free"
+repository = "https://github.com/pyrlyn/crates"
+keywords = ["llm", "http", "sse", "retry", "keyring"]
+categories = ["api-bindings", "asynchronous"]
+readme = "README.md"
+exclude = ["AGENTS.md", "done.md", "ideas.md", "justfile", "plan.md", "roadmap.md", "todo.md", "toolchain.md"]
+
+[features]
+default = ["keyring", "reqwest", "sse"]
+# The platform keyring behind `resolve_key`. Off for a host that keeps secrets
+# in its own store and hands the lookup to `resolve_key_with`, so the platform
+# keychain bindings are never built.
+keyring = ["dep:keyring"]
+# `client_with_timeout`. Off for a host that sends requests through its own
+# HTTP stack; the header helpers and `map_http_error` use `http` types either way.
+reqwest = ["dep:reqwest"]
+# `sse_stream` and `parse_sse_str` over eventsource-stream.
+sse = ["dep:bytes", "dep:eventsource-stream", "dep:futures"]
+
+[dependencies]
+llm-wire = { path = "../llm-wire", version = "0.1.0" }
+bytes = { version = "1", optional = true }
+eventsource-stream = { version = "0.2.3", optional = true }
+futures = { version = "0.3", optional = true }
+# The header and status types reqwest re-exports, so `bearer`, `api_key` and
+# `map_http_error` need no HTTP client and still accept reqwest's values.
+http = "1"
+keyring = { version = "4", optional = true }
+# Only what the plumbing needs: the client builder, headers and status codes.
+# The wire crates that send requests enable `json` and `stream` themselves.
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"], optional = true }
+serde_json = "1.0"
+tokio = { version = "1", default-features = false, features = ["sync", "macros"] }
+tokio-util = "0.7"
+
+# tokio's timer needs a native runtime, so on wasm32-unknown-unknown the caller
+# injects the backoff sleep through `stream_with_retry_with` instead.
+[target.'cfg(not(all(target_arch = "wasm32", target_os = "unknown")))'.dependencies]
+tokio = { version = "1", default-features = false, features = ["time"] }
+
+# std's clock panics on wasm32-unknown-unknown; web-time reads the JS clock
+# there for the backoff jitter.
+[target.'cfg(all(target_arch = "wasm32", target_os = "unknown"))'.dependencies]
+web-time = "1.1"
+
+[dev-dependencies]
+tokio = { version = "1", default-features = false, features = ["rt", "macros", "time", "sync"] }
+
+[lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+dbg_macro = "warn"
+todo = "warn"
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
