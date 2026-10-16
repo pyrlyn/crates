@@ -19,6 +19,8 @@
 | libc | local | https://github.com/rust-lang/libc | dlopen probes, rlimits, Seatbelt and Landlock/seccomp calls, POSIX shared memory for isolated calls |
 | libloading | local | https://github.com/nagisa/rust_libloading | Loads native plugin libraries |
 | notify | local | https://github.com/notify-rs/notify | Opt-in watcher that reloads plugins when their files change |
+| minisign-verify | local | https://github.com/jedisct1/rust-minisign-verify | Verifies artifact signatures before loading (zero dependencies) |
+| minisign | local (optional, feature `sign` of `plugwright-trust`) | https://github.com/jedisct1/rust-minisign | Signs artifacts and generates keys |
 | proc-macro2 | local | https://github.com/dtolnay/proc-macro2 | `#[plugin]` / `#[interface]` macros |
 | quote | local | https://github.com/dtolnay/quote | `#[plugin]` / `#[interface]` macros |
 | syn | local | https://github.com/dtolnay/syn | `#[plugin]` / `#[interface]` macros |

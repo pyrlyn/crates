@@ -16,6 +16,7 @@ pub use plugwright_loader::WasmtimeEngine;
 pub use plugwright_loader::{Loader, NativeLoader, WasmLoader, builtin_engines};
 pub use plugwright_native as native;
 pub use plugwright_sandbox as sandbox;
+pub use plugwright_trust as trust;
 pub use plugwright_wasm as wasm;
 
 pub use builder::{BuildOptions, BuildRequest, Builder, CrateType, Target};
@@ -31,5 +32,6 @@ pub use native::{NativePlugin, Placement};
 pub use plugin::{Backend, Plugin, PluginExt, PluginInfo, Release};
 pub use plugwright_macros::interface;
 pub use sandbox::SandboxPolicy;
+pub use trust::TrustPolicy;
 pub use wasm::{ModuleCache, WasmEngine, WasmError, WasmInstance, WasmLimits, WasmModule, WasmPlugin, WasmVal};
 pub use watch::{Reloader, WatchOptions, Watcher};

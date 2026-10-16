@@ -274,6 +274,13 @@ fn doctor(manifest: &Path) -> Result<bool, PluginError> {
     let sandbox = plugwright::sandbox::capabilities();
     row(sandbox.gaps.is_empty(), "sandbox", &sandbox);
 
+    row(true, "trust", &m.settings.trust);
+    for p in &m.plugins {
+        if let Some(t) = &p.trust {
+            row(true, "trust", format!("{}: {t}", p.id));
+        }
+    }
+
     let tool = |name: &str| accel::find_tool(name).map_or_else(|| "not found".into(), |p| p.display().to_string());
     row(true, "sccache", tool("sccache"));
     if cfg!(target_os = "linux") {

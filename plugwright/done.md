@@ -295,6 +295,28 @@ so plugin output lands on stderr. Compile + clippy for `x86_64-pc-windows-msvc`.
 ### T23 — Secure defaults (C2)
 `Isolation::default() = Process`; demo manifest marks the in-process plugin explicitly.
 
+### T43 — Artifact signatures and a trust policy per source
+From idea F1. Today the host trusts any artifact it builds or fetches. Add detached signatures
+(ed25519, minisign format) for plugin artifacts and a per-source trust policy in the manifest:
+which public keys a source accepts, and whether an unsigned artifact is refused, warned about or
+allowed. Verification runs before an artifact is mapped or compiled, and a failed or missing
+signature is a `PluginError`, never a panic. Done: signing and verification live in the lowest
+crate that can own them, the facade only wires the policy from the manifest, `doctor` reports
+the policy, and tests cover a valid signature, a wrong key, a tampered artifact and each policy
+mode. The signed precompiled-module cache (idea F5) builds on this later.
+**Result:** new crate `plugwright-trust` (D25): `TrustPolicy { keys, unsigned }`,
+`Unsigned::{Deny, Warn, Allow}` (default deny with keys, allow without), `verify` of
+`<artifact>.minisig` with `minisign-verify` (streamed, prehashed only, signature read capped at
+4 KiB, comments never echoed), `sign_file` behind feature `sign` (`minisign`);
+`PluginError::Signature`. A present but malformed, untrusted or mismatching signature fails in
+every mode; only a missing one follows `unsigned`. Facade: `[settings.trust]`, `[plugin.trust]`
+(replaces the default for that source), keys validated at parse, `ManagerOptions::trust`;
+`resolve` verifies before the sha256 pin, relinking, Wasm compilation and mapping. `doctor`
+prints the default policy and every override. Tests: the crate's unit tests (valid, wrong key,
+tampered artifact and trusted comment, malformed and oversized signature, each mode, no keys),
+manifest parsing, a manager load refused before compile and before format sniffing, and the
+doctor rows in `crates/cargo-plugwright/tests/cli.rs`.
+
 ### T24 — Tests and docs (C2)
 New example methods and e2e tests; README security table and platform notes rewritten; clippy for
 `aarch64-unknown-linux-gnu` and `x86_64-pc-windows-msvc`.

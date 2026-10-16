@@ -8,6 +8,7 @@ members = [
     "crates/plugwright-macros",
     "crates/plugwright-core",
     "crates/plugwright-sandbox",
+    "crates/plugwright-trust",
     "crates/plugwright-build",
     "crates/plugwright-native",
     "crates/plugwright-isolate",
@@ -30,6 +31,7 @@ default-members = [
     "crates/plugwright-macros",
     "crates/plugwright-core",
     "crates/plugwright-sandbox",
+    "crates/plugwright-trust",
     "crates/plugwright-build",
     "crates/plugwright-native",
     "crates/plugwright-isolate",
@@ -57,6 +59,7 @@ plugwright-macros = { path = "crates/plugwright-macros", version = "0.1.0" }
 plugwright = { path = "crates/plugwright", version = "0.1.0", default-features = false }
 plugwright-core = { path = "crates/plugwright-core", version = "0.1.0" }
 plugwright-sandbox = { path = "crates/plugwright-sandbox", version = "0.1.0" }
+plugwright-trust = { path = "crates/plugwright-trust", version = "0.1.0" }
 plugwright-build = { path = "crates/plugwright-build", version = "0.1.0" }
 plugwright-native = { path = "crates/plugwright-native", version = "0.1.0" }
 plugwright-isolate = { path = "crates/plugwright-isolate", version = "0.1.0" }
@@ -69,6 +72,8 @@ cc = "1.8.0"
 cargo_metadata = "0.23.1"
 libc = "0.2"
 libloading = "0.9.0"
+minisign = "0.10.0"
+minisign-verify = "0.3.0"
 notify = "8.2.0"
 semver = { version = "1.0.28", features = ["serde"] }
 serde = { version = "1.0.228", features = ["derive"] }

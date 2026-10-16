@@ -37,6 +37,7 @@ Workspace:
 | `plugwright-build` | cargo builder (with a `crate-type` override), content-addressed cache, git sources, static-library relink, build acceleration (`accel`), workspace package lookup (`package`) |
 | `plugwright-native` | in-process loader, unload probe, artifact format detection (`format`) |
 | `plugwright-sandbox` | runner self-sandbox: Seatbelt / Landlock + seccomp / low integrity + job object |
+| `plugwright-trust` | detached minisign signatures for artifacts, `TrustPolicy` (keys, unsigned = deny / warn / allow); signing behind feature `sign` |
 | `plugwright-isolate` | child-process isolation: protocol, runner, restart budget, timeouts |
 | `plugwright-wasm` | engine traits `WasmEngine → WasmModule → WasmInstance` + `WasmPlugin` ABI glue, `ModuleCache` (compiled modules in memory and on disk) |
 | `plugwright-wasmtime`, `plugwright-wasmi` | engine adapters (features `wasmtime`, `wasmi` of the loader and the facade) |
@@ -50,7 +51,7 @@ Workspace:
 | `examples/wasm-hello` | Wasm plugin (methods: `greet`, `reverse`, `loop`, `oom`, `trap`) |
 | `examples/host` | `plugwright-host` demo CLI; e2e tests in `examples/host/tests/e2e.rs` |
 
-Crate graph: `core ← {sandbox, build, native, wasm} ← {isolate, wasmtime, wasmi, wasmer} ← plugwright ← cargo-plugwright`.
+Crate graph: `core ← {sandbox, trust, build, native, wasm} ← {isolate, wasmtime, wasmi, wasmer} ← plugwright ← cargo-plugwright`.
 
 ## 2. Decisions
 
@@ -80,6 +81,7 @@ Crate graph: `core ← {sandbox, build, native, wasm} ← {isolate, wasmtime, wa
 | D22 | Cranelift only for artifacts that are not loaded in-process | Cranelift-built code aborts on panic (verified on nightly 1.100, aarch64-darwin): in-process that kills the host, isolated it is a survivable crash |
 | D23 | Typed calls through proc macros over the existing byte ABI: `#[plugin]` (guest) and `#[interface]` (host) share one wire convention decided **syntactically** from the signature (`&str`/`String` → UTF-8, `&[u8]`/`Vec<u8>` → bytes, ≥ 2 params → JSON array/object, other → JSON) | no ABI change (ABI_VERSION stays 1), raw callers keep working, binary payloads stay copy-free; a trait-based encoding cannot tell `String` from `T: Serialize` without specialization. Cost: aliases of `String` travel as JSON — documented |
 | D24 | `#[interface]` keeps the trait as written (methods return `plugwright::Result<T>`) and generates `<Trait>Client<I: Invoke>`; `Invoke` is implemented for `Bound` (via the manager), `dyn Plugin`, `&mut T`, `Box<T>` | an honest signature (every call can fail), mockable trait, calls through the manager keep logging/timeouts/restarts |
+| D25 | Artifact signatures are detached minisign files (`<artifact>.minisig`, prehashed ed25519), verified with `minisign-verify` against a per-source `TrustPolicy` before the sha256 pin, relinking, compiling or mapping; signing (`minisign`) is an opt-in feature | the format and tool users already have; zero dependencies on the host's load path, while signing's scrypt and password prompt stay out of hosts; a check before anything runs the artifact's code |
 | D26 | Isolated payloads of at least `shm_threshold` bytes travel through one fixed-size shared memory region per runner (POSIX `shm_open` / a pagefile-backed section), mapped by the runner before LOAD applies the sandbox; frames carry `offset, length`, the pipe stays the control channel and the fallback | a 4 MiB call no longer streams through a pipe twice; mapping before the sandbox needs no new sandbox rule, and with the name unlinked and every descriptor closed nothing can resize the region under the host. Raw `libc` / `windows-sys`: `shared_memory` is unmaintained, `memmap2` maps files only, `ipc-channel` is heavy |
 
 
@@ -89,6 +91,7 @@ Crate graph: `core ← {sandbox, build, native, wasm} ← {isolate, wasmtime, wa
 |---|---|---|
 | malicious plugin **source** (build.rs, proc-macros) | build only manifests you trust; `--locked`, `--offline`; lockfile pins SHAs | arbitrary code runs at build time — F3 (sandboxed builds) |
 | tampered **artifact** in cache | sha256 recorded at build, verified on every load; `sha256` pin for prebuilt artifacts | attacker with write access to both cache and lock |
+| forged or swapped prebuilt **artifact** | minisign signature against the source's trusted keys, before mapping / relinking / compiling; unsigned = deny / warn / allow per source (D25) | stolen signing key; a swap between the check and the load by someone with write access |
 | native plugin memory corruption / crash | `Isolation::Process` (default); env cleared; core dumps off | — |
 | native plugin reaching the system | runner sandbox: Seatbelt / Landlock + seccomp / low integrity + job | Windows: reads and network open (F2: AppContainer); Linux without Landlock: files open (reported) |
 | in-process native plugin | explicit opt-in only; unload verified and leaks counted | full trust: same address space |
