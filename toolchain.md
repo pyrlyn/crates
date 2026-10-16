@@ -10,6 +10,9 @@ Workspace pin: `rust-toolchain.toml` channel `1.99.0` (profile `minimal`, compon
 | just | mise | Test recipes in the member crates | https://github.com/casey/just |
 | ketch | see its README | Installs swarfr for member justfiles | https://github.com/pyrlyn/ketch |
 | swarfr | ketch | Lossless cleanup of `target/` after tests | https://github.com/listepo/swarfr |
+| jactionlint | mise (`mise.toml` pins `github:jdx/jactionlint` 2.0.2) | Lints the workflows (CI, the pre-push hook and `mise x -- jactionlint`) | https://github.com/jdx/jactionlint |
+| hk | mise (`mise.toml` pins 2.5.0) | Runs jactionlint as a pre-push hook (`hk.pkl`) | https://github.com/jdx/hk |
+| shellcheck | mise (`mise.toml` pins 0.11.0) | Checks `run:` scripts inside jactionlint | https://github.com/koalaman/shellcheck |
 
 ## cargo
 
@@ -58,6 +61,16 @@ Direct dependencies of the workspace members. Path crates are this repo.
 | similar | local | https://github.com/mitsuhiko/similar | Unified diffs in `abi-drift` and `change-preview` |
 | toml | local | https://github.com/toml-rs/toml | Gate and scoped-check config; `keychain-secret` inline-secret check |
 | keyring | local | https://github.com/open-source-cooperative/keyring-rs | `keychain-secret` reaches the OS keychain |
+
+## mise
+
+`mise.toml` pins the lint tools only; Rust stays on `rust-toolchain.toml`.
+
+| Package | Where | Source | Why here |
+| --- | --- | --- | --- |
+| github:jdx/jactionlint | global | https://github.com/jdx/jactionlint | Workflow lint |
+| hk | global | https://github.com/jdx/hk | Pre-push hook runner |
+| shellcheck | global | https://github.com/koalaman/shellcheck | Shell checks inside jactionlint |
 
 ## ketch
 

@@ -37,6 +37,16 @@ cargo fmt --all -- --check
 ```
 
 Rust is pinned by `rust-toolchain.toml` (channel 1.99.0, with rustfmt and clippy).
+
+jactionlint, hk and shellcheck are pinned in `mise.toml` (lint tools only). `.github/jactionlint.yaml`
+applies the default profile and the baseline `.github/jactionlint-baseline.json`. `hk.pkl` runs
+jactionlint as a pre-push hook:
+
+```bash
+mise x -- jactionlint                  # lint workflows, composite actions, dependabot.yml
+mise x -- jactionlint --baseline-write # refresh the baseline after fixing findings
+mise x -- hk install --mise            # install the pre-push hook once per clone
+```
 Releases are described in the README: `release-plz` updates versions, and only
 `file-backup` is published to crates.io.
 
