@@ -21,6 +21,7 @@ use crate::native::format::{self, Format};
 use crate::native::{NativePlugin, Placement};
 use crate::plugin::{Plugin, PluginInfo, Release};
 use crate::relink::RelinkRequest;
+use crate::trust::TrustPolicy;
 use crate::wasm::{ModuleCache, WasmEngine, WasmPlugin};
 
 /// Manager-wide configuration.
@@ -34,6 +35,8 @@ pub struct ManagerOptions {
     pub allow_local_git: bool,
     /// Where to persist resolved SHAs and hashes; `None` keeps the lock in memory.
     pub lock_path: Option<PathBuf>,
+    /// Signature policy of specs without their own `trust`.
+    pub trust: TrustPolicy,
 }
 
 impl ManagerOptions {
@@ -46,6 +49,7 @@ impl ManagerOptions {
             isolation: IsolationOptions::default(),
             allow_local_git: false,
             lock_path: None,
+            trust: TrustPolicy::default(),
         }
     }
 
@@ -64,6 +68,7 @@ impl ManagerOptions {
             o.isolation.runner = RunnerCommand::Path(m.resolve(r));
         }
         o.lock_path = Some(m.lock_path());
+        o.trust = s.trust.clone();
         o
     }
 }
@@ -189,8 +194,9 @@ impl PluginManager {
             }
         };
 
-        // The pin covers what the user supplied or cargo produced, i.e. the
-        // static library itself when it is relinked below.
+        // Both checks cover what the user supplied or cargo produced, i.e. the
+        // static library itself when it is relinked below, before anything maps it.
+        spec.trust.as_ref().unwrap_or(&self.opts.trust).verify(&spec.id, &artifact.path)?;
         if let Some(expected) = &spec.sha256 {
             verify_sha256(&artifact.path, expected)?;
         }
@@ -653,6 +659,61 @@ mod tests {
         // The pin is case-insensitive; once it matches, the content check runs.
         s.sha256 = Some(TEXT_SHA.to_uppercase());
         not_a_plugin(m.load(s));
+    }
+
+    #[test]
+    fn signatures_are_checked_before_an_artifact_is_compiled_or_mapped() {
+        use crate::trust::minisign::KeyPair;
+        use crate::trust::{Unsigned, sign_file, signature_path};
+
+        let dir = tempfile::tempdir().unwrap();
+        let lock = dir.path().join("plugwright.lock");
+        let signer = KeyPair::generate_unencrypted_keypair().unwrap();
+        let stranger = KeyPair::generate_unencrypted_keypair().unwrap();
+        let mut o = ManagerOptions::new(dir.path());
+        o.lock_path = Some(lock.clone());
+        o.trust = TrustPolicy { keys: vec![signer.pk.to_base64()], unsigned: None };
+        let mut m = PluginManager::new(o).unwrap();
+        m.register_engine(Arc::new(RefusingEngine("compiled")));
+        let wasm = file(dir.path(), "m.wasm", CORE_WASM);
+        let mut s = artifact("w", PluginKind::Wasm, &wasm);
+        s.engine = Some("refusing".into());
+        let sig_err = |r: Result<&PluginInfo>| match r {
+            Err(PluginError::Signature { path, reason }) => {
+                assert_eq!(path, wasm);
+                reason
+            }
+            Err(e) => panic!("expected a signature error, got {e:?}"),
+            Ok(i) => panic!("expected a signature error, loaded {}", i.name),
+        };
+
+        // The manifest-wide policy lists a key, so an unsigned artifact is refused.
+        assert!(sig_err(m.load(s.clone())).contains("refuses unsigned artifacts"));
+        sign_file(&wasm, &stranger.sk, None).unwrap();
+        assert!(sig_err(m.load(s.clone())).contains("does not trust"));
+        sign_file(&wasm, &signer.sk, None).unwrap();
+        std::fs::write(&wasm, b"\0asm\x01\0\0\0\0").unwrap();
+        assert!(sig_err(m.load(s.clone())).contains("does not match its signature"));
+        assert!(!lock.exists(), "a refused artifact is not pinned");
+
+        // Signed by the trusted key: the check passes and the engine gets the module.
+        std::fs::write(&wasm, CORE_WASM).unwrap();
+        sign_file(&wasm, &signer.sk, None).unwrap();
+        let compiled =
+            |r: Result<&PluginInfo>| matches!(r, Err(PluginError::Wasm(WasmError::Compile(m))) if m == "compiled");
+        assert!(compiled(m.load(s.clone())));
+
+        // A plugin's own policy replaces the manifest-wide one for its source.
+        std::fs::remove_file(signature_path(&wasm)).unwrap();
+        s.trust = Some(TrustPolicy { keys: vec![], unsigned: Some(Unsigned::Warn) });
+        assert!(compiled(m.load(s.clone())));
+        s.trust = Some(TrustPolicy { keys: vec![stranger.pk.to_base64()], unsigned: Some(Unsigned::Deny) });
+        assert!(sig_err(m.load(s)).contains("plugin `w` refuses unsigned"));
+
+        // A native artifact is refused before its format is even sniffed.
+        let lib = file(dir.path(), "notes.dll", b"just text");
+        let err = m.load(artifact("n", PluginKind::Native, &lib)).unwrap_err();
+        assert!(matches!(&err, PluginError::Signature { path, .. } if *path == lib), "{err}");
     }
 
     #[test]

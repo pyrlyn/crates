@@ -34,6 +34,10 @@ pub enum PluginError {
     #[error("integrity check failed for {path}: expected sha256 {expected}, got {actual}")]
     Integrity { path: PathBuf, expected: String, actual: String },
 
+    /// The artifact's signature is missing, malformed, untrusted or does not match.
+    #[error("signature check failed for {path}: {reason}")]
+    Signature { path: PathBuf, reason: String },
+
     #[error("failed to load plugin: {0}")]
     Load(String),
 
