@@ -114,22 +114,17 @@ jobs:
 
   # plugwright is a separate workspace (own Cargo.lock and rust-toolchain.toml: wasmtime and
   # wasmer pin cranelift versions the root workspace does not need), so the rust job above never
-  # sees it. Its tests build plugins with cargo and load them, which is slow, so a pull request
-  # that does not touch plugwright/ or this file skips the work; pushes to main always run it.
-  # Windows is cross-linted locally only (plugwright/AGENTS.md); the wasmer adapter has its own
-  # lockfile and stays a local `mise run test-wasmer`.
-  plugwright:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
+  # sees it and the same shared workflow runs again from plugwright/. Its tests build plugins with
+  # cargo and load them, which is slow, so a pull request that does not touch plugwright/ or this
+  # file skips the job; pushes to main always run it. Windows is cross-linted locally only
+  # (plugwright/AGENTS.md); the wasmer adapter has its own lockfile and stays a local
+  # `mise run test-wasmer`.
+  plugwright-changes:
+    runs-on: ubuntu-latest
     permissions:
       contents: read
-    defaults:
-      run:
-        shell: bash
-        working-directory: plugwright
+    outputs:
+      run: ${{ steps.changed.outputs.run }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -147,38 +142,38 @@ jobs:
           fi
           git rev-parse -q --verify "origin/$BASE^{commit}" > /dev/null \
             || { echo "base branch origin/$BASE not found" >&2; exit 1; }
-          # Paths are relative to the repository root whatever the working directory is.
           if git diff --name-only "origin/$BASE...HEAD" | grep -qE '^(plugwright/|\.github/workflows/ci\.yml$)'; then
             echo run=true >> "$GITHUB_OUTPUT"
           else
             echo run=false >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Toolchain
-        if: steps.changed.outputs.run == 'true'
-        # Installs the channel, components and wasm target from plugwright/rust-toolchain.toml.
-        run: rustup toolchain install && rustc -V
-
-      - uses: Swatinem/rust-cache@v2
-        if: steps.changed.outputs.run == 'true'
-        with:
-          workspaces: plugwright
-
-      - name: fmt
-        if: steps.changed.outputs.run == 'true'
-        run: cargo fmt --all --check
-
-      - name: clippy
-        if: steps.changed.outputs.run == 'true'
-        run: |
-          cargo clippy --workspace --all-targets --locked -- -D warnings
-          # Native-only builds must not pull the Wasm crates (plugwright/AGENTS.md).
-          cargo clippy -p plugwright-loader --no-default-features --all-targets --locked -- -D warnings
-          cargo clippy -p plugwright-sdk -p wasm-hello --target wasm32-unknown-unknown --locked -- -D warnings
-
-      - name: test
-        if: steps.changed.outputs.run == 'true'
-        run: |
-          cargo test --workspace --locked
-          # Smoke run of the performance cases (no budgets without --bench).
-          cargo test -p plugwright-host --benches --locked
+  plugwright:
+    needs: plugwright-changes
+    if: needs.plugwright-changes.outputs.run == 'true'
+    uses: pyrlyn/ci/.github/workflows/ci-rust.yml@863d8960601216eec62d4aa78924f84ce61d72b9
+    permissions:
+      contents: read
+      actions: write # cancel-run on failure
+    with:
+      working-directory: plugwright
+      rust-version: "1.97.1" # plugwright/rust-toolchain.toml channel = "1.97.1"
+      matrix: >-
+        [
+        {"os": "ubuntu-latest", "target": "x86_64-unknown-linux-gnu"},
+        {"os": "macos-latest", "target": "aarch64-apple-darwin"}
+        ]
+      feature-args: ""
+      clippy-args: --locked
+      # `cargo test --workspace` below already runs the doctests.
+      doc-tests: false
+      # RUSTUP_TOOLCHAIN overrides rust-toolchain.toml, so its wasm target is not installed by
+      # itself; the tests and the demo build plugins for it.
+      setup-command: rustup target add wasm32-unknown-unknown
+      test-command: |
+        # Native-only builds must not pull the Wasm crates (plugwright/AGENTS.md).
+        cargo clippy -p plugwright-loader --no-default-features --all-targets --locked -- -D warnings
+        cargo clippy -p plugwright-sdk -p wasm-hello --target wasm32-unknown-unknown --locked -- -D warnings
+        cargo test --workspace --locked
+        # Smoke run of the performance cases (no budgets without --bench).
+        cargo test -p plugwright-host --benches --locked

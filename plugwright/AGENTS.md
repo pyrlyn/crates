@@ -4,7 +4,7 @@ If an AGENTS.md or CLAUDE.md exists higher in the tree, follow it too; on confli
 
 Rust plugin manager, a separate workspace inside `pyrlyn/crates` (excluded from the root one:
 own `Cargo.lock`, `rust-toolchain.toml` (1.97.1) and `mise.toml` tasks; run commands from this
-directory). CI: the `plugwright` job in the root `.github/workflows/ci.yml`.
+directory). CI: the `plugwright` job in the root `.github/workflows/ci.yml` (the shared `ci-rust.yml`).
 Read [design.md](design.md) (architecture, decisions D1–D26, security model) before changing
 design; [research.md](research.md) records why alternatives were rejected. Tasks live in
 [plan.md](plan.md) / [todo.md](todo.md), finished ones in [done.md](done.md).
