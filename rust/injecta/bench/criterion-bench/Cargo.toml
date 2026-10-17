@@ -1,0 +1,22 @@
+[package]
+name = "criterion-bench"
+description = "Criterion benchmarks: injecta's own paths (cold start, lazy vs cached singletons, deep chains, loops, threads, scopes, overrides) and the cross-crate comparison"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+injecta = { workspace = true }
+impl-injecta = { path = "../impl-injecta" }
+impl-baseline = { path = "../impl-baseline" }
+
+[dev-dependencies]
+criterion = { workspace = true }
+impl-shaku = { path = "../impl-shaku" }
+impl-nject = { path = "../impl-nject" }
+impl-teloc = { path = "../impl-teloc" }
+impl-dill = { path = "../impl-dill" }
+
+[[bench]]
+name = "criterion"
+harness = false

@@ -1,0 +1,16 @@
+[package]
+name = "atomic-replace"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.86"
+description = "Replace a file atomically: write a sibling temp file, keep the old permissions and symlinks, optionally fsync, then rename it over the target"
+license.workspace = true
+repository = "https://github.com/pyrlyn/crates"
+keywords = ["atomic", "write", "file", "rename", "fsync"]
+categories = ["filesystem"]
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[dev-dependencies]
+tempfile = "3"

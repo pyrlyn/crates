@@ -1,0 +1,5 @@
+[tools]
+# Same pin as rust-toolchain.toml; CI installs Rust from here. rust-src makes rustc quote
+# std's source in diagnostics, so trybuild's expected stderr is the same on every machine.
+rust = { version = "1.99.0", profile = "minimal", components = "rustfmt,clippy,rust-src" }
+"cargo:cargo-workspaces" = "0.4.2"

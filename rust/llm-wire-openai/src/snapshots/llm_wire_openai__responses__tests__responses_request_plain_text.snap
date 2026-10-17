@@ -1,0 +1,36 @@
+---
+source: llm-wire-openai/src/responses.rs
+expression: body
+---
+{
+  "model": "gpt-5.1",
+  "input": [
+    {
+      "type": "message",
+      "role": "user",
+      "content": "what does cox-provider own?"
+    }
+  ],
+  "stream": true,
+  "store": false,
+  "max_output_tokens": 16384,
+  "reasoning": {
+    "effort": "high"
+  },
+  "instructions": "<tool specs>\n\nYou are cox.",
+  "tools": [
+    {
+      "type": "function",
+      "name": "read",
+      "description": "Read a file",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  ]
+}

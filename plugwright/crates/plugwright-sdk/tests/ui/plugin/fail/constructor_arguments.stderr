@@ -1,0 +1,5 @@
+error: the constructor takes nothing, `&[u8]`, `&str` or one deserializable config value
+ --> tests/ui/plugin/fail/constructor_arguments.rs:7:12
+  |
+7 |     fn new(a: u8, b: u8) -> Self {
+  |            ^^^^^^^^^^^^

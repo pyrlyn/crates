@@ -1,0 +1,4 @@
+# Tests assert with expect/unwrap/panic; the deny lints are for shipped code.
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true
+allow-panic-in-tests = true

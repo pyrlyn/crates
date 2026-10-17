@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PriceFile",
+  "description": "The shape of a whole `prices.toml`.",
+  "type": "object",
+  "properties": {
+    "model": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Price"
+      }
+    }
+  },
+  "required": [
+    "model"
+  ],
+  "$defs": {
+    "Price": {
+      "description": "One `[[model]]` row of `prices.toml`: the four per-MTok rates a call is\nbilled at, plus the provenance that lets a host flag a stale\ntable.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "The `ModelId` string this row prices.",
+          "type": "string"
+        },
+        "input": {
+          "description": "Input tokens, USD per MTok.",
+          "type": "number",
+          "format": "double"
+        },
+        "output": {
+          "description": "Output tokens, USD per MTok.",
+          "type": "number",
+          "format": "double"
+        },
+        "cache_write": {
+          "description": "Cache write tokens, USD per MTok.",
+          "type": "number",
+          "format": "double"
+        },
+        "cache_read": {
+          "description": "Cache read tokens, USD per MTok.",
+          "type": "number",
+          "format": "double"
+        },
+        "verified_on": {
+          "description": "ISO date these rates were last checked against `source_url`.",
+          "type": "string"
+        },
+        "source_url": {
+          "description": "The official pricing page the rates were read from.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "input",
+        "output",
+        "cache_write",
+        "cache_read",
+        "verified_on",
+        "source_url"
+      ]
+    }
+  }
+}

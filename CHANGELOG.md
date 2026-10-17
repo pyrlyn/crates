@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.1.1](https://github.com/pyrlyn/crates-packages/releases/tag/file-backup-v0.1.1)
+## [0.1.1](https://github.com/listepo/crates-packages/releases/tag/file-backup-v0.1.1)
 
 First published release of `file-backup` on crates.io. The `0.1.0` sources
 were tagged (`file-backup-v0.1.0`) but never published; this patch release is

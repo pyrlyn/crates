@@ -1,0 +1,54 @@
+[package]
+name = "llm-wire"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.98"
+description = "The provider contract for LLM agent loops: the Provider trait, the neutral request and event types, and test-double helpers"
+license = "GPL-3.0-or-later OR LicenseRef-Royalty-Free"
+repository = "https://github.com/pyrlyn/crates"
+keywords = ["llm", "agent", "provider", "streaming"]
+categories = ["api-bindings", "asynchronous"]
+readme = "README.md"
+exclude = ["AGENTS.md", "done.md", "ideas.md", "justfile", "plan.md", "roadmap.md", "todo.md", "toolchain.md"]
+
+[features]
+# Scenario parsing and cassette helpers for Provider test doubles.
+test-util = ["dep:figment", "dep:sha2"]
+
+[dependencies]
+async-trait = "0.1"
+schemars = "1"
+serde = { version = "1.0", features = ["derive"] }
+# preserve_order keeps JSON key order identical however the workspace is built:
+# `cassette_hash` hashes the serialized request, so a reordered key is a miss.
+serde_json = { version = "1.0", features = ["preserve_order"] }
+thiserror = "2"
+tokio = { version = "1", default-features = false, features = ["sync"] }
+tokio-util = "0.7"
+ulid = { version = "3", features = ["serde"] }
+figment = { version = "0.10", default-features = false, features = ["toml"], optional = true }
+sha2 = { version = "0.11", optional = true }
+
+# ulid's random bits come from getrandom, which has no wasm32-unknown-unknown
+# backend unless `wasm_js` (Crypto.getRandomValues through wasm-bindgen) is on.
+# getrandom's README advises libraries against enabling it unless they already
+# depend on wasm-bindgen there; ulid does, through web-time on this target, so
+# a browser build of llm-wire works with no flag from the host.
+[target.'cfg(all(target_arch = "wasm32", target_os = "unknown"))'.dependencies]
+getrandom = { version = "0.4.3", features = ["wasm_js"] }
+
+[dev-dependencies]
+pretty_assertions = "1.4"
+rstest = "0.27"
+
+[lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+dbg_macro = "warn"
+todo = "warn"
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"

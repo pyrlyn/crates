@@ -1,0 +1,5 @@
+error: `u32` is registered twice in `App`; each type has exactly one provider — wrap one of them in a newtype to register two values of the same type
+ --> tests/ui/duplicate_entry.rs:4:19
+  |
+4 |         singleton u32,
+  |                   ^^^

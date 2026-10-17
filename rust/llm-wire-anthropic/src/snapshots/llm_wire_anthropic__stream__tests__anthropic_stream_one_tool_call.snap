@@ -1,0 +1,44 @@
+---
+source: llm-wire-anthropic/src/stream.rs
+expression: "run_fixture(\"one_tool_call\")"
+---
+[
+  {
+    "type": "message_start",
+    "model": "claude-sonnet-5"
+  },
+  {
+    "type": "tool_use_start",
+    "id": "00000000000000000000000000",
+    "name": "read"
+  },
+  {
+    "type": "tool_use_input_delta",
+    "text": "{\"path\":"
+  },
+  {
+    "type": "tool_use_input_delta",
+    "text": "\"a.rs\"}"
+  },
+  {
+    "type": "tool_use_end"
+  },
+  {
+    "type": "stop",
+    "stop": {
+      "type": "end_turn"
+    }
+  },
+  {
+    "type": "usage",
+    "usage": {
+      "input_tokens": 512,
+      "output_tokens": 24,
+      "cache_read_tokens": 50,
+      "cache_write_tokens": 100,
+      "estimated": false,
+      "cost_usd": 0.0,
+      "latency_ms": 0
+    }
+  }
+]

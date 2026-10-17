@@ -1,0 +1,45 @@
+[package]
+name = "speech-capture"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.98"
+description = "Microphone capture, audio file decode, resampling to 16 kHz mono and an energy VAD for speech-to-text, with optional whisper.cpp transcription"
+license = "GPL-3.0-or-later OR LicenseRef-Royalty-Free"
+repository = "https://github.com/pyrlyn/crates"
+keywords = ["audio", "microphone", "resample", "vad", "whisper"]
+categories = ["multimedia::audio"]
+readme = "README.md"
+exclude = ["AGENTS.md", "done.md", "ideas.md", "justfile", "plan.md", "roadmap.md", "todo.md", "toolchain.md"]
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+
+[features]
+default = ["decode"]
+# Audio file decode. Off for a caller that only needs the microphone, which
+# then builds without symphonia, hound, sha2 and serde.
+decode = ["dep:hound", "dep:serde", "dep:sha2", "dep:symphonia"]
+# whisper.cpp is a heavy cmake C++ build, so it stays off unless asked for.
+whisper = ["dep:whisper-rs"]
+
+[dependencies]
+cpal = "0.18"
+hound = { version = "3.5", optional = true }
+ringbuf = "0.5.2"
+rubato = "5"
+serde = { version = "1", features = ["derive"], optional = true }
+sha2 = { version = "0.11", optional = true }
+symphonia = { version = "0.6.1", optional = true, features = ["mp3", "aac", "flac", "ogg", "pcm", "wav", "isomp4"] }
+thiserror = "2"
+tracing = "0.1"
+# `tracing_backend` routes whisper.cpp's and ggml's logging into `tracing`
+# instead of stderr, which would paint over a TUI.
+whisper-rs = { version = "0.16", optional = true, features = ["tracing_backend"] }
+
+[dev-dependencies]
+tempfile = "3"

@@ -8,18 +8,24 @@ Cargo workspace of five small Rust crates shared by ketch and rtok:
 
 | Crate | Role |
 | --- | --- |
+| `abi-drift` | Drift tests for generated bindings: regenerate a cbindgen header or csbindgen C# file, diff it against the committed copy, bless to rewrite |
 | `cargo-changed-packages` | Workspace packages a set of changed paths affects, including reverse dependencies |
 | `file-backup` | Copy a file to `<name>.bak-<unix-seconds>` beside it before replacing it |
+| `gettext-catalog` | gettext `.po` catalogs for an application's own strings: plural rules, named placeholders, language negotiation and per-message fallback |
 | `git-changed-paths` | Paths a git working tree changed relative to a base ref |
+| `keychain-secret` | Application secrets from an environment variable or the OS keychain, never a config file, with a test guard against the real keychain |
 | `path-gates` | Map changed paths to named gates by glob rules from a TOML config |
+| `plugwright` | Plugin manager for Rust hosts (native and Wasm); a separate workspace excluded from this one, with its own `Cargo.lock`, `rust-toolchain.toml` (1.97.1) and `AGENTS.md`; CI job `plugwright` |
 | `scoped-check` | Binary that runs only the check commands a change touches |
+| `telemetry-setup` | `tracing` setup with rotating JSON logs, optional OTLP traces and secret redaction, shared by aulo and Mailune |
+| `sqlite-change-feed` | Change feed for a SQLite database shared between processes: `PRAGMA data_version` through Diesel |
 | `wasm-plugin-host` | WebAssembly plugin host (extism) shared by cox and scull: worker per plugin, memory cap, deadlines |
 
 Each member directory has its own `AGENTS.md`. This file is the workspace root.
 
 `Cargo.toml` `repository` fields and the root README name
-`https://github.com/pyrlyn/crates-packages`. This checkout's `origin` is
-`git@github.com:listepo/crates-packages.git`.
+`https://github.com/pyrlyn/crates`. This checkout's `origin` is
+`git@github.com:pyrlyn/crates.git`.
 
 ## Commands
 

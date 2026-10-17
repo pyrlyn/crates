@@ -1,0 +1,1 @@
+- T1.6. Adopt llm-catalog in cox (needs publication)

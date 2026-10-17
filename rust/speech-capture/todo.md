@@ -1,0 +1,2 @@
+- T2. Adopt speech-capture in cox (needs publication)
+- T3. Adopt speech-capture in runa (needs publication)
