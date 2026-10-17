@@ -4,18 +4,18 @@
     {
       "file": ".github/workflows/ci.yml",
       "rule": "concurrency-limits",
-      "fingerprint": "c41f0955d93b4ce5",
+      "fingerprint": "5363b52cb5d160de",
       "context": "081b2e27040f94d3",
       "occurrence": 0,
-      "message": "workflow has no \"concurrency:\", so every run of it executes at the same time even when a newer run supersedes the older ones. add a top-level \"concurrency:\" with a \"group:\" and \"cancel-in-progress: true\". use a group per pull request such as \"${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}\", so that a new push cancels only the older runs of the same pull request and not the runs of the others"
+      "message": "workflow has no \"concurrency:\", so every run of it executes at the same time even when a newer run supersedes the older ones. add a top-level \"concurrency:\" with a \"group:\" and \"cancel-in-progress: true\". use a group per pull request such as \"${{ github.workflow }}-caller-${{ github.event.pull_request.number || github.ref }}\", so that a new push cancels only the older runs of the same pull request and not the runs of the others. the workflow has jobs that call reusable workflows, and inside a called workflow \"github.workflow\" is the name of the caller, so a group that the caller and the called workflow both build from \"${{ github.workflow }}\" is the same one and the called workflow is cancelled at once. give the group of the caller its own part, such as \"-caller\", so that it never equals the group of a called workflow"
     },
     {
       "file": ".github/workflows/ci.yml",
       "rule": "missing-timeout",
-      "fingerprint": "bf36b429b148506e",
+      "fingerprint": "dbfe7585f40d5f89",
       "context": "1b9f31c01c09c9f2",
       "occurrence": 0,
-      "message": "\"timeout-minutes\" is not set at this job. Set it to avoid wasting runner minutes when the job hangs"
+      "message": "\"timeout-minutes\" is not set at this job. Set it to avoid wasting runner minutes when the job hangs. Set \"default-minutes\" in the \"missing-timeout\" rule options of the configuration to turn on the --fix fix"
     },
     {
       "file": ".github/workflows/ci.yml",
@@ -50,12 +50,68 @@
       "message": "\"github.base_ref\" is a branch or tag name, which is not validated and can hold shell syntax. avoid using it directly in inline scripts. instead, pass it through an environment variable. see https://docs.github.com/en/actions/reference/security/secure-use#good-practices-for-mitigating-script-injection-attacks for more details"
     },
     {
+      "file": ".github/workflows/ci.yml",
+      "rule": "missing-timeout",
+      "fingerprint": "13c1406c2d344d1c",
+      "context": "a3a2def3552fa8be",
+      "occurrence": 0,
+      "message": "\"timeout-minutes\" is not set at this job. Set it to avoid wasting runner minutes when the job hangs. Set \"default-minutes\" in the \"missing-timeout\" rule options of the configuration to turn on the --fix fix"
+    },
+    {
+      "file": ".github/workflows/ci.yml",
+      "rule": "unpinned-uses",
+      "fingerprint": "6e94b252ac77d144",
+      "context": "8ecfd72b4c071b83",
+      "occurrence": 0,
+      "message": "action \"actions/checkout@v5\" must be pinned to a full-length commit SHA like \"{owner}/{repo}@{sha}\" because the \"unpinned-uses\" rule is enabled"
+    },
+    {
+      "file": ".github/workflows/ci.yml",
+      "rule": "artipacked",
+      "fingerprint": "b0042c3eb655ab4c",
+      "context": "1a7d0d00ee065d62",
+      "occurrence": 0,
+      "message": "actions/checkout leaves the GITHUB_TOKEN in the git config of the workspace, where a later step such as an artifact upload can publish it. set \"persist-credentials: false\" under \"with:\" unless a later step needs to push"
+    },
+    {
+      "file": ".github/workflows/publish-crates.yml",
+      "rule": "missing-timeout",
+      "fingerprint": "6ce2beb34f373a4b",
+      "context": "77b112513fd382c9",
+      "occurrence": 0,
+      "message": "\"timeout-minutes\" is not set at this job. Set it to avoid wasting runner minutes when the job hangs. Set \"default-minutes\" in the \"missing-timeout\" rule options of the configuration to turn on the --fix fix"
+    },
+    {
+      "file": ".github/workflows/publish-crates.yml",
+      "rule": "unpinned-uses",
+      "fingerprint": "ee52cb8a52bf60c3",
+      "context": "48639655ca69eb85",
+      "occurrence": 0,
+      "message": "action \"actions/checkout@v7\" must be pinned to a full-length commit SHA like \"{owner}/{repo}@{sha}\" because the \"unpinned-uses\" rule is enabled"
+    },
+    {
+      "file": ".github/workflows/publish-crates.yml",
+      "rule": "artipacked",
+      "fingerprint": "ac390e30061aa89a",
+      "context": "11fd66be8c1d075a",
+      "occurrence": 0,
+      "message": "actions/checkout leaves the GITHUB_TOKEN in the git config of the workspace, where a later step such as an artifact upload can publish it. set \"persist-credentials: false\" under \"with:\" unless a later step needs to push"
+    },
+    {
+      "file": ".github/workflows/publish-crates.yml",
+      "rule": "unpinned-uses",
+      "fingerprint": "efc89ab3573e5154",
+      "context": "e9874ffe0aa3688f",
+      "occurrence": 0,
+      "message": "action \"Swatinem/rust-cache@v2\" must be pinned to a full-length commit SHA like \"{owner}/{repo}@{sha}\" because the \"unpinned-uses\" rule is enabled"
+    },
+    {
       "file": ".github/workflows/release.yml",
       "rule": "missing-timeout",
-      "fingerprint": "2cb4df72ae5ee6e0",
+      "fingerprint": "acc0e9a2010d8ff0",
       "context": "7f7f8c2a1bdade99",
       "occurrence": 0,
-      "message": "\"timeout-minutes\" is not set at this job. Set it to avoid wasting runner minutes when the job hangs"
+      "message": "\"timeout-minutes\" is not set at this job. Set it to avoid wasting runner minutes when the job hangs. Set \"default-minutes\" in the \"missing-timeout\" rule options of the configuration to turn on the --fix fix"
     },
     {
       "file": ".github/workflows/release.yml",
@@ -84,42 +140,10 @@
     {
       "file": ".github/workflows/release.yml",
       "rule": "missing-timeout",
-      "fingerprint": "c9cf052a0948a014",
-      "context": "ec0ab2e76b324a03",
-      "occurrence": 0,
-      "message": "\"timeout-minutes\" is not set at this job. Set it to avoid wasting runner minutes when the job hangs"
-    },
-    {
-      "file": ".github/workflows/release.yml",
-      "rule": "unpinned-uses",
-      "fingerprint": "efd653bfa0f4386e",
-      "context": "4f034354546568e2",
-      "occurrence": 0,
-      "message": "action \"actions/checkout@v7\" must be pinned to a full-length commit SHA like \"{owner}/{repo}@{sha}\" because the \"unpinned-uses\" rule is enabled"
-    },
-    {
-      "file": ".github/workflows/release.yml",
-      "rule": "artipacked",
-      "fingerprint": "9983dd8efb00b1f6",
-      "context": "7f9d08df077c35d6",
-      "occurrence": 0,
-      "message": "actions/checkout leaves the GITHUB_TOKEN in the git config of the workspace, where a later step such as an artifact upload can publish it. set \"persist-credentials: false\" under \"with:\" unless a later step needs to push"
-    },
-    {
-      "file": ".github/workflows/release.yml",
-      "rule": "unpinned-uses",
-      "fingerprint": "7a859952d27da001",
-      "context": "60bcb0cdd8119cee",
-      "occurrence": 0,
-      "message": "action \"Swatinem/rust-cache@v2\" must be pinned to a full-length commit SHA like \"{owner}/{repo}@{sha}\" because the \"unpinned-uses\" rule is enabled"
-    },
-    {
-      "file": ".github/workflows/release.yml",
-      "rule": "missing-timeout",
-      "fingerprint": "3b0bdc9e4097ce75",
+      "fingerprint": "2e932d0bd11f1a1e",
       "context": "630681983bb6a668",
       "occurrence": 0,
-      "message": "\"timeout-minutes\" is not set at this job. Set it to avoid wasting runner minutes when the job hangs"
+      "message": "\"timeout-minutes\" is not set at this job. Set it to avoid wasting runner minutes when the job hangs. Set \"default-minutes\" in the \"missing-timeout\" rule options of the configuration to turn on the --fix fix"
     },
     {
       "file": ".github/workflows/release.yml",
@@ -164,10 +188,10 @@
     {
       "file": ".github/workflows/release.yml",
       "rule": "missing-timeout",
-      "fingerprint": "3096ba7884d9d7fa",
+      "fingerprint": "6ce2beb34f373a4b",
       "context": "77b112513fd382c9",
       "occurrence": 0,
-      "message": "\"timeout-minutes\" is not set at this job. Set it to avoid wasting runner minutes when the job hangs"
+      "message": "\"timeout-minutes\" is not set at this job. Set it to avoid wasting runner minutes when the job hangs. Set \"default-minutes\" in the \"missing-timeout\" rule options of the configuration to turn on the --fix fix"
     },
     {
       "file": ".github/workflows/release.yml",
