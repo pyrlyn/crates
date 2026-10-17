@@ -1,6 +1,6 @@
 # Toolchain
 
-Workspace pin: `rust-toolchain.toml` channel `1.99.0` (profile `minimal`, components `rustfmt` and `clippy`). Member crates also document mise; the root pin is the toolchain file.
+Workspace pin: `rust-toolchain.toml` channel `1.99.0` (profile `minimal`, components `rustfmt`, `clippy` and `rust-src`). `mise.toml` pins the same Rust with the same components; CI installs it from there.
 
 | Program | How to install | Why here | Source |
 | --- | --- | --- | --- |
