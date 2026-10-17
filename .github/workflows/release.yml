@@ -89,7 +89,7 @@ jobs:
     with:
       # The release gate ran on Linux only; ci.yml covers the other targets.
       matrix: '[{"os": "ubuntu-latest", "target": "x86_64-unknown-linux-gnu"}]'
-      rust-version: "1.99.0" # rust-toolchain.toml channel = "1.99.0"
+      # Rust comes from mise.toml, as in ci.yml.
       feature-args: ""
       clippy-args: --locked
       # speech-capture links ALSA through cpal's alsa-sys on Linux; ci.yml installs it too.
