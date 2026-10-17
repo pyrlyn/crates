@@ -1,0 +1,33 @@
+[package]
+name = "config-schema"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.86"
+description = "Schema-checked TOML config helpers: a stale-JSON-Schema check, figment layering with per-key provenance, and comment-preserving key edits"
+license = "GPL-3.0-or-later OR LicenseRef-Royalty-Free"
+repository = "https://github.com/pyrlyn/crates"
+keywords = ["config", "toml", "json-schema", "figment", "toml-edit"]
+categories = ["config"]
+readme = "README.md"
+exclude = ["AGENTS.md", "done.md", "ideas.md", "justfile", "plan.md", "roadmap.md", "todo.md", "toolchain.md"]
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+
+[dependencies]
+figment = { version = "0.10.19", default-features = false, features = ["toml", "parse-value"] }
+schemars = "1.2.2"
+serde = "1.0.229"
+serde_json = "1.0.151"
+thiserror = "2.0.21"
+toml_edit = { version = "0.25.15", features = ["serde"] }
+
+[dev-dependencies]
+figment = { version = "0.10.19", default-features = false, features = ["toml", "parse-value", "test"] }
+serde = { version = "1.0.229", features = ["derive"] }
+tempfile = "3.27.0"

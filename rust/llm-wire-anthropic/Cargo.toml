@@ -1,0 +1,52 @@
+[package]
+name = "llm-wire-anthropic"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.98"
+description = "The Anthropic Messages wire for LLM agent loops: request translation with cache breakpoints, thinking and effort, the SSE stream parser and a streaming client"
+license = "GPL-3.0-or-later OR LicenseRef-Royalty-Free"
+repository = "https://github.com/pyrlyn/crates"
+keywords = ["llm", "anthropic", "claude", "streaming", "sse"]
+categories = ["api-bindings", "asynchronous"]
+readme = "README.md"
+exclude = ["AGENTS.md", "done.md", "ideas.md", "justfile", "plan.md", "roadmap.md", "todo.md", "toolchain.md"]
+
+[dependencies]
+llm-wire = { path = "../llm-wire", version = "0.1.0" }
+llm-http = { path = "../llm-http", version = "0.1.0" }
+async-trait = "0.1"
+futures = "0.3"
+# `json` sends the request body and `stream` reads the SSE response; llm-http
+# enables neither.
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "stream"] }
+serde = { version = "1.0", features = ["derive"] }
+# preserve_order: `request::in_order` restores the key order of the request
+# bytes, which are part of the cache-stable prefix.
+serde_json = { version = "1.0", features = ["preserve_order"] }
+tokio = { version = "1", default-features = false, features = ["sync", "macros"] }
+tokio-util = "0.7"
+
+[build-dependencies]
+# build.rs generates the wire types from the vendored OpenAPI spec. typify's
+# `TypeSpace` takes schemars 0.8 schemas; build.rs lets the compiler infer
+# that type instead of naming it, so schemars 0.8 stays typify's private
+# dependency.
+typify = "0.8"
+serde_json = "1.0"
+
+[dev-dependencies]
+insta = { version = "1.48", features = ["json"] }
+tokio = { version = "1", default-features = false, features = ["rt", "macros", "net", "io-util", "time", "sync"] }
+wiremock = "0.6"
+
+[lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+dbg_macro = "warn"
+todo = "warn"
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"

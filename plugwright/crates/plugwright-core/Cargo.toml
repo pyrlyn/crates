@@ -1,0 +1,23 @@
+[package]
+name = "plugwright-core"
+description = "Core types of plugwright: the Plugin trait, errors and guest log forwarding"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords = ["plugin"]
+
+[dependencies]
+plugwright-abi.workspace = true
+semver.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+tracing-subscriber.workspace = true
+
+[lints]
+workspace = true

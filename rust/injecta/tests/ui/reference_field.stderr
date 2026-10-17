@@ -1,0 +1,5 @@
+error: references cannot be injected; take `Arc<T>` (shared) or `T: Clone` (owned) instead, or give the field a fixed value with `#[inject(value = ...)]`
+ --> tests/ui/reference_field.rs:3:9
+  |
+3 |     db: &'a str,
+  |         ^

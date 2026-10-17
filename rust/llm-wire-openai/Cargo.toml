@@ -1,0 +1,43 @@
+[package]
+name = "llm-wire-openai"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.98"
+description = "OpenAI Chat Completions and Responses wires for LLM agent loops, also used for every OpenAI-compatible endpoint"
+license = "GPL-3.0-or-later OR LicenseRef-Royalty-Free"
+repository = "https://github.com/pyrlyn/crates"
+keywords = ["llm", "openai", "chat-completions", "responses", "streaming"]
+categories = ["api-bindings", "asynchronous"]
+readme = "README.md"
+exclude = ["AGENTS.md", "done.md", "ideas.md", "justfile", "plan.md", "roadmap.md", "todo.md", "toolchain.md"]
+
+[dependencies]
+llm-http = { path = "../llm-http", version = "0.1.0" }
+llm-wire = { path = "../llm-wire", version = "0.1.0" }
+async-trait = "0.1"
+# Responses request and stream-event types only (`response-types`): no HTTP
+# client, so no second reqwest, tokio or futures in the graph.
+async-openai = { version = "0.42", default-features = false, features = ["response-types"] }
+futures = "0.3"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "stream"] }
+serde = "1.0"
+serde_json = "1.0"
+tokio = { version = "1", default-features = false, features = ["sync", "time", "macros"] }
+tokio-util = "0.7"
+
+[dev-dependencies]
+insta = { version = "1.48", features = ["json"] }
+tokio = { version = "1", default-features = false, features = ["rt-multi-thread", "macros", "time", "sync"] }
+wiremock = "0.6"
+
+[lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+dbg_macro = "warn"
+todo = "warn"
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"

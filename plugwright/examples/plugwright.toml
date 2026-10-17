@@ -1,0 +1,67 @@
+# Demo manifest for `plugwright-host`. Paths are relative to this file.
+
+[settings]
+cache_dir = ".plugwright"
+release = true
+# Restarts allowed per minute for an isolated plugin before it is disabled.
+max_restarts = 3
+
+# Build acceleration. `auto` uses what is installed; see `cargo plugwright doctor`.
+[settings.build]
+sccache = "auto"
+linker = "auto"
+# toolchain = "nightly"   # with codegen = "cranelift": isolated plugins only (no unwinding)
+# codegen = "cranelift"
+# profile = { codegen_units = 16 }
+
+# Native plugin loaded into the host process: fastest, but fully trusted.
+# The default is `isolation = "process"`, so in-process must be asked for.
+[[plugin]]
+id = "hello-native"
+source = { path = "native-hello" }
+isolation = "in-process"
+version = "^0.1"
+config = { greeting = "Hello" }
+
+# Same crate (same cache entry), loaded in a sandboxed child process (the
+# default): crashes are survivable; no writes, network or child processes.
+[[plugin]]
+id = "hello-isolated"
+source = { path = "native-hello" }
+timeout_ms = 1500
+config = { greeting = "Privet" }
+
+# A `crate-type = ["staticlib"]` crate: built to `.a` / `.lib`, then relinked
+# into a shared library by the host (cached like any build).
+[[plugin]]
+id = "hello-static"
+source = { path = "static-hello" }
+
+# Wasm plugin on wasmtime: fuel + memory cap + wall-clock timeout.
+[[plugin]]
+id = "hello-wasmtime"
+kind = "wasm"
+engine = "wasmtime"
+source = { path = "wasm-hello" }
+config = { greeting = "Hola" }
+[plugin.limits]
+fuel = 50_000_000
+max_memory_bytes = 16_777_216
+timeout_ms = 1000
+
+# The same module on the wasmi interpreter.
+[[plugin]]
+id = "hello-wasmi"
+kind = "wasm"
+engine = "wasmi"
+source = { path = "wasm-hello" }
+config = { greeting = "Ciao" }
+[plugin.limits]
+fuel = 20_000_000
+max_memory_bytes = 16_777_216
+
+# Example of a git source (disabled: needs network). Pin `rev` to a full SHA.
+[[plugin]]
+id = "from-git"
+enabled = false
+source = { git = "https://github.com/example/plugins.git", branch = "main", subdir = "hello" }

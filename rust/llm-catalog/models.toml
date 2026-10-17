@@ -1,0 +1,172 @@
+# Built-in model rows: id, display name, context window, efforts and the
+# declared capability flags. Copied from cox's `default.toml`
+# `[providers.*].models` lists, which cox's `cox-vendor models` pipeline
+# regenerates from https://models.dev/api.json (never hand-edited there).
+# `efforts = []` (omitted) means "any". Schema: schema/models.schema.json.
+
+[[model]]
+id = "claude-haiku-4-5"
+display_name = "Claude Haiku 4.5 (latest)"
+context_window = 200000
+efforts = ["low"]
+images = true
+
+[[model]]
+id = "claude-sonnet-5"
+display_name = "Claude Sonnet 5"
+context_window = 1000000
+efforts = ["low", "medium", "high", "xhigh"]
+images = true
+
+[[model]]
+id = "claude-opus-5"
+display_name = "Claude Opus 5"
+context_window = 1000000
+efforts = ["low", "medium", "high", "xhigh"]
+images = true
+
+[[model]]
+id = "claude-fable-5-1"
+display_name = "Claude Fable 5.1"
+context_window = 1000000
+efforts = ["low", "medium", "high", "xhigh"]
+images = true
+
+[[model]]
+id = "gpt-5.1"
+display_name = "GPT-5.1"
+context_window = 400000
+efforts = ["low", "medium", "high"]
+images = true
+
+[[model]]
+id = "gpt-5.5"
+display_name = "GPT-5.5"
+context_window = 1050000
+efforts = ["low", "medium", "high", "xhigh"]
+images = true
+
+[[model]]
+id = "gpt-5.6-sol"
+display_name = "GPT-5.6 Sol"
+context_window = 1050000
+efforts = ["low", "medium", "high", "xhigh"]
+images = true
+
+[[model]]
+id = "qwen3-coder"
+context_window = 32768
+efforts = ["low", "high", "xhigh"]
+
+[[model]]
+id = "jev-latest"
+context_window = 128000
+efforts = ["low"]
+
+[[model]]
+id = "deepseek-v4-flash"
+display_name = "DeepSeek V4 Flash"
+context_window = 1000000
+efforts = ["low", "high", "xhigh"]
+images = true
+
+[[model]]
+id = "deepseek-v4-pro"
+display_name = "DeepSeek V4 Pro"
+context_window = 1000000
+efforts = ["low", "high", "xhigh"]
+images = false
+
+[[model]]
+id = "deepseek-v4-flash-vision-exp"
+display_name = "DeepSeek V4 Flash Vision Exp"
+context_window = 1000000
+efforts = ["low", "high", "xhigh"]
+images = true
+
+[[model]]
+id = "anthropic/claude-sonnet-5"
+display_name = "Claude Sonnet 5"
+context_window = 1000000
+efforts = ["low", "medium", "high", "xhigh"]
+images = true
+
+[[model]]
+id = "anthropic/claude-opus-5"
+display_name = "Claude Opus 5"
+context_window = 1000000
+efforts = ["low", "medium", "high", "xhigh"]
+images = true
+
+[[model]]
+id = "deepseek/deepseek-v4-pro"
+display_name = "DeepSeek V4 Pro"
+context_window = 1048576
+efforts = ["high", "xhigh"]
+images = false
+
+[[model]]
+id = "qwen/qwen3-coder-plus"
+display_name = "Qwen3 Coder Plus"
+context_window = 1000000
+efforts = ["low", "high", "xhigh"]
+images = false
+
+[[model]]
+id = "x-ai/grok-4.3"
+display_name = "Grok 4.3"
+context_window = 1000000
+efforts = ["low", "medium", "high"]
+images = true
+
+[[model]]
+id = "kimi-k2.6"
+display_name = "Kimi K2.6"
+context_window = 262144
+efforts = ["low", "medium", "high", "xhigh"]
+images = true
+
+[[model]]
+id = "kimi-k2.7-code"
+display_name = "Kimi K2.7 Code"
+context_window = 262144
+efforts = ["low", "high", "xhigh"]
+images = true
+
+[[model]]
+id = "glm-5.2"
+display_name = "GLM-5.2"
+context_window = 1000000
+efforts = ["high", "xhigh"]
+images = false
+
+[[model]]
+id = "glm-5.3"
+display_name = "GLM-5.3"
+context_window = 1000000
+efforts = ["low", "high", "xhigh"]
+images = false
+
+[[model]]
+id = "gemini-3.8-flash"
+display_name = "Gemini 3.8 Flash"
+context_window = 1048576
+efforts = ["low", "medium", "high"]
+reasoning_effort = true
+images = true
+
+[[model]]
+id = "gemini-3.1-pro-preview"
+display_name = "Gemini 3.1 Pro Preview"
+context_window = 1048576
+efforts = ["low", "medium", "high"]
+reasoning_effort = true
+images = true
+
+[[model]]
+id = "gemini-3.5-flash-lite"
+display_name = "Gemini 3.5 Flash Lite"
+context_window = 1048576
+efforts = ["low", "medium", "high"]
+reasoning_effort = true
+images = true

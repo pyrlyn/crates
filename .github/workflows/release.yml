@@ -1,36 +1,24 @@
 name: release
 
-# Publishing creates the tag, not the other way round.
+# The release build. It never tags and never starts itself: bump.yml
+# (Actions -> Bump and release, pyrlyn/ci bump.yml) is the only way to a
+# release and the only thing that creates a `<package>-v*` tag. bump runs
+# `release-plz update`, opens a pull request with the one version commit,
+# rebase-merges it once every required check is green, tags the commit that
+# landed on main, creates a *draft* release with the CHANGELOG.md section and
+# dispatches this workflow with `--ref <tag> -f tag=<tag>` (a tag pushed with
+# GITHUB_TOKEN starts no workflow, so the dispatch is explicit).
 #
-# Two ways to start a release:
-#
-# - Merging to main (including merging a `release/*` branch or a manual bump
-#   pull request): if the version in `file-backup/Cargo.toml` has no
-#   `file-backup-v<version>` tag yet, the whole gate runs, the crate goes up
-#   on crates.io, and a GitHub release is created as a draft and published -
-#   publishing it is what creates the tag, at the commit that was verified. So
-#   a tag exists if and only if a release completed. A build that fails leaves
-#   main untagged and nothing half-published for dependents to find.
-#
-# - Manually, with a bump: `gh workflow run release.yml -f bump=patch|minor|
-#   major` opens a version-bump pull request from
-#   `release/file-backup-v<version>`. Merging it is the release, through the
-#   path above. Nothing is typed to cut a patch by hand beyond choosing
-#   the bump.
+# Here: the gate again on the tagged commit, crates.io, then the draft is
+# published. A failed run leaves the tag and a draft; re-run it with the same
+# tag (an "already published" crate is accepted on a re-run).
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
     inputs:
-      bump:
-        description: "Version bump to propose (opens a release pull request)"
-        type: choice
-        options: [patch, minor, major]
-        required: false
-      force:
-        description: "Publish even when the tag exists, to re-run a failed upload"
-        type: boolean
-        default: false
+      tag:
+        description: "Release tag bump.yml created (<package>-vX.Y.Z); run with --ref <tag>"
+        required: true
+        type: string
 
 env:
   CARGO_TERM_COLOR: always
@@ -38,108 +26,18 @@ env:
 permissions:
   contents: read
 
-# One release at a time. Two merges landing together would race for the same
-# tag, and cancelling a run halfway could leave a draft release behind.
+# One release at a time; cancelling a run halfway could leave a draft behind.
 concurrency:
   group: release
   cancel-in-progress: false
 
 jobs:
-  # A manual bump run stops here: it proposes a version, it does not publish.
-  # Everything below only runs on pushes to main (or a force re-run).
-  propose:
-    if: github.event_name == 'workflow_dispatch' && inputs.bump != ''
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-
-      - name: Compute the bumped version
-        id: bump
-        env:
-          BUMP: ${{ inputs.bump }}
-        run: |
-          current="$(cargo metadata --no-deps --format-version 1 \
-            | sed -n 's/.*"name":"file-backup","version":"\([^"]*\)".*/\1/p')"
-          [ -n "$current" ] || { echo "could not read the version out of file-backup/Cargo.toml" >&2; exit 1; }
-          core="${current%%-*}"
-          major="${core%%.*}"; rest="${core#*.}"
-          minor="${rest%%.*}"; patch="${rest#*.}"
-          case "$BUMP" in
-            patch) patch="$((patch + 1))" ;;
-            minor) minor="$((minor + 1))"; patch=0 ;;
-            major) major="$((major + 1))"; minor=0; patch=0 ;;
-            *) echo "unknown bump: $BUMP" >&2; exit 1 ;;
-          esac
-          version="$major.$minor.$patch"
-          {
-            echo "current=$current"
-            echo "version=$version"
-            echo "tag=file-backup-v$version"
-            echo "branch=release/file-backup-v$version"
-          } >> "$GITHUB_OUTPUT"
-          echo "$current -> $version"
-
-      - name: Rewrite the crate version
-        env:
-          VERSION: ${{ steps.bump.outputs.version }}
-        run: |
-          python3 - "$VERSION" << 'PYEOF'
-          import re, sys
-          new = sys.argv[1]
-          p = 'file-backup/Cargo.toml'
-          text = open(p).read()
-          head, sep, tail = text.partition('[package]')
-          assert sep, 'no [package] section'
-          section, sep2, rest = tail.partition('\n[')
-          section, n = re.subn(r'(?m)^version\s*=.*$', 'version = "%s"' % new, section, count=1)
-          assert n == 1, 'version line not found'
-          open(p, 'w').write(head + sep + section + sep2 + rest)
-          print('bumped to %s' % new)
-          PYEOF
-          cargo update --workspace --quiet \
-            || { echo "could not update Cargo.lock" >&2; exit 1; }
-
-      - name: Open the release pull request
-        env:
-          GH_TOKEN: ${{ github.token }}
-          CURRENT: ${{ steps.bump.outputs.current }}
-          VERSION: ${{ steps.bump.outputs.version }}
-          TAG: ${{ steps.bump.outputs.tag }}
-          BRANCH: ${{ steps.bump.outputs.branch }}
-        run: |
-          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
-            echo "$TAG already exists" >&2
-            exit 1
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if git ls-remote --exit-code --heads origin "refs/heads/$BRANCH" >/dev/null 2>&1; then
-            echo "branch $BRANCH already exists; doing nothing" >&2
-            exit 0
-          fi
-          git checkout -b "$BRANCH"
-          git add file-backup/Cargo.toml Cargo.lock
-          git commit -m "Release $TAG" -m "Bumps the version the release workflow publishes and tags."
-          git push -u origin "$BRANCH"
-          if gh pr view "$BRANCH" --json number -q .number >/dev/null 2>&1; then
-            echo "a pull request for $BRANCH is already open"
-          else
-            gh pr create --base main --head "$BRANCH" --title "Release $TAG" \
-              --body "Bumps file-backup/Cargo.toml and Cargo.lock from $CURRENT to $VERSION. Merging this pull request is the release."
-          fi
-
-  # The cheap job that decides whether this merge is a release at all, so an
-  # ordinary one stops here in seconds. The version in
-  # `file-backup/Cargo.toml` *is* the tag: `file-backup-v<version>`.
+  # The run must be on the tag bump created, and the tag must name a
+  # workspace crate and the version in its `Cargo.toml`.
   version:
-    if: github.event_name != 'workflow_dispatch' || inputs.bump == ''
     runs-on: ubuntu-latest
     outputs:
+      package: ${{ steps.decide.outputs.package }}
       version: ${{ steps.decide.outputs.version }}
       tag: ${{ steps.decide.outputs.tag }}
       publish: ${{ steps.decide.outputs.publish }}
@@ -147,65 +45,60 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Is this version released yet?
+      - name: Is this run on the release tag?
         id: decide
         env:
-          FORCE: ${{ inputs.force }}
+          TAG: ${{ inputs.tag }}
         run: |
+          package="${TAG%-v*}"
           version="$(cargo metadata --no-deps --format-version 1 \
-            | sed -n 's/.*"name":"file-backup","version":"\([^"]*\)".*/\1/p')"
+            | jq -r --arg p "$package" '.packages[] | select(.name == $p) | .version')"
           if [ -z "$version" ]; then
-            echo "could not read the version out of file-backup/Cargo.toml" >&2
+            echo "tag $TAG names no workspace crate ($package)" >&2
             exit 1
           fi
-          tag="file-backup-v$version"
-          {
-            echo "version=$version"
-            echo "tag=$tag"
-          } >> "$GITHUB_OUTPUT"
-          if [ "$FORCE" = "true" ]; then
-            if ! git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null 2>&1; then
-              echo "$tag does not exist; force only rebuilds a published release" >&2
-              exit 1
-            fi
-            ref="$(git ls-remote origin "refs/tags/${tag}^{commit}" | awk '{print $1; exit}')"
-            if [ -z "$ref" ]; then
-              ref="$(git ls-remote origin "refs/tags/${tag}" | awk '{print $1; exit}')"
-            fi
-            if [ -z "$ref" ]; then
-              echo "could not resolve $tag to a commit" >&2
-              exit 1
-            fi
-            echo "ref=$ref" >> "$GITHUB_OUTPUT"
-            echo "publish=true" >> "$GITHUB_OUTPUT"
-            echo "$tag: forced, publishing $ref again"
-          elif git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null 2>&1; then
-            echo "publish=false" >> "$GITHUB_OUTPUT"
-            echo "$tag is already released; nothing to do"
-          else
-            echo "ref=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
-            echo "publish=true" >> "$GITHUB_OUTPUT"
-            echo "$tag has no tag yet; releasing it"
+          if [ "$TAG" != "$package-v$version" ]; then
+            echo "tag $TAG does not match $package/Cargo.toml ($version)" >&2
+            exit 1
           fi
+          ref="$(git ls-remote origin "refs/tags/${TAG}^{commit}" | awk '{print $1; exit}')"
+          [ -n "$ref" ] || ref="$(git ls-remote origin "refs/tags/${TAG}" | awk '{print $1; exit}')"
+          if [ "$ref" != "$GITHUB_SHA" ]; then
+            echo "$TAG is ${ref:-missing}, this run is $GITHUB_SHA: dispatch with --ref $TAG" >&2
+            exit 1
+          fi
+          {
+            echo "package=$package"
+            echo "version=$version"
+            echo "tag=$TAG"
+            echo "ref=$ref"
+            echo "publish=true"
+          } >> "$GITHUB_OUTPUT"
 
   # Nothing is published unless the same gate CI applies is green. A release is
-  # the one build people cannot re-run themselves.
+  # the one build people cannot re-run themselves. pyrlyn/ci ci-rust.yml, the
+  # workflow ci.yml calls, on the tagged commit (this run is on the tag, see
+  # `version`): fmt, then clippy -D warnings, check and the tests with --locked.
   verify:
     needs: version
     if: needs.version.outputs.publish == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          ref: ${{ needs.version.outputs.ref }}
-      - run: rustup component add rustfmt clippy
-      - uses: Swatinem/rust-cache@v2
-      - name: Format
-        run: cargo fmt --all -- --check
-      - name: Lint
-        run: cargo clippy --workspace --all-targets --locked -- -D warnings
-      - name: Test
-        run: cargo test --workspace --locked
+    uses: pyrlyn/ci/.github/workflows/ci-rust.yml@863d8960601216eec62d4aa78924f84ce61d72b9 # same pin as ci.yml
+    permissions:
+      contents: read
+      actions: write # cancel-run on failure
+    with:
+      # The release gate ran on Linux only; ci.yml covers the other targets.
+      matrix: '[{"os": "ubuntu-latest", "target": "x86_64-unknown-linux-gnu"}]'
+      # Rust comes from mise.toml, as in ci.yml.
+      feature-args: ""
+      clippy-args: --locked
+      # speech-capture links ALSA through cpal's alsa-sys on Linux; ci.yml installs it too.
+      setup-command: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends libasound2-dev pkg-config
+      # `cargo test --workspace` already runs the doctests.
+      test-command: cargo test --workspace --locked
+      doc-tests: false
 
   # crates.io first: the tag and the GitHub release are the record of a
   # completed publish, not a promise of one.
@@ -218,9 +111,10 @@ jobs:
         with:
           ref: ${{ needs.version.outputs.ref }}
       - uses: Swatinem/rust-cache@v2
-      - name: Publish file-backup
+      - name: Publish the crate
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+          PACKAGE: ${{ needs.version.outputs.package }}
         run: |
           if [ -z "$CARGO_REGISTRY_TOKEN" ]; then
             echo "CARGO_REGISTRY_TOKEN is not set: a crates.io API token." >&2
@@ -231,14 +125,14 @@ jobs:
           # the env var alone authenticates `cargo login`, not `cargo publish`.
           mkdir -p "$HOME/.cargo"
           printf '[registry]\ntoken = "%s"\n' "$CARGO_REGISTRY_TOKEN" > "$HOME/.cargo/credentials.toml"
-          cargo publish -p file-backup --locked > publish.log 2>&1
+          cargo publish -p "$PACKAGE" --locked > publish.log 2>&1
           status=$?
           set -e
           cat publish.log
           if [ $status -eq 0 ]; then
             exit 0
           fi
-          if [ "${{ github.event.inputs.force }}" = "true" ] && grep -q "already published" publish.log; then
+          if [ "$GITHUB_RUN_ATTEMPT" -gt 1 ] && grep -qE "already (published|exists)" publish.log; then
             echo "already on crates.io; continuing"
             exit 0
           fi
@@ -277,12 +171,25 @@ jobs:
           open('notes.md', 'w').write(notes)
           print('notes: %d chars' % len(notes))
           PYEOF
-          if [ -s notes.md ]; then
-            gh release create "$TAG" --draft --target "$(git rev-parse HEAD)" --title "$TAG" --notes-file notes.md 2>/dev/null \
-              || echo "release $TAG already exists; leaving it alone"
-          else
-            gh release create "$TAG" --draft --target "$(git rev-parse HEAD)" --title "$TAG" --generate-notes 2>/dev/null \
-              || echo "release $TAG already exists; leaving it alone"
+          # bump.yml created the draft (with the CHANGELOG.md notes) on the tag.
+          gh release view "$TAG" --json tagName >/dev/null \
+            || { echo "no release $TAG: start releases with bump.yml" >&2; exit 1; }
+          if [ -s notes.md ] && [ -z "$(gh release view "$TAG" --json body --jq .body)" ]; then
+            gh release edit "$TAG" --notes-file notes.md
           fi
           gh release edit "$TAG" --draft=false
           gh release view "$TAG" --json tagName,isDraft --jq '"published \(.tagName) draft=\(.isDraft)"'
+
+  # A failed release opens (or comments on) a `release-failure` issue that mentions and assigns
+  # the maintainer (pyrlyn/ci notify-release-failure.yml). always(): ci-rust cancels the rest
+  # of the run after a failure, and this job must run anyway.
+  notify-failure:
+    needs: [version, verify, crates-io, publish]
+    if: always() && contains(needs.*.result, 'failure')
+    permissions:
+      actions: read # failed job names
+      issues: write
+    uses: pyrlyn/ci/.github/workflows/notify-release-failure.yml@c875cd763ad0c4abbd936e480be5752330d3b66b # main 2026-10-07
+    with:
+      ref: ${{ needs.version.outputs.tag || inputs.tag }}
+      needs: ${{ toJSON(needs) }}

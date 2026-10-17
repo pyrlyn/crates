@@ -1,0 +1,24 @@
+error[E0277]: `App` has no provider for `Arc<Session>`
+  --> tests/ui/captive_dependency.rs:14:23
+   |
+14 |         singleton Arc<Cache>,
+   |                       ^^^^^ `Arc<Session>` is not registered in `App`
+   |
+   = note: declare it in `injecta::container!` as `instance Arc<Session>`, `singleton Arc<Session>` or `transient Arc<Session>`
+   = note: inside a `scope`, a root `singleton` cannot depend on a `scoped` value: make the dependent `scoped` or `transient`
+help: the trait `Provide<Arc<Session>>` is not implemented for `App`
+      but trait `Provide<Arc<Cache>>` is implemented for it
+  --> tests/ui/captive_dependency.rs:14:19
+   |
+14 |         singleton Arc<Cache>,
+   |                   ^^^
+   = help: for that trait implementation, expected `Cache`, found `Session`
+note: required for `Cache` to implement `Injectable<App>`
+  --> tests/ui/captive_dependency.rs:8:8
+   |
+ 8 | struct Cache {
+   |        ^^^^^
+ 9 |     session: Arc<Session>,
+   |              --- unsatisfied trait bound
+   = help: consider manually implementing `Injectable<App>` to avoid undesired bounds caused by "imperfect derives"
+   = note: to learn more, visit <https://github.com/rust-lang/rust/issues/26925>

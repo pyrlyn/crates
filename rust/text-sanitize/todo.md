@@ -1,0 +1,3 @@
+- T2. Adopt text-sanitize in cox
+- T3. Adopt text-sanitize in rtok
+- T4. Adopt text-sanitize in ketch

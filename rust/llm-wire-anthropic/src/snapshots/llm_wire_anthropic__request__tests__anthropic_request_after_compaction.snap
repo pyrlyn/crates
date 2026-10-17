@@ -1,0 +1,88 @@
+---
+source: llm-wire-anthropic/src/request.rs
+expression: body
+---
+{
+  "model": "claude-opus-5",
+  "max_tokens": 16384,
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "Summary of earlier work: refactored the parser."
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "Continuing.",
+          "cache_control": {
+            "type": "ephemeral",
+            "ttl": "5m"
+          }
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "[archived: bash cargo test: 91000 bytes, exit 0; expand 01ARZ3NDEKTSV4RRFFQ69G5FB0]"
+        },
+        {
+          "type": "text",
+          "text": "now fix the failing test"
+        }
+      ]
+    }
+  ],
+  "stream": true,
+  "output_config": {
+    "effort": "high"
+  },
+  "system": [
+    {
+      "type": "text",
+      "text": "<tool specs>"
+    },
+    {
+      "type": "text",
+      "text": "You are cox.",
+      "cache_control": {
+        "type": "ephemeral",
+        "ttl": "5m"
+      }
+    },
+    {
+      "type": "text",
+      "text": "date: 2026-09-02"
+    }
+  ],
+  "tools": [
+    {
+      "name": "read",
+      "description": "Read a file",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  ],
+  "tool_choice": {
+    "type": "auto"
+  },
+  "thinking": {
+    "type": "adaptive"
+  },
+  "fallbacks": "default"
+}

@@ -1,29 +1,32 @@
-# release-plz proposes the version bump and writes the changelog. Merging the
-# pull request it opens is what releases the crates, through
-# `.github/workflows/release.yml`.
+# release-plz writes the version and the changelog, and nothing else: bump.yml
+# (pyrlyn/ci bump.yml) runs `release-plz update` with this file, lands the
+# result through a pull request merged by rebase once the required checks are
+# green, and only then tags the landed commit and creates the release.
 #
-# Deliberately off is `git_release_enable`, because release.yml creates the
-# GitHub release (as a draft first, published last so the tag is created by a
-# completed release, never by a failed build). Tagging is release.yml's too,
-# for the same reason — the `release` command is never run here, only
-# `release-pr`.
-#
-# Unlike ketch, the crates here ARE published to crates.io, so the registry
-# lookup stays on: it is the source of truth for what was released.
+# No tags and no GitHub releases from release-plz (`git_tag_enable` and
+# `git_release_enable` off): bump is the only tagger, and the `release` /
+# `release-pr` commands are never run.
 
 [workspace]
 git_release_enable = false
+git_tag_enable = false
 
-# `file-backup` was never published to crates.io, so the registry lookup comes
-# back empty and release-plz concludes it can diff against nothing — same trap
-# ketch's release-plz.toml documents. Git tags are the only record that a
-# release happened, which release.yml now makes literally true: it creates the
-# tag by publishing the release.
+# Unlike ketch, some crates here are published to crates.io (see the README),
+# but not all of them, and a crate's first release has nothing on the registry
+# to diff against: the lookup comes back empty and release-plz concludes there
+# is nothing to compare — the same trap ketch's release-plz.toml documents. So
+# the registry is not consulted, and the `<crate>-v<version>` git tags are the
+# record of what was released; release.yml creates the tag by publishing the
+# release.
 git_only = true
 
 # Below 1.0 release-plz sends a `feat:` to the patch. A new feature is worth
 # more than a third digit to someone deciding whether to upgrade, 1.0 or not.
 features_always_increment_minor = true
+
+# No per-crate list here: every workspace crate is covered, `git_only` keys on the
+# `<crate>-v<version>` tags, so git-changed-paths, cargo-changed-packages and
+# scoped-check need no entry of their own.
 
 # One tag per crate: release.yml derives `file-backup-v<version>` from
 # `file-backup/Cargo.toml`, and the changelog headings link to the release page.
@@ -52,5 +55,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 # NOTE: This is a TOML literal string, so TOML preserves backslashes. The regex
 # receives `\\.` to match a literal dot.
 postprocessors = [
-  { pattern = 'https://github\.com/listepo/crates-packages/compare/[^)\s]*\.\.\.([^)\s]*)', replace = "https://github.com/listepo/crates-packages/releases/tag/${1}" },
+  { pattern = 'https://github\.com/pyrlyn/crates/compare/[^)\s]*\.\.\.([^)\s]*)', replace = "https://github.com/pyrlyn/crates/releases/tag/${1}" },
 ]

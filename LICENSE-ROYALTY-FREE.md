@@ -2,7 +2,9 @@
 
 Version 1.0
 
-This license is an alternative to the GNU GPLv3 (see [`LICENSE`](LICENSE)) and to a commercial license (see [`PRICING.md`](PRICING.md)). You may choose whichever of the three suits you.
+This license is an alternative to the GNU GPLv3 (see [`LICENSE`](LICENSE)) and to a commercial license (contact the copyright holder). You may choose whichever of the three suits you.
+
+It covers only the crates in this repository whose `Cargo.toml` names it: `license = "GPL-3.0-or-later OR LicenseRef-Royalty-Free"`. Every other crate here is GPL-3.0-or-later only.
 
 ## Grant
 
@@ -22,7 +24,7 @@ This license does **not** cover:
 - **Embedded systems**, meaning computer systems that perform a dedicated function within a larger mechanical or electrical system (for example appliances, vehicles, industrial controllers, kiosks, and medical devices).
 - Use without the attribution required above.
 
-For those cases, use the GNU GPLv3 or obtain a commercial license (see [`PRICING.md`](PRICING.md)).
+For those cases, use the GNU GPLv3 or obtain a commercial license from the copyright holder.
 
 ## Termination
 

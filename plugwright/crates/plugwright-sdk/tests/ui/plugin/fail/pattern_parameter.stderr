@@ -1,0 +1,5 @@
+error: use a plain name: it is the key in the JSON argument object
+ --> tests/ui/plugin/fail/pattern_parameter.rs:8:19
+  |
+8 |     fn sum(&self, (a, b): (u8, u8), c: u8) -> u8 {
+  |                   ^^^^^^

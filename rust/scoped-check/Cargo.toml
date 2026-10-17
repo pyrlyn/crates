@@ -1,0 +1,26 @@
+[package]
+name = "scoped-check"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.91"
+description = "Run only the check commands a change touches: changed paths, glob gates and affected cargo packages"
+license = "MIT"
+repository = "https://github.com/pyrlyn/crates"
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[dependencies]
+anyhow = "1.0.104"
+cargo-changed-packages = { path = "../cargo-changed-packages", version = "0.1.0" }
+clap = { version = "4.6.7", features = ["derive"] }
+git-changed-paths = { path = "../git-changed-paths", version = "0.1.0" }
+path-gates = { path = "../path-gates", version = "0.1.0" }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+shlex = "2.0.1"
+toml = "1.1.6"
+
+[dev-dependencies]
+assert_cmd = "2.2.2"
+tempfile = "3.27.0"

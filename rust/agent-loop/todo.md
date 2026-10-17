@@ -1,0 +1,1 @@
+- T2. cox-core uses agent-loop (T1.16, needs publication)

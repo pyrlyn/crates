@@ -1,0 +1,11 @@
+error: an interface trait only declares methods
+ --> tests/ui/interface/fail/non_method_item.rs:5:5
+  |
+5 |     type Output;
+  |     ^^^^^^^^^^^^
+
+error: an interface trait only declares methods
+ --> tests/ui/interface/fail/non_method_item.rs:6:5
+  |
+6 |     const LIMIT: u8;
+  |     ^^^^^^^^^^^^^^^^
