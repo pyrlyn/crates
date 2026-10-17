@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 
 env:
@@ -14,7 +15,7 @@ jobs:
   # so a pull request's subjects are linted here. Pushes to main skip this:
   # every commit there arrived through a pull request that already passed it.
   commits:
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' && !github.event.pull_request.draft
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -52,6 +53,7 @@ jobs:
   # file-backup is std-only and shared by ketch and rtok on all three platforms. The toolchain
   # comes from mise.toml (with rust-src), pinned exactly (every job fails on another rustc).
   rust:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     uses: pyrlyn/ci/.github/workflows/ci-rust.yml@863d8960601216eec62d4aa78924f84ce61d72b9
     permissions:
       contents: read
@@ -109,6 +111,7 @@ jobs:
           rustup target add wasm32-unknown-unknown
           cargo build -p llm-wire --target wasm32-unknown-unknown --locked
           cargo build -p llm-http --no-default-features --target wasm32-unknown-unknown --locked
+          cargo publish --dry-run -p atomic-replace --locked
         fi
 
   # plugwright is a separate workspace (own Cargo.lock and rust-toolchain.toml: wasmtime and
