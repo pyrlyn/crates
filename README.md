@@ -2,7 +2,7 @@
 
 [![ci](https://github.com/pyrlyn/crates/actions/workflows/ci.yml/badge.svg)](https://github.com/pyrlyn/crates/actions/workflows/ci.yml) [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=listepo_crates-packages&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=listepo_crates-packages) [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=listepo_crates-packages&metric=coverage)](https://sonarcloud.io/component_measures?id=listepo_crates-packages&metric=coverage) [![Tests](https://img.shields.io/sonar/tests/listepo_crates-packages?server=https%3A%2F%2Fsonarcloud.io&compact_message)](https://sonarcloud.io/component_measures?id=listepo_crates-packages&metric=tests)
 
-Small, focused Rust crates shared by `ketch` and `rtok`.
+Small, focused Rust crates shared by the creator's projects (`ketch`, `rtok`, `scull` and others).
 
 | Crate | What it does |
 | --- | --- |
@@ -37,6 +37,7 @@ Small, focused Rust crates shared by `ketch` and `rtok`.
 | [`telemetry-setup`](rust/telemetry-setup) | `tracing` setup: rotating JSON log, stderr log, optional OTLP traces, secrets masked before they leave the process |
 | [`sqlite-change-feed`](rust/sqlite-change-feed) | Change feed for a SQLite database shared between processes: `PRAGMA data_version` through Diesel |
 | [`wasm-plugin-host`](rust/wasm-plugin-host) | Run WebAssembly plugins with extism: a worker thread per plugin, memory cap, per-call deadlines, control lane before events |
+| [`workspace-graph`](rust/workspace-graph) | Load a workspace's direct dependency graph and assert rules over it in tests (not published) |
 
 ## Commands
 
