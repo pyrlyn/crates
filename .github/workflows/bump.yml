@@ -26,12 +26,46 @@ on:
         options:
           - file-backup
           - change-preview
+          - operation-icons
+          - fs-kit
+          - agent-ext
+          - agent-host-config
+          - agent-loop
+          - config-schema
+          - llm-catalog
+          - llm-http
+          - llm-wire
+          - llm-wire-anthropic
+          - llm-wire-openai
+          - mcp-client-host
+          - perm-rules
+          - proc-sandbox
+          - shell-classify
+          - speech-capture
+          - text-sanitize
           - wasm-plugin-host
           - telemetry-setup
           - gettext-catalog
           - sqlite-change-feed
           - abi-drift
           - keychain-secret
+          - git-changed-paths
+          - cargo-changed-packages
+          - scoped-check
+          - injecta-macros
+          - injecta
+          - sccache-r2
+          - app-home
+          - atomic-replace
+      prerelease:
+        description: "semver prerelease suffix, e.g. alpha.1 (empty: a normal release through release-plz)"
+        default: ""
+        type: string
+      level:
+        description: "prerelease only: how far past the last released version (a never-released crate keeps its version)"
+        default: patch
+        type: choice
+        options: [patch, minor, major]
       dry-run:
         description: open the version pull request and wait for its checks, then close it
         default: false
@@ -46,7 +80,7 @@ permissions:
 
 jobs:
   bump:
-    uses: pyrlyn/ci/.github/workflows/bump.yml@a4f93a2606a5dd8f697ad3d876440ab3e2eb4ae9 # main
+    uses: pyrlyn/ci/.github/workflows/bump.yml@341896b491b89d93a1940313c0149ddfd8fae9c2 # main
     permissions:
       contents: write # the bump branch, the tag and the release
       pull-requests: write # merge or close the bump pull request
@@ -55,10 +89,22 @@ jobs:
       statuses: read
       issues: write # notify-failure: a failed run opens a release-failure issue
     with:
-      level: patch
+      level: ${{ inputs.level }}
+      # A prerelease goes through scripts/prerelease.sh (<version>-<suffix>; a
+      # `-` version makes the GitHub Release a prerelease); otherwise release-plz.
+      release-script: ${{ inputs.prerelease != '' && 'scripts/prerelease.sh' || '' }}
+      release-script-args: ${{ inputs.prerelease }} ${{ inputs.package }}
       dry-run: ${{ inputs.dry-run }}
       release-untagged-head: ${{ inputs.release-untagged-head }}
-      release-plz-update: true
+      # Every GitHub Release is a dev snapshot, published as a prerelease. This
+      # repository's decision, not pyrlyn/ci's. (crates.io gets the source as
+      # before; there is no binary build profile here.)
+      prerelease: true
+      release-title-suffix: " (dev build)"
+      release-notes-header: |-
+        > [!WARNING]
+        > Dev build: a development snapshot, published as a prerelease.
+      release-plz-update: ${{ inputs.prerelease == '' }}
       package: ${{ inputs.package }}
       tag-prefix: ${{ inputs.package }}-v
       commit-message: "chore: release ${{ inputs.package }}-v{version}"

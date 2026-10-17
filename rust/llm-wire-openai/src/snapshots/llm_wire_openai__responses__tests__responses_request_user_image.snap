@@ -1,0 +1,47 @@
+---
+source: llm-wire-openai/src/responses.rs
+expression: body
+---
+{
+  "model": "gpt-5.1",
+  "input": [
+    {
+      "type": "message",
+      "role": "user",
+      "content": "what is in this screenshot?"
+    },
+    {
+      "type": "message",
+      "role": "user",
+      "content": [
+        {
+          "type": "input_image",
+          "detail": "auto",
+          "image_url": "data:image/png;base64,iVBORw0KGgo="
+        }
+      ]
+    }
+  ],
+  "stream": true,
+  "store": false,
+  "max_output_tokens": 16384,
+  "reasoning": {
+    "effort": "high"
+  },
+  "instructions": "<tool specs>\n\nYou are cox.",
+  "tools": [
+    {
+      "type": "function",
+      "name": "read",
+      "description": "Read a file",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  ]
+}

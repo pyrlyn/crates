@@ -1,0 +1,7 @@
+error: expected `=`
+ --> tests/ui/plugin/fail/crate_without_value.rs:6:1
+  |
+6 | #[plugin(crate)]
+  | ^^^^^^^^^^^^^^^^
+  |
+  = note: this error originates in the attribute macro `plugin` (in Nightly builds, run with -Z macro-backtrace for more info)

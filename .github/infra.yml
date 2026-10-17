@@ -1,0 +1,22 @@
+# Configuration for pyrlyn/ci's ci.yml, called from pipeline.yml (docs/config.md in
+# pyrlyn/ci). Language CI stays in ci.yml; this file turns on the scans.
+version: 1
+
+codeql:
+  languages: [actions, rust]
+
+# Snyk stays off (pyrlyn/ci default).
+snyk:
+  enabled: false
+
+# .NET (if any) is built and tested by the local ci.yml.
+dotnet:
+  enabled: false
+
+# SonarCloud with Rust LCOV coverage (replaces the former sonarcloud.yml; same inputs).
+sonarcloud:
+  enabled: true
+  mise: false
+  rust: true
+  coverage-command: cargo llvm-cov --workspace --locked --lcov --output-path coverage/lcov.info
+

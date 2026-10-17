@@ -1,0 +1,40 @@
+[package]
+name = "agent-ext"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.98"
+description = "Agent extension points: SKILL.md discovery with a deferred skill tool, and Claude-Code-style shell hooks (JSON on stdin, exit 2 blocks) that fail open"
+license = "GPL-3.0-or-later OR LicenseRef-Royalty-Free"
+repository = "https://github.com/pyrlyn/crates"
+keywords = ["agent", "skills", "hooks", "claude-code"]
+categories = ["development-tools"]
+readme = "README.md"
+exclude = ["AGENTS.md", "done.md", "ideas.md", "justfile", "plan.md", "roadmap.md", "todo.md", "toolchain.md"]
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1"
+serde-saphyr = "1.3.0"
+thiserror = "2"
+async-trait = "0.1"
+# `[hooks]` config types carry a schema so a host can embed it in its own.
+schemars = "1"
+tokio = { version = "1", features = ["io-util", "process", "time"] }
+# A `matcher` that is not a plain tool name compiles as a regex.
+regex = "1"
+
+# Kills the whole process group of a timed-out hook, not just its shell.
+[target.'cfg(unix)'.dependencies]
+nix = { version = "0.31", features = ["signal"] }
+
+[dev-dependencies]
+tempfile = "3"
+tokio = { version = "1", features = ["macros", "rt"] }

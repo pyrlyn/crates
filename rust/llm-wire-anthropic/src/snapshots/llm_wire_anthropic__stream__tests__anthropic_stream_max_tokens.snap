@@ -1,0 +1,32 @@
+---
+source: llm-wire-anthropic/src/stream.rs
+expression: events
+---
+[
+  {
+    "type": "message_start",
+    "model": "claude-sonnet-5"
+  },
+  {
+    "type": "text_delta",
+    "text": "This response was cut off mid"
+  },
+  {
+    "type": "stop",
+    "stop": {
+      "type": "end_turn"
+    }
+  },
+  {
+    "type": "usage",
+    "usage": {
+      "input_tokens": 100,
+      "output_tokens": 16384,
+      "cache_read_tokens": 0,
+      "cache_write_tokens": 0,
+      "estimated": false,
+      "cost_usd": 0.0,
+      "latency_ms": 0
+    }
+  }
+]

@@ -1,0 +1,18 @@
+[package]
+name = "di-bench"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dev-dependencies]
+divan = { workspace = true }
+impl-baseline = { path = "../impl-baseline" }
+impl-injecta = { path = "../impl-injecta" }
+impl-shaku = { path = "../impl-shaku" }
+impl-nject = { path = "../impl-nject" }
+impl-teloc = { path = "../impl-teloc" }
+impl-dill = { path = "../impl-dill" }
+
+[[bench]]
+name = "resolve"
+harness = false

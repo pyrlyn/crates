@@ -1,0 +1,12 @@
+# Everything CI would run.
+test: && swarfr
+    cargo test
+
+# Lossless cleanup of the workspace's cargo target dir (compress + dedupe); never deletes.
+# `..` because the workspace root (see ../Cargo.toml) is one level up from this crate,
+# and that's where cargo puts target/.
+swarfr:
+    #!/usr/bin/env sh
+    command -v swarfr >/dev/null || { echo "swarfr not found; install it with: ketch install swarfr"; exit 0; }
+    [ -d ../target ] || exit 0
+    swarfr run ../target || test $? -eq 2

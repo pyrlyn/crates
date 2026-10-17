@@ -1,0 +1,8 @@
+[package]
+name = "impl-dill"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+dill = { workspace = true }

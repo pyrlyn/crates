@@ -1,0 +1,10 @@
+data: {"id":"chatcmpl-001","object":"chat.completion.chunk","created":"2026-09-02T10:00:00Z","model":"qwen3-coder","choices":[{"index":0,"delta":{"role":"assistant","content":""},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-001","object":"chat.completion.chunk","created":"2026-09-02T10:00:00Z","model":"qwen3-coder","choices":[{"index":0,"delta":{"content":"Cargo is"},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-001","object":"chat.completion.chunk","created":"2026-09-02T10:00:00Z","model":"qwen3-coder","choices":[{"index":0,"delta":{"content":" the build system."},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-001","object":"chat.completion.chunk","created":"2026-09-02T10:00:00Z","model":"qwen3-coder","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}
+
+data: {"id":"chatcmpl-001","object":"chat.completion.chunk","created":"2026-09-02T10:00:00Z","model":"qwen3-coder","choices":[],"usage":{"prompt_tokens":12,"completion_tokens":34,"prompt_tokens_details":{"cached_tokens":5}}}
+

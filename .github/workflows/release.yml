@@ -76,23 +76,29 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
   # Nothing is published unless the same gate CI applies is green. A release is
-  # the one build people cannot re-run themselves.
+  # the one build people cannot re-run themselves. pyrlyn/ci ci-rust.yml, the
+  # workflow ci.yml calls, on the tagged commit (this run is on the tag, see
+  # `version`): fmt, then clippy -D warnings, check and the tests with --locked.
   verify:
     needs: version
     if: needs.version.outputs.publish == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          ref: ${{ needs.version.outputs.ref }}
-      - run: rustup component add rustfmt clippy
-      - uses: Swatinem/rust-cache@v2
-      - name: Format
-        run: cargo fmt --all -- --check
-      - name: Lint
-        run: cargo clippy --workspace --all-targets --locked -- -D warnings
-      - name: Test
-        run: cargo test --workspace --locked
+    uses: pyrlyn/ci/.github/workflows/ci-rust.yml@863d8960601216eec62d4aa78924f84ce61d72b9 # same pin as ci.yml
+    permissions:
+      contents: read
+      actions: write # cancel-run on failure
+    with:
+      # The release gate ran on Linux only; ci.yml covers the other targets.
+      matrix: '[{"os": "ubuntu-latest", "target": "x86_64-unknown-linux-gnu"}]'
+      # Rust comes from mise.toml, as in ci.yml.
+      feature-args: ""
+      clippy-args: --locked
+      # speech-capture links ALSA through cpal's alsa-sys on Linux; ci.yml installs it too.
+      setup-command: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends libasound2-dev pkg-config
+      # `cargo test --workspace` already runs the doctests.
+      test-command: cargo test --workspace --locked
+      doc-tests: false
 
   # crates.io first: the tag and the GitHub release are the record of a
   # completed publish, not a promise of one.
@@ -126,7 +132,7 @@ jobs:
           if [ $status -eq 0 ]; then
             exit 0
           fi
-          if [ "$GITHUB_RUN_ATTEMPT" -gt 1 ] && grep -q "already published" publish.log; then
+          if [ "$GITHUB_RUN_ATTEMPT" -gt 1 ] && grep -qE "already (published|exists)" publish.log; then
             echo "already on crates.io; continuing"
             exit 0
           fi
@@ -173,3 +179,17 @@ jobs:
           fi
           gh release edit "$TAG" --draft=false
           gh release view "$TAG" --json tagName,isDraft --jq '"published \(.tagName) draft=\(.isDraft)"'
+
+  # A failed release opens (or comments on) a `release-failure` issue that mentions and assigns
+  # the maintainer (pyrlyn/ci notify-release-failure.yml). always(): ci-rust cancels the rest
+  # of the run after a failure, and this job must run anyway.
+  notify-failure:
+    needs: [version, verify, crates-io, publish]
+    if: always() && contains(needs.*.result, 'failure')
+    permissions:
+      actions: read # failed job names
+      issues: write
+    uses: pyrlyn/ci/.github/workflows/notify-release-failure.yml@c875cd763ad0c4abbd936e480be5752330d3b66b # main 2026-10-07
+    with:
+      ref: ${{ needs.version.outputs.tag || inputs.tag }}
+      needs: ${{ toJSON(needs) }}

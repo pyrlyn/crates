@@ -1,0 +1,5 @@
+error: method names starting with `plugwright.` are reserved
+ --> tests/ui/plugin/fail/reserved_name.rs:9:8
+  |
+9 |     fn describe(&self) {}
+  |        ^^^^^^^^

@@ -1,0 +1,40 @@
+# Build and test on the toolchains this package is developed with.
+# macOS: the `xcode-27` runner. `macos-latest` is the macOS 26 image and ships Xcode 26, not 27.
+# Linux: the official Swift 6.4.0 image (Ubuntu 24.04). `swift test` includes DocsTests,
+# which fails when llms.txt or llms-full.txt drift from GUIDE.md and AGENTS.md.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  macos:
+    name: macOS (Xcode 27)
+    runs-on: xcode-27
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain
+        run: xcodebuild -version && swift --version
+      - name: Build
+        run: swift build
+      - name: Test
+        run: swift test
+
+  linux:
+    name: Linux (Swift 6.4)
+    runs-on: ubuntu-latest
+    container: swift:6.4.0-noble
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain
+        run: swift --version
+      - name: Build
+        run: swift build
+      - name: Test
+        run: swift test

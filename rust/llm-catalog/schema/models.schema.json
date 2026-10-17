@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ModelsFile",
+  "description": "The shape of a whole `models.toml`.",
+  "type": "object",
+  "properties": {
+    "model": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ProviderModel"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "model"
+  ],
+  "$defs": {
+    "ProviderModel": {
+      "description": "One configured model: what a host's `[providers.*].models` entry (or a\nbuilt-in `models.toml` row) says about a model id. The host fills these\nfrom its own config, so this crate depends on no config type of the\nhost's. An empty `efforts` means \"any\".",
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "The model id sent on the wire (for gateways the full `vendor/model`\nid, e.g. `\"anthropic/claude-sonnet-5\"`).",
+          "type": "string",
+          "default": ""
+        },
+        "display_name": {
+          "description": "What a person calls the model (`\"Claude Sonnet 5\"`). Unset means a\nreader shows the id.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "context_window": {
+          "description": "Context window in tokens; `0` means not declared.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "default": 0
+        },
+        "efforts": {
+          "description": "Efforts this model supports; empty means \"any\".",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Effort"
+          },
+          "default": []
+        },
+        "reasoning_effort": {
+          "description": "Whether this model takes the Chat Completions `reasoning_effort`\nfield. Unset means \"not declared\", and a chat wire then sends no\neffort at all: OpenAI documents the field, LM Studio's compatible\nendpoint does not list it, so it is opt-in per model.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "images": {
+          "description": "Whether this model takes image input. `false` makes the Chat wire\nrefuse a request that carries an image; unset still sends it.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "Effort": {
+      "description": "Reasoning effort passed to the provider.\n\nOrdered `Low < Medium < High < Xhigh` so the router can clamp a tier's\neffort to the greatest level a model supports (`docs/design/providers.md`).\nThe four levels are models.dev's own, so a catalog row maps without loss\n(T30.26).",
+      "oneOf": [
+        {
+          "description": "Cheapest, fastest; used for `cheap`-tier jobs.",
+          "type": "string",
+          "const": "low"
+        },
+        {
+          "description": "Between `Low` and `High`: models.dev's and the wires' `medium`.",
+          "type": "string",
+          "const": "medium"
+        },
+        {
+          "description": "Default for `code`/`think` tiers.",
+          "type": "string",
+          "const": "high"
+        },
+        {
+          "description": "User-selected for a flagged large refactor.",
+          "type": "string",
+          "const": "xhigh"
+        }
+      ]
+    }
+  }
+}

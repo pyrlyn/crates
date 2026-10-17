@@ -1,0 +1,112 @@
+---
+source: llm-wire-anthropic/src/request.rs
+expression: body
+---
+{
+  "model": "claude-sonnet-5",
+  "max_tokens": 16384,
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "read both files"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "Reading both."
+        },
+        {
+          "type": "tool_use",
+          "id": "01ARZ3NDEKTSV4RRFFQ69G5FA1",
+          "name": "read",
+          "input": {
+            "path": "a.rs"
+          }
+        },
+        {
+          "type": "tool_use",
+          "id": "01ARZ3NDEKTSV4RRFFQ69G5FA2",
+          "name": "read",
+          "input": {
+            "path": "b.rs"
+          },
+          "cache_control": {
+            "type": "ephemeral",
+            "ttl": "5m"
+          }
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "tool_result",
+          "tool_use_id": "01ARZ3NDEKTSV4RRFFQ69G5FA1",
+          "content": "fn a() {}",
+          "is_error": false
+        },
+        {
+          "type": "tool_result",
+          "tool_use_id": "01ARZ3NDEKTSV4RRFFQ69G5FA2",
+          "content": "no such file",
+          "is_error": true,
+          "cache_control": {
+            "type": "ephemeral",
+            "ttl": "5m"
+          }
+        }
+      ]
+    }
+  ],
+  "stream": true,
+  "output_config": {
+    "effort": "high"
+  },
+  "system": [
+    {
+      "type": "text",
+      "text": "<tool specs>"
+    },
+    {
+      "type": "text",
+      "text": "You are cox.",
+      "cache_control": {
+        "type": "ephemeral",
+        "ttl": "5m"
+      }
+    },
+    {
+      "type": "text",
+      "text": "date: 2026-09-02"
+    }
+  ],
+  "tools": [
+    {
+      "name": "read",
+      "description": "Read a file",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  ],
+  "tool_choice": {
+    "type": "auto"
+  },
+  "thinking": {
+    "type": "adaptive"
+  },
+  "fallbacks": "default"
+}

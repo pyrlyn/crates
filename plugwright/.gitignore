@@ -1,0 +1,5 @@
+/target
+/.plugwright
+/examples/.plugwright
+# Written by `mise run demo`; its hashes depend on the machine and the toolchain.
+/examples/plugwright.lock

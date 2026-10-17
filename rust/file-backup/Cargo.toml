@@ -1,0 +1,15 @@
+[package]
+name = "file-backup"
+version = "0.2.0"
+edition = "2021"
+rust-version = "1.86"
+description = "Copy a file to `<name>.bak-<unix-seconds>` beside it before replacing it"
+license.workspace = true
+repository = "https://github.com/pyrlyn/crates"
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[dev-dependencies]
+rstest = "0.27.0"
+tempfile = "3"

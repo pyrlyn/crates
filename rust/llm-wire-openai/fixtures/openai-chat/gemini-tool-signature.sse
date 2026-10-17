@@ -1,0 +1,4 @@
+data: {"id":"gem-001","object":"chat.completion.chunk","created":1790000000,"model":"gemini-3.8-flash","choices":[{"index":0,"delta":{"role":"assistant","tool_calls":[{"index":0,"id":"function-call-1","type":"function","function":{"name":"read","arguments":"{\"path\":\"src/main.rs\"}"},"extra_content":{"google":{"thought_signature":"sig-fixture"}}}]},"finish_reason":null}]}
+
+data: {"id":"gem-001","object":"chat.completion.chunk","created":1790000000,"model":"gemini-3.8-flash","choices":[{"index":0,"delta":{},"finish_reason":"tool_calls"}],"usage":{"prompt_tokens":40,"completion_tokens":12,"prompt_tokens_details":{"cached_tokens":8}}}
+

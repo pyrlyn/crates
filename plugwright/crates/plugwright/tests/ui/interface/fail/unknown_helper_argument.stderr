@@ -1,0 +1,5 @@
+error: unknown argument; expected one of: name
+ --> tests/ui/interface/fail/unknown_helper_argument.rs:5:18
+  |
+5 |     #[plugwright(skip)]
+  |                  ^^^^

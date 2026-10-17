@@ -1,0 +1,32 @@
+---
+source: llm-wire-openai/src/responses.rs
+expression: "run_fixture(\"text_only\")"
+---
+[
+  {
+    "type": "text_delta",
+    "text": "cox-provider owns "
+  },
+  {
+    "type": "text_delta",
+    "text": "the Provider trait."
+  },
+  {
+    "type": "stop",
+    "stop": {
+      "type": "end_turn"
+    }
+  },
+  {
+    "type": "usage",
+    "usage": {
+      "input_tokens": 512,
+      "output_tokens": 24,
+      "cache_read_tokens": 100,
+      "cache_write_tokens": 0,
+      "estimated": false,
+      "cost_usd": 0.0,
+      "latency_ms": 0
+    }
+  }
+]

@@ -1,0 +1,58 @@
+---
+source: llm-wire-openai/src/responses.rs
+expression: body
+---
+{
+  "model": "gpt-5.1",
+  "input": [
+    {
+      "type": "message",
+      "role": "user",
+      "content": "read both files"
+    },
+    {
+      "type": "function_call",
+      "call_id": "01ARZ3NDEKTSV4RRFFQ69G5FA1",
+      "name": "read",
+      "arguments": "{\"path\":\"a.rs\"}"
+    },
+    {
+      "type": "function_call",
+      "call_id": "01ARZ3NDEKTSV4RRFFQ69G5FA2",
+      "name": "read",
+      "arguments": "{\"path\":\"b.rs\"}"
+    },
+    {
+      "type": "function_call_output",
+      "call_id": "01ARZ3NDEKTSV4RRFFQ69G5FA1",
+      "output": "fn a() {}"
+    },
+    {
+      "type": "function_call_output",
+      "call_id": "01ARZ3NDEKTSV4RRFFQ69G5FA2",
+      "output": "Error: no such file"
+    }
+  ],
+  "stream": true,
+  "store": false,
+  "max_output_tokens": 16384,
+  "reasoning": {
+    "effort": "high"
+  },
+  "instructions": "<tool specs>\n\nYou are cox.",
+  "tools": [
+    {
+      "type": "function",
+      "name": "read",
+      "description": "Read a file",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  ]
+}

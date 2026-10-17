@@ -1,0 +1,26 @@
+error[E0277]: `_` cannot be overridden in `App`
+  --> tests/ui/override_transient.rs:11:29
+   |
+11 |     let _ = App::new().with(Handler);
+   |                        ---- ^^^^^^^ no `singleton` or `scoped` entry of type `_`
+   |                        |
+   |                        required by a bound introduced by this call
+   |
+help: the trait `Override<_>` is not implemented for `App`
+  --> tests/ui/override_transient.rs:4:1
+   |
+ 4 | / injecta::container! {
+ 5 | |     struct App {
+   | |______________^
+   = note: only `singleton` (root) and `scoped` (scope) entries are cached and can be overridden; `instance` values are constructor arguments
+   = note: `transient` values are rebuilt on every resolve: override their dependencies instead
+note: required by a bound in `App::with`
+  --> tests/ui/override_transient.rs:4:1
+   |
+ 4 | / injecta::container! {
+ 5 | |     struct App {
+ 6 | |         transient Handler,
+ 7 | |     }
+ 8 | | }
+   | |_^ required by this bound in `App::with`
+   = note: this error originates in the macro `injecta::container` (in Nightly builds, run with -Z macro-backtrace for more info)

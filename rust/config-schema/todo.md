@@ -1,0 +1,2 @@
+- T2. Adopt config-schema in ketch or rtok (needs publication)
+- T3. Adopt config-schema in cox

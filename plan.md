@@ -1,6 +1,6 @@
-# crates (crates-packages)
+# crates
 
-<https://github.com/pyrlyn/crates-packages>
+<https://github.com/pyrlyn/crates>
 
 Cargo workspace of five small published crates shared by ketch and rtok — git-changed-paths, path-gates, cargo-changed-packages, scoped-check, file-backup — released via release-plz.
 
@@ -16,9 +16,8 @@ Cargo workspace of five small published crates shared by ketch and rtok — git-
 | T8 | todo | P3 | 1 | 0% | |
 | T9 | todo | P3 | 2 | 0% | |
 | T10 | todo | P2 | 1 | 0% | |
-| T11 | in progress | P1 | 2 | 90% | Claude / opus-5.5 |
 | T13 | in progress | P1 | 2 | 90% | Claude / opus-5.5 |
-| T20.2 | todo | P1 | 3 | 0% | |
+| T20.2 | done | P1 | 3 | 100% | |
 | T20.3 | todo | P2 | 4 | 0% | |
 | T21 | in progress | P1 | 3 | 90% | Cursor / claude-opus-5.5 |
 | T22.1 | in progress | P1 | 2 | 90% | Cursor / claude-opus-5.5 |
@@ -31,54 +30,43 @@ Audit note (2026-10-07): verified defenses — git argument injection refused, P
 
 ### T1. Windows: POSIX quoting handed to cmd.exe in scoped-check
 
-`scoped-check/src/plan.rs:139,155-157` builds `{changed}`/`{packages}` with `shlex::try_join`/`try_quote` (POSIX single quotes), but `scoped-check/src/main.rs:146-149` runs commands via `cmd /C` on Windows, which does not honor them. A file named `docs/x & calc & .md` executes `calc`; plain spaces break arguments. Tests are `#![cfg(unix)]` (`scoped-check/tests/cli.rs:4`), so the path is untested. Done means: Windows-appropriate quoting (or raw argument passing) with tests covering it.
+`rust/scoped-check/src/plan.rs:139,155-157` builds `{changed}`/`{packages}` with `shlex::try_join`/`try_quote` (POSIX single quotes), but `rust/scoped-check/src/main.rs:146-149` runs commands via `cmd /C` on Windows, which does not honor them. A file named `docs/x & calc & .md` executes `calc`; plain spaces break arguments. Tests are `#![cfg(unix)]` (`rust/scoped-check/tests/cli.rs:4`), so the path is untested. Done means: Windows-appropriate quoting (or raw argument passing) with tests covering it.
 
 ### T2. `{changed}` silently expands to empty in full mode
 
-`scoped-check/src/plan.rs:87-91` sets `changed: String::new()` for `--all`, unmatched-path fallback, and error fallbacks, while `paths` is usually already known (`plan.rs:58-63`). A gate `run = "gofmt -w {changed}"` becomes `gofmt -w` (reads stdin, hangs CI); test `cli.rs:176-180` pins the trailing-empty behavior. Done means: the full quoted path list is substituted whenever paths are known, and a forced plan that still contains `{changed}` with unknown paths warns or refuses.
+`rust/scoped-check/src/plan.rs:87-91` sets `changed: String::new()` for `--all`, unmatched-path fallback, and error fallbacks, while `paths` is usually already known (`plan.rs:58-63`). A gate `run = "gofmt -w {changed}"` becomes `gofmt -w` (reads stdin, hangs CI); test `cli.rs:176-180` pins the trailing-empty behavior. Done means: the full quoted path list is substituted whenever paths are known, and a forced plan that still contains `{changed}` with unknown paths warns or refuses.
 
 ### T3. `--config` outside the repository top mixes path bases
 
-`git-changed-paths` returns repo-top-relative paths, but `Config::parse` sets `dir` to the config file's parent (`scoped-check/src/config.rs:96-99`) and `plan::build` uses that dir both for git and as the cargo root (`plan.rs:58,174`), so `--config sub/scoped-check.toml` feeds determinator wrong relative paths and gates get wrong package sets. Done means: `dir` is resolved via `git rev-parse --show-toplevel` from the config parent, with a test.
+`git-changed-paths` returns repo-top-relative paths, but `Config::parse` sets `dir` to the config file's parent (`rust/scoped-check/src/config.rs:96-99`) and `plan::build` uses that dir both for git and as the cargo root (`plan.rs:58,174`), so `--config sub/scoped-check.toml` feeds determinator wrong relative paths and gates get wrong package sets. Done means: `dir` is resolved via `git rev-parse --show-toplevel` from the config parent, with a test.
 
 ### T4. file-backup: name-probe race and symlink-following overwrite
 
-`file-backup/src/lib.rs:39-45` does `while bak.exists()` then `fs::copy` — two concurrent backups can pick the same name and the second silently truncates the first (exactly what the comment claims to prevent), and a planted `<name>.bak-<ts>` dangling symlink is followed by `fs::copy`. Done means: the destination is created with `OpenOptions::create_new(true)` + `io::copy`, bumping the suffix on `AlreadyExists`.
+`rust/file-backup/src/lib.rs:39-45` does `while bak.exists()` then `fs::copy` — two concurrent backups can pick the same name and the second silently truncates the first (exactly what the comment claims to prevent), and a planted `<name>.bak-<ts>` dangling symlink is followed by `fs::copy`. Done means: the destination is created with `OpenOptions::create_new(true)` + `io::copy`, bumping the suffix on `AlreadyExists`.
 
 ### T5. Error-quality fixes: canonicalize and NotARepository
 
-`cargo-changed-packages/src/lib.rs:103` compares two `canonicalize().ok()` results — double failure passes as equality; bail when either errors. `git-changed-paths/src/lib.rs:78-86` reports "not a git repository" for a nonexistent directory; distinguish the two cases.
+`rust/cargo-changed-packages/src/lib.rs:103` compares two `canonicalize().ok()` results — double failure passes as equality; bail when either errors. `rust/git-changed-paths/src/lib.rs:78-86` reports "not a git repository" for a nonexistent directory; distinguish the two cases.
 
 ### T6. Deduplicate git-toplevel discovery
 
-Repo-top discovery exists privately in `git-changed-paths/src/lib.rs:78-86` and again in `scoped-check/src/main.rs:94-103` (losing `GIT_OPTIONAL_LOCKS=0` and the error mapping); the same pattern is copy-pasted in cox (`crates/cox-tools/src/git.rs:518`) and swarfr (`src/session.rs:520`). Done means: `git_changed_paths::toplevel(dir)` is public and all four call sites use it (coordinate the cox/swarfr swap with those projects).
+Repo-top discovery exists privately in `rust/git-changed-paths/src/lib.rs:78-86` and again in `rust/scoped-check/src/main.rs:94-103` (losing `GIT_OPTIONAL_LOCKS=0` and the error mapping); the same pattern is copy-pasted in cox (`crates/cox-tools/src/git.rs:518`) and swarfr (`src/session.rs:520`). Done means: `git_changed_paths::toplevel(dir)` is public and all four call sites use it (coordinate the cox/swarfr swap with those projects).
 
 ### T7. Extract the shared test fixtures
 
-The "a depends on b, c unrelated" workspace fixture is built twice (`cargo-changed-packages/tests/affected.rs:13-34`, `scoped-check/tests/cli.rs:55-92`) and the `git()` helper twice (`git-changed-paths/tests/changed_paths.rs:11-26`, `cli.rs:38-47`). Done means: one dev-only shared test-support crate in this workspace.
+The "a depends on b, c unrelated" workspace fixture is built twice (`rust/cargo-changed-packages/tests/affected.rs:13-34`, `rust/scoped-check/tests/cli.rs:55-92`) and the `git()` helper twice (`rust/git-changed-paths/tests/changed_paths.rs:11-26`, `cli.rs:38-47`). Done means: one dev-only shared test-support crate in this workspace.
 
 ### T8. Parse the scoped-check config TOML once
 
-`Config::parse` parses the same TOML text twice with two schemas (`scoped-check/src/config.rs:73-74`). Done means: one struct embedding `GateSpec` parses once, keeping the acknowledged trade-offs in mind.
+`Config::parse` parses the same TOML text twice with two schemas (`rust/scoped-check/src/config.rs:73-74`). Done means: one struct embedding `GateSpec` parses once, keeping the acknowledged trade-offs in mind.
 
 ### T9. Robustness batch: dead gates, dropped paths, `./` stripping
 
-A `[[gate]]` with `run` but no `paths`/`always` is silently unselectable (`path-gates/src/lib.rs:121-131`) — a typo'd glob skips checks; warn or add `plan --lint`. `Selection::unmatched` is never surfaced when `unmatched = "ignore"` (`plan.rs:71-84`). `path-gates/src/lib.rs:199-202` strips only one leading `./` (`././x` stays `./x`, breaking exact patterns like `Cargo.lock`). Done means: all three fixed with tests.
+A `[[gate]]` with `run` but no `paths`/`always` is silently unselectable (`rust/path-gates/src/lib.rs:121-131`) — a typo'd glob skips checks; warn or add `plan --lint`. `Selection::unmatched` is never surfaced when `unmatched = "ignore"` (`plan.rs:71-84`). `rust/path-gates/src/lib.rs:199-202` strips only one leading `./` (`././x` stays `./x`, breaking exact patterns like `Cargo.lock`). Done means: all three fixed with tests.
 
 ### T10. Fix crate metadata: license mix and repository URL drift
 
-Workspace `Cargo.toml` sets `license = "GPL-3.0-or-later"` (inherited only by file-backup) while the other four crates hardcode `MIT`; every `repository` field, README badges, and the release-plz postprocessor say `pyrlyn/crates-packages` while origin is `listepo/crates-packages`. Done means: one license everywhere (intentionally chosen) and URLs match the canonical remote.
-
-### T11. atomic-replace: one atomic file write for every project
-
-Six projects (rtok, ketch, cox, swarfr, aulo, runa) carry about 18 hand-written temp-file-and-rename writes that disagree on fsync, permissions, symlinks and temp naming. New crate `atomic-replace` (std only, edition 2021, Rust 1.86 so ketch can use it): `write(path, bytes)` and `Options { durable, preserve_permissions, follow_symlinks, create_parent, mode }` with `write`/`write_with`, plus `sync_dir`. Ported from rtok `rtok-agent-sdk` `write_atomic`/`link_target` (permissions, Windows read-only bit, dangling links) and ketch `state.rs` `save_path` (fsync file and directory). Done means: the crate is in the workspace with tests, wired into CI dry-run publish, bump options, README and sonar; consumers migrate in their own tasks.
-
-Plan:
-1. `atomic-replace/` with Cargo.toml, src/lib.rs, AGENTS.md, README.md, plan/todo/done/roadmap/ideas/toolchain.md, justfile (copy of change-preview's layout).
-2. Temp file beside the target via `create_new`, named `.<name>.tmp-<pid>-<nanos>-<counter>`; removed on every error path.
-3. Register: workspace members, `ci.yml` dry-run, `bump.yml` package options, root README crate table and token scope, `sonar-project.properties`.
-4. Check: `cargo test -p atomic-replace`, clippy `-D warnings`, fmt, `cargo +1.86 check -p atomic-replace`.
-
+Workspace `Cargo.toml` sets `license = "GPL-3.0-or-later"` (inherited only by file-backup) while the other four crates hardcode `MIT`; every `repository` field, README badges, and the release-plz postprocessor say `pyrlyn/crates` while origin is `pyrlyn/crates`. Done means: one license everywhere (intentionally chosen) and URLs match the canonical remote.
 
 ### T20.2. wasm-plugin-host: package layout
 
@@ -93,7 +81,7 @@ What every application's host functions repeat: the `(u64) -> u64` JSON wire wit
 Approved by the creator as Mailune's X3 (2026-10-08: code Mailune shares with other projects is extracted here). aulo (`aulo-telemetry`) and cox (`cox-telemetry`) each set up `tracing` by hand: a rotating JSON log file, a filter from config or an environment variable, and optional OTLP export. Only aulo masks secrets before a line reaches a sink. Mailune needs the same (its F5). rtok `src/otel` exports rtok's own events and has nothing to share. New crate `telemetry-setup`, extracted from `aulo-telemetry` with no change in what is masked. Done means: the crate is in the workspace with aulo's redaction and logging tests, registered for CI dry-run publish, bump, README and sonar. Consumers migrate in their own tasks once the crate is published (aulo first, then Mailune F5).
 
 Plan:
-1. `telemetry-setup/` with the member files of `wasm-plugin-host`. Edition 2024, `rust-version` 1.98 (cox, the lowest candidate consumer). Dependency versions are the ones aulo locks, so neither lock moves.
+1. `rust/telemetry-setup/` with the member files of `wasm-plugin-host`. Edition 2024, `rust-version` 1.98 (cox, the lowest candidate consumer). Dependency versions are the ones aulo locks, so neither lock moves.
 2. From `aulo-telemetry`: `redact` (masking of a finished line, structural masking of a JSON record), the buffering `Scrubbed` writer, `Settings`/`subscriber`/`init`, and the `otlp` feature that masks span attributes before export.
 3. What named aulo becomes a setting: the application name (file prefix and OTLP service name), the filter environment variable, and extra credential patterns (aulo's `aulo_<hex>` tokens). An invalid pattern or an application name that is not a plain file name is an error at setup.
 4. Register: workspace members, `ci.yml` dry-run publish and an `otlp` feature test on Linux, `bump.yml` package option, root README crate table and token scope, `sonar-project.properties`, root `toolchain.md`.
@@ -120,7 +108,7 @@ Plan:
 Approved by the creator as Mailune's X4 (2026-10-10: extract the shared code and publish it through release-plz). cox's `cox-i18n` parses `.po` catalogs with `polib`, evaluates `Plural-Forms` with its own parser, and fills `{name}` placeholders; Mailune's F10 needs the same for core-originated strings. New crate `gettext-catalog`, split into two tasks to stay under 500 lines each. This one: `catalog` (entries by key, fuzzy and incomplete plurals untranslated, the `# cldr-other:` override), `plural` (the GNU gettext C subset, tested against CLDR for ru and uk) and `format` (`pieces`, `placeholders`, `render`, `validate`), with one `Error` enum for the crate. Done means: the crate is in the workspace with those modules and their tests, registered for CI dry-run publish, bump, README, sonar and the root `toolchain.md`.
 
 Plan:
-1. `gettext-catalog/` with the member files of `wasm-plugin-host`. Edition 2024, `rust-version` 1.98 (cox). Dependency versions are the ones cox locks (`polib 0.3.0`, `unic-langid 0.9.6`, `sys-locale 0.3.2`).
+1. `rust/gettext-catalog/` with the member files of `wasm-plugin-host`. Edition 2024, `rust-version` 1.98 (cox). Dependency versions are the ones cox locks (`polib 0.3.0`, `unic-langid 0.9.6`, `sys-locale 0.3.2`).
 2. Port `catalog.rs`, `plural.rs` and `format.rs` from `cox-i18n` with their tests; the plural and placeholder errors become variants of the crate's `Error`, and the evaluator loses its `unreachable!`.
 3. Register as T21 did; the package ships only `src`, `tests` and `README.md`.
 4. Check: fmt, clippy `-D warnings`, `cargo test --workspace --locked`, `cargo publish --dry-run -p gettext-catalog --locked`.
@@ -141,7 +129,7 @@ Left (both): review and merge; GitHub Actions must be enabled on this repository
 Approved by the creator as Mailune's X11 (2026-10-10: extract the shared code and publish it through release-plz). cox's `cox-store` (`src/watch.rs`) tells the app and a TUI sharing one `cox.db` when the other committed, by polling `PRAGMA data_version`; Mailune's S7 change feed reads the same pragma. New crate `sqlite-change-feed`: `ChangeToken::new(conn)`, `ChangeToken::poll(conn)` and `data_version(conn)` over a Diesel `SqliteConnection`, with no connection, thread or `libsqlite3-sys` choice of its own. Done means: the crate is in the workspace with a test in which a writer in another process commits and the feed sees it once, plus a second-connection test in the same process, registered for CI dry-run publish, bump, README, sonar and the root `toolchain.md`.
 
 Plan:
-1. `sqlite-change-feed/` with the member files of `wasm-plugin-host`. Edition 2024, `rust-version` 1.98 (cox). `diesel 2.3.13` with only the `sqlite` feature (cox and Mailune lock 2.3.13 and 2.3.14); bundled `libsqlite3-sys 0.38.2` as a dev-dependency only.
+1. `rust/sqlite-change-feed/` with the member files of `wasm-plugin-host`. Edition 2024, `rust-version` 1.98 (cox). `diesel 2.3.13` with only the `sqlite` feature (cox and Mailune lock 2.3.13 and 2.3.14); bundled `libsqlite3-sys 0.38.2` as a dev-dependency only.
 2. Port the token and the pragma from `watch.rs`; the store's mutex and `StoreError` stay in cox.
 3. `tests/feed.rs`: the cross-process test re-executes the test binary as cox's does (an ignored `writer_process` test), plus own-commit, second-connection and two-consumer tests.
 4. Register as T21 did; the package ships only `src`, `tests` and `README.md`.
@@ -154,7 +142,7 @@ Left: review and merge; GitHub Actions must be enabled on this repository and `C
 Approved by the creator as Mailune's X9 (2026-10-10: extract the shared code and publish it through release-plz). scull (`crates/scull-ffi/tests/bindings.rs`) and ketch (`ketch-capi`'s header test) each regenerate their cbindgen header (and scull its csbindgen C# file) in a test, compare with the committed copy and rewrite it under `SCULL_BLESS` / `KETCH_BLESS`; Mailune's B6 C ABI needs the same. New crate `abi-drift`: `Drift` (compare with LF line endings, a unified diff on drift, bless from a flag or a named variable, the regenerate command in the message) and `cbindgen_header` / `csbindgen_file` behind default features. Done means: the crate is in the workspace with a fixture FFI crate whose committed header and C# file are checked, and tests for a stale copy showing its diff, blessing, a missing copy and CRLF, registered for CI dry-run publish, bump, README, sonar and the root `toolchain.md`.
 
 Plan:
-1. `abi-drift/` with the member files of `wasm-plugin-host`. Edition 2021, `rust-version` 1.86 (ketch). `cbindgen 0.29.4` (library only) and `csbindgen 1.9.8` as optional default features, as scull and ketch lock them; `similar 3.2` for the diff, as `change-preview` uses it.
+1. `rust/abi-drift/` with the member files of `wasm-plugin-host`. Edition 2021, `rust-version` 1.86 (ketch). `cbindgen 0.29.4` (library only) and `csbindgen 1.9.8` as optional default features, as scull and ketch lock them; `similar 3.2` for the diff, as `change-preview` uses it.
 2. The shared `check_drift` of both tests becomes `Drift::check`, returning `Error::Stale` with the diff instead of panicking; `Debug` prints the same text so a test's `?` shows it.
 3. `tests/fixtures/ffi` (source, `cbindgen.toml`, committed header and C# file, regenerated with `ABI_DRIFT_BLESS=1`) and `tests/drift.rs`.
 4. Register as T21 did; the package ships only `src`, `tests` and `README.md`.
@@ -167,7 +155,7 @@ Left: review and merge; GitHub Actions must be enabled on this repository and `C
 Approved by the creator as Mailune's X2 (2026-10-10: extract the shared code and publish it through release-plz; the crates.io name `secret-store` belongs to someone else, so the crate is `keychain-secret`). runa (`runa-cloud/src/secrets.rs`), cox (`cox-provider-http` `resolve_key_with` and its `no_real_keychain_in_tests` guard) and aulo (`aulo-server/src/auth/token.rs`) each resolve a secret from an environment variable, then the keyring, keep it out of logs, and keep tests off the real keychain; runa also refuses inline keys in config files. Mailune's C1 needs all of it. New crate `keychain-secret`. Done means: one implementation in the workspace with a redacted `Secret`, a `SecretStore` trait with `Keychain`, `MemoryStore` and `NoStore`, `resolve` (env, then store), the keychain switch, `reject_inline_secrets`, and the no-real-keychain `guard` scanner, with tests that never touch the keychain, registered for CI dry-run publish, bump, README, sonar and the root `toolchain.md`.
 
 Plan:
-1. `keychain-secret/` with the member files of `wasm-plugin-host`. Edition 2024, `rust-version` 1.98 (cox, runa). `keyring 4.2.0`, `toml 0.9.12`, as the consumers lock them.
+1. `rust/keychain-secret/` with the member files of `wasm-plugin-host`. Edition 2024, `rust-version` 1.98 (cox, runa). `keyring 4.2.0`, `toml 0.9.12`, as the consumers lock them.
 2. From aulo: the redacted secret type and the store trait with keychain and memory stores (keyring errors keep only their message). From cox and runa: env-then-store resolution with an injectable lookup, returning `None` so each caller decides what a missing key means, and the `COX_KEYRING=off` switch as `keychain_enabled`/`os_store`. From runa: `reject_inline_secrets`, plus `password`, `client_secret` and `refresh_token`. From cox: the guard scanner, walking any repository root with caller-given patterns; it also treats `'"'` as a character, not a string start.
 3. Register as T21 did; the package ships only `src` and `README.md`.
 4. Check: fmt, clippy `-D warnings`, `cargo test --workspace --locked`, `cargo publish --dry-run -p keychain-secret --locked`.

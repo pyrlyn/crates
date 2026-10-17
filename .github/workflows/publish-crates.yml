@@ -1,0 +1,54 @@
+name: publish-crates
+
+# Every merge to main publishes the workspace crates whose current version is not on
+# crates.io yet (scripts/publish-new-crates.sh: dependency order, an existing version is
+# skipped). bump.yml / release.yml stay the way to version, tag and release a crate; this
+# only covers what a plain merge to main leaves unpublished (a new crate, a changed
+# version). No tags or releases are created here.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "rust/**"
+      - Cargo.toml
+      - Cargo.lock
+      - scripts/publish-new-crates.sh
+      - .github/workflows/publish-crates.yml
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: only list what would be published
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-crates
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: Swatinem/rust-cache@v2
+      - name: System libraries (speech-capture links ALSA)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libasound2-dev pkg-config
+      - name: Publish crates not yet on crates.io
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+          DRY_RUN: ${{ inputs.dry-run && '1' || '0' }}
+        run: |
+          if [ "$DRY_RUN" != 1 ]; then
+            if [ -z "$CARGO_REGISTRY_TOKEN" ]; then
+              echo "CARGO_REGISTRY_TOKEN is not set: a crates.io API token." >&2
+              exit 1
+            fi
+            mkdir -p "$HOME/.cargo"
+            printf '[registry]\ntoken = "%s"\n' "$CARGO_REGISTRY_TOKEN" > "$HOME/.cargo/credentials.toml"
+          fi
+          scripts/publish-new-crates.sh
