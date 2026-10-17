@@ -111,6 +111,7 @@ jobs:
           rustup target add wasm32-unknown-unknown
           cargo build -p llm-wire --target wasm32-unknown-unknown --locked
           cargo build -p llm-http --no-default-features --target wasm32-unknown-unknown --locked
+          cargo publish --dry-run -p atomic-replace --locked
         fi
 
   # plugwright is a separate workspace (own Cargo.lock and rust-toolchain.toml: wasmtime and
