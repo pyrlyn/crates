@@ -1,6 +1,6 @@
 # SonarCloud analysis (+ Rust LCOV coverage) through pyrlyn/ci's sonarcloud.yml. Every
 # step skips with a notice when SONAR_TOKEN is not set; coverage and scan are soft-fail.
-# Rust comes from rust-toolchain.toml (no mise.toml here).
+# Rust comes from rust-toolchain.toml (mise is off for this job).
 name: sonarcloud
 
 on:

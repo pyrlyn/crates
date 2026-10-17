@@ -50,14 +50,13 @@ jobs:
   # aarch64, macOS aarch64, Windows x86_64. The shared matrix at this pin still builds macOS
   # x86_64, so the targets are listed here: Intel macOS is not supported.
   # file-backup is std-only and shared by ketch and rtok on all three platforms. The toolchain
-  # is rust-toolchain.toml's channel, pinned exactly (every job fails on another rustc).
+  # comes from mise.toml (with rust-src), pinned exactly (every job fails on another rustc).
   rust:
     uses: pyrlyn/ci/.github/workflows/ci-rust.yml@863d8960601216eec62d4aa78924f84ce61d72b9
     permissions:
       contents: read
       actions: write # cancel-run on failure
     with:
-      rust-version: "1.99.0" # rust-toolchain.toml channel = "1.99.0"
       matrix: >-
         [
         {"os": "ubuntu-latest", "target": "x86_64-unknown-linux-gnu"},
