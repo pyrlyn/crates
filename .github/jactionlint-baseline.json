@@ -74,38 +74,6 @@
       "message": "actions/checkout leaves the GITHUB_TOKEN in the git config of the workspace, where a later step such as an artifact upload can publish it. set \"persist-credentials: false\" under \"with:\" unless a later step needs to push"
     },
     {
-      "file": ".github/workflows/publish-crates.yml",
-      "rule": "missing-timeout",
-      "fingerprint": "6ce2beb34f373a4b",
-      "context": "77b112513fd382c9",
-      "occurrence": 0,
-      "message": "\"timeout-minutes\" is not set at this job. Set it to avoid wasting runner minutes when the job hangs. Set \"default-minutes\" in the \"missing-timeout\" rule options of the configuration to turn on the --fix fix"
-    },
-    {
-      "file": ".github/workflows/publish-crates.yml",
-      "rule": "unpinned-uses",
-      "fingerprint": "ee52cb8a52bf60c3",
-      "context": "48639655ca69eb85",
-      "occurrence": 0,
-      "message": "action \"actions/checkout@v7\" must be pinned to a full-length commit SHA like \"{owner}/{repo}@{sha}\" because the \"unpinned-uses\" rule is enabled"
-    },
-    {
-      "file": ".github/workflows/publish-crates.yml",
-      "rule": "artipacked",
-      "fingerprint": "ac390e30061aa89a",
-      "context": "11fd66be8c1d075a",
-      "occurrence": 0,
-      "message": "actions/checkout leaves the GITHUB_TOKEN in the git config of the workspace, where a later step such as an artifact upload can publish it. set \"persist-credentials: false\" under \"with:\" unless a later step needs to push"
-    },
-    {
-      "file": ".github/workflows/publish-crates.yml",
-      "rule": "unpinned-uses",
-      "fingerprint": "efc89ab3573e5154",
-      "context": "e9874ffe0aa3688f",
-      "occurrence": 0,
-      "message": "action \"Swatinem/rust-cache@v2\" must be pinned to a full-length commit SHA like \"{owner}/{repo}@{sha}\" because the \"unpinned-uses\" rule is enabled"
-    },
-    {
       "file": ".github/workflows/release.yml",
       "rule": "missing-timeout",
       "fingerprint": "acc0e9a2010d8ff0",

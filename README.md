@@ -80,6 +80,27 @@ run, each with its own version, `rust/<crate>/CHANGELOG.md` and
   `Cargo.toml` (`0.1.0`), with a new changelog. A crate that must not be
   published says `publish = false`.
 
+### Selective publishing
+
+`publish-crates.yml` publishes with [cargo-workspaces](https://github.com/pksunkara/cargo-workspaces)
+(`cargo:cargo-workspaces` in `mise.toml`). `cargo ws publish --publish-as-is`
+uploads, in dependency order, only the crates whose `Cargo.toml` version is not
+on crates.io yet; an unchanged (not bumped) crate is skipped. To release a
+change, bump the crate in a pull request (`cargo ws version`, or by hand) and
+merge it.
+
+- Pull request: lists changed crates (`cargo ws changed --since origin/main`) in
+  the job summary and runs `cargo ws publish --dry-run --no-verify`. Nothing is
+  uploaded.
+- Push to `main`: the same listing against the previous commit, then the
+  publish. It is real only when the repository variable `CRATES_PUBLISH` is
+  `true` (otherwise a dry run); `CARGO_REGISTRY_TOKEN` is read from the
+  environment. Manual run: Actions → publish-crates, `dry-run: false`.
+- `cargo ws changed` diffs against the last git tag, and the existing
+  `<crate>-v<version>` tags predate most crates, so without `--since` it lists
+  nearly everything. Use it as a report; the registry decides what is published.
+  Tags are still created only by `bump.yml`.
+
 ### Release order
 
 The shared bump workflow currently runs bare `release-plz update`, which can
