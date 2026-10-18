@@ -108,7 +108,7 @@ jobs:
       package: ${{ inputs.package }}
       tag-prefix: ${{ inputs.package }}-v
       commit-message: "chore: release ${{ inputs.package }}-v{version}"
-      mise: false # no mise.toml; rust-toolchain.toml pins Rust
+      mise: false # mise.toml pins lint tools only; rust-toolchain.toml pins Rust
       ci-workflows: ci.yml
       release-workflows: release.yml
     secrets:
