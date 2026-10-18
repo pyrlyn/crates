@@ -4,9 +4,9 @@ use std::fmt;
 use std::path::PathBuf;
 use std::time::Duration;
 
-use crate::Format;
 use crate::diagnostic::Diagnostic;
 use crate::svg::SvgInfo;
+use crate::Format;
 
 /// Everything known about one successful render.
 #[derive(Debug, Clone, PartialEq)]

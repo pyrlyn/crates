@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use std::sync::mpsc::Receiver;
 use std::time::{Duration, Instant};
 
-use d2_render::watch::{WatchConfig, WatchEvent, output_path, watch_channel};
+use d2_render::watch::{output_path, watch_channel, WatchConfig, WatchEvent};
 use d2_render::{Backend, BackendOutput, Format, RenderOptions, Renderer, Result};
 
 /// Copies the source into the output, wrapped as a fake SVG.

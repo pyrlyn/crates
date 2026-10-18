@@ -10,8 +10,8 @@
 use std::fmt::Write as _;
 
 use super::graph::{ArrowShape, Arrowhead, Graph, Style};
-use super::layout::{CONTAINER_ICON, ICON_SIZE, Layout, Rect};
-use super::theme::{THEMES, Theme};
+use super::layout::{Layout, Rect, CONTAINER_ICON, ICON_SIZE};
+use super::theme::{Theme, THEMES};
 use crate::svg::{base64_encode, escape_xml};
 
 /// Rendering knobs the native backend honours.
