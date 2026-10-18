@@ -1,0 +1,20 @@
+# A small but representative diagram.
+direction: right
+
+user: User {shape: person}
+web: Web app
+api: API {
+  style.fill: "#E8F5E9"
+}
+db: Database {shape: cylinder}
+
+backend: Backend {
+  worker: Worker
+  queue: Jobs {shape: queue}
+  worker -> queue: poll
+}
+
+user -> web: opens
+web -> api: REST
+api -> db: SQL
+api -> backend.queue: enqueue
