@@ -52,3 +52,13 @@ Updated the shared WASM host and cox to Extism 1.41.0 / Wasmtime 49, removing th
 ### T20.5. abi-drift: permit Extism-compatible cbindgen patch
 
 Lowered abi-drift's cbindgen minimum to 0.29.3, which Extism 1.41.0 pins exactly. Confirmed the API is compatible and generated C/C# outputs are unchanged. Verified abi-drift tests, workspace tests, clippy, fmt, and CI on pyrlyn/crates#74.
+
+### T30. Extract reusable shell completion generation
+
+Use the local `shell-completions` crate in `packages/crates/rust`. Preserve rtok scripts and ketch package-name completion and installation behavior. Add `cox completions <shell>` without loading configuration, credentials, telemetry or a session.
+
+Execution plan: establish existing completion tests; extract the clap generator and Clink implementation with regression tests into the shared crate; connect consumers through local Cargo paths; update dependency inventories; run focused tests, formatting and clippy. Application-specific installation policies and ketch dynamic package lookup stay with their owners. Done when generation has one owner and the three CLI surfaces pass their checks.
+
+Validation: Four generator tests passed, including upstream byte parity for five shells, Clink aliases/hidden values/escaping and writer errors. Formatting and all-target clippy passed. Consumer checks verified all 11 existing application scripts byte for byte. Existing dependency versions and unrelated lockfile edges were preserved.
+
+Reused `clap_complete` and the existing rtok Clink generator. No replacement library or custom generator was introduced. Local path dependencies resolve in the standard apps/packages layout.

@@ -1,0 +1,16 @@
+[package]
+name = "shell-completions"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.86"
+license.workspace = true
+publish = false
+repository = "https://github.com/pyrlyn/crates"
+description = "Shared clap shell completion generation, including Clink"
+
+[dependencies]
+clap = { version = "4.6", features = ["derive"] }
+clap_complete = "4.6"
+
+[lints.rust]
+unsafe_code = "forbid"
