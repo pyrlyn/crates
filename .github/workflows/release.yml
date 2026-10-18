@@ -10,8 +10,11 @@ name: release
 # GITHUB_TOKEN starts no workflow, so the dispatch is explicit).
 #
 # Here: the gate again on the tagged commit, crates.io, then the draft is
-# published. A failed run leaves the tag and a draft; re-run it with the same
-# tag (an "already published" crate is accepted on a re-run).
+# published. The tag names the crate (`<crate>-v<version>`): any workspace crate
+# that is not `publish = false`, whose workspace dependencies are already on
+# crates.io. A failed run leaves the tag and a draft; re-run it with the same
+# tag (an "already published" crate is accepted on a re-run, and so is a
+# crates.io rate limit once its window has passed).
 on:
   workflow_dispatch:
     inputs:
@@ -32,13 +35,14 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # The run must be on the tag bump created, and the tag must name a
+  # The run must be on the tag bump created, and the tag must name a releasable
   # workspace crate and the version in its `Cargo.toml`.
   version:
     runs-on: ubuntu-latest
     outputs:
       package: ${{ steps.decide.outputs.package }}
       version: ${{ steps.decide.outputs.version }}
+      changelog: ${{ steps.decide.outputs.changelog }}
       tag: ${{ steps.decide.outputs.tag }}
       publish: ${{ steps.decide.outputs.publish }}
       ref: ${{ steps.decide.outputs.ref }}
@@ -50,17 +54,18 @@ jobs:
         env:
           TAG: ${{ inputs.tag }}
         run: |
-          package="${TAG%-v*}"
-          version="$(cargo metadata --no-deps --format-version 1 \
-            | jq -r --arg p "$package" '.packages[] | select(.name == $p) | .version')"
-          if [ -z "$version" ]; then
-            echo "tag $TAG names no workspace crate ($package)" >&2
+          if [[ ! "$TAG" =~ ^([A-Za-z0-9_-]+)-v([0-9][0-9A-Za-z.+-]*)$ ]]; then
+            echo "tag $TAG is not <crate>-v<version>" >&2
             exit 1
           fi
-          if [ "$TAG" != "$package-v$version" ]; then
-            echo "tag $TAG does not match $package/Cargo.toml ($version)" >&2
-            exit 1
-          fi
+          package="${BASH_REMATCH[1]}"
+          # Rejects a crate that is not a workspace member, has publish = false,
+          # a version that is not in its Cargo.toml, or a dependency that is not
+          # on crates.io yet.
+          .github/scripts/release-crate.sh "$package" "${BASH_REMATCH[2]}" > "$RUNNER_TEMP/crate.env"
+          cat "$RUNNER_TEMP/crate.env"
+          version="$(sed -n 's/^version=//p' "$RUNNER_TEMP/crate.env")"
+          changelog="$(sed -n 's/^changelog=//p' "$RUNNER_TEMP/crate.env")"
           ref="$(git ls-remote origin "refs/tags/${TAG}^{commit}" | awk '{print $1; exit}')"
           [ -n "$ref" ] || ref="$(git ls-remote origin "refs/tags/${TAG}" | awk '{print $1; exit}')"
           if [ "$ref" != "$GITHUB_SHA" ]; then
@@ -70,6 +75,7 @@ jobs:
           {
             echo "package=$package"
             echo "version=$version"
+            echo "changelog=$changelog"
             echo "tag=$TAG"
             echo "ref=$ref"
             echo "publish=true"
@@ -153,25 +159,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.version.outputs.tag }}
           VERSION: ${{ needs.version.outputs.version }}
+          CHANGELOG: ${{ needs.version.outputs.changelog }}
         run: |
-          python3 - "$VERSION" << 'PYEOF'
-          import re, sys
-          version = sys.argv[1]
-          text = open('CHANGELOG.md').read()
-          start = text.find('## [%s]' % version)
-          notes = ''
-          if start != -1:
-            rest = text[start:].split('\n', 1)[1]
-            out = []
-            for line in rest.splitlines():
-              if line.startswith('## '):
-                break
-              out.append(line)
-            notes = '\n'.join(out).strip()
-          open('notes.md', 'w').write(notes)
-          print('notes: %d chars' % len(notes))
-          PYEOF
-          # bump.yml created the draft (with the CHANGELOG.md notes) on the tag.
+          : > notes.md
+          .github/scripts/changelog-section.sh "$VERSION" < "$CHANGELOG" > notes.md || true
+          echo "notes: $(wc -c < notes.md) bytes"
+          # bump.yml created the draft (with the crate's changelog notes) on the tag.
           gh release view "$TAG" --json tagName >/dev/null \
             || { echo "no release $TAG: start releases with bump.yml" >&2; exit 1; }
           if [ -s notes.md ] && [ -z "$(gh release view "$TAG" --json body --jq .body)" ]; then
@@ -189,7 +182,7 @@ jobs:
     permissions:
       actions: read # failed job names
       issues: write
-    uses: pyrlyn/ci/.github/workflows/notify-release-failure.yml@main
+    uses: pyrlyn/ci/.github/workflows/notify-release-failure.yml@main # main 2026-10-07
     with:
       ref: ${{ needs.version.outputs.tag || inputs.tag }}
       needs: ${{ toJSON(needs) }}

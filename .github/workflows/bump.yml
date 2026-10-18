@@ -1,63 +1,32 @@
 # The only way to a release, and the only thing that creates a
 # `<package>-v*` tag (pyrlyn/ci bump.yml). One run releases the one crate
-# named by `package`. `release-plz update`
-# (release-plz.toml) writes the next version and the CHANGELOG.md section from
-# the conventional commits since the last tag; bump commits that as one
-# `chore: release <package>-vX.Y.Z` commit, pushes it to a `release/bump-*`
-# branch and opens a pull request into main with RELEASE_PLZ_TOKEN, so the
-# pull request's own ci.yml runs. Once every required check is green, bump
-# rebase-merges it with GITHUB_TOKEN, reads back the commit that landed on
-# main, tags it, creates a draft release with the changelog section and
-# dispatches release.yml on the tag (gate, crates.io, publish the draft). Red
-# checks, a timeout or a failed merge close the pull request: no tag, no
-# release. `dry-run` stops after the checks. `level` is not used: release-plz
-# decides the next version from the commits. It versions every crate with
-# unreleased commits; when both had some, the other one's version lands
-# untagged, and its own run with `release-untagged-head` releases it.
+# named by `package`: any workspace crate that is not `publish = false`. Run it
+# for a crate only after the workspace crates it depends on are on crates.io
+# (README, "Release order"); the `package` job below refuses otherwise.
+# `release-plz update` (release-plz.toml) writes the next version and the
+# crate's CHANGELOG.md section from the conventional commits since the last tag;
+# bump commits that as one `chore: release <package>-vX.Y.Z` commit, pushes it
+# to a `release/bump-*` branch and opens a pull request into main with
+# RELEASE_PLZ_TOKEN, so the pull request's own ci.yml runs. Once every required
+# check is green, bump rebase-merges it with GITHUB_TOKEN, reads back the commit
+# that landed on main, tags it, creates a draft release with the crate's
+# changelog section and dispatches release.yml on the tag (gate, crates.io,
+# publish the draft). Red checks, a timeout or a failed merge close the pull
+# request: no tag, no release. `dry-run` stops after the checks. `level` is not
+# used: release-plz decides the next version from the commits.
+#
+# The shared workflow still calls bare `release-plz update`, which may update
+# other releasable crates in the same commit. It must select `package` before
+# this workflow is used to release a multi-crate workspace.
 name: Bump and release
 
 on:
   workflow_dispatch:
     inputs:
       package:
-        description: the crate to release
+        description: the workspace crate to release, e.g. file-backup
         required: true
-        type: choice
-        options:
-          - file-backup
-          - change-preview
-          - operation-icons
-          - fs-kit
-          - agent-ext
-          - agent-host-config
-          - agent-loop
-          - config-schema
-          - llm-catalog
-          - llm-http
-          - llm-wire
-          - llm-wire-anthropic
-          - llm-wire-openai
-          - mcp-client-host
-          - perm-rules
-          - proc-sandbox
-          - shell-classify
-          - shell-completions
-          - speech-capture
-          - text-sanitize
-          - wasm-plugin-host
-          - telemetry-setup
-          - gettext-catalog
-          - sqlite-change-feed
-          - abi-drift
-          - keychain-secret
-          - git-changed-paths
-          - cargo-changed-packages
-          - scoped-check
-          - injecta-macros
-          - injecta
-          - sccache-r2
-          - app-home
-          - atomic-replace
+        type: string
       prerelease:
         description: "semver prerelease suffix, e.g. alpha.1 (empty: a normal release through release-plz)"
         default: ""
@@ -80,8 +49,31 @@ permissions:
   contents: read
 
 jobs:
+  # A typo or a `publish = false` crate fails here, before a pull request is
+  # opened; a crate whose workspace dependencies are not on crates.io yet too.
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        shell: bash
+    outputs:
+      package: ${{ steps.crate.outputs.package }}
+      changelog: ${{ steps.crate.outputs.changelog }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Is the crate releasable?
+        id: crate
+        env:
+          PACKAGE: ${{ inputs.package }}
+        run: .github/scripts/release-crate.sh "$PACKAGE" >> "$GITHUB_OUTPUT"
+
   bump:
-    uses: pyrlyn/ci/.github/workflows/bump.yml@main
+    needs: package
+    uses: pyrlyn/ci/.github/workflows/bump.yml@main # main
     permissions:
       contents: write # the bump branch, the tag and the release
       pull-requests: write # merge or close the bump pull request
@@ -106,9 +98,12 @@ jobs:
         > [!WARNING]
         > Dev build: a development snapshot, published as a prerelease.
       release-plz-update: ${{ inputs.prerelease == '' }}
-      package: ${{ inputs.package }}
-      tag-prefix: ${{ inputs.package }}-v
-      commit-message: "chore: release ${{ inputs.package }}-v{version}"
+      package: ${{ needs.package.outputs.package }}
+      tag-prefix: ${{ needs.package.outputs.package }}-v
+      commit-message: "chore: release ${{ needs.package.outputs.package }}-v{version}"
+      notes-command: |
+        { git show "$SHA:${{ needs.package.outputs.changelog }}" 2>/dev/null || true; } \
+          | .github/scripts/changelog-section.sh "$VERSION" > "$NOTES_FILE" || true
       mise: false # mise.toml pins lint tools only; rust-toolchain.toml pins Rust
       ci-workflows: ci.yml
       release-workflows: release.yml

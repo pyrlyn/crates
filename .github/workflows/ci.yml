@@ -79,8 +79,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libasound2-dev pkg-config
         fi
-      # Publishing happens only from release.yml on a version-bump merge. Every other push
-      # proves the crate is publish-ready, so a broken publish breaks here, not at release.
+      # Publish dry-runs cover release-ready crates; feature-specific tests stay below.
       test-command: |
         cargo test --workspace --locked
         if [ "$TARGET" = x86_64-unknown-linux-gnu ]; then
@@ -203,3 +202,5 @@ jobs:
         with:
           install_args: github:jdx/jactionlint@2.0.2 shellcheck@0.11.0
       - run: jactionlint --color
+      - name: Release helper tests
+        run: python3 .github/scripts/test_release.py
