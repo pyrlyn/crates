@@ -1,0 +1,19 @@
+title: |md
+  Native backend
+|
+start: Start {shape: oval}
+check: Valid? {shape: diamond}
+ok: Render {shape: hexagon}
+fail: Report {shape: document}
+store: Cache {shape: cylinder}
+
+start -> check
+check -> ok: yes
+check -> fail: no
+ok -> store: write {style.stroke-dash: 3}
+fail -> start: retry
+group: Pipeline {
+  parse -> layout -> draw
+  draw.style.multiple: true
+}
+ok -> group.parse
