@@ -94,3 +94,11 @@ Validation: mise renders the macOS wrapper and empty Linux flags correctly; the 
 Added the existing pinned sccache tool to publish-crates mise installation. The cargo backend requires its configured compiler wrapper even when installing cargo-workspaces; the restricted tool list omitted it and failed before any publish command (main run 39146935615). Publication gates and pinned versions are unchanged.
 
 Workflow lint and diff checks pass locally. The existing pull-request publish job exercises a clean Linux bootstrap and dry-run publication as integration regression proof; it uploads no crates on pull requests.
+
+### T31. Publish shell-completions through the managed release pipeline
+
+Publish the extracted crate so independently checked-out applications build in CI. Execution plan: enable publication in the crate manifest, add it to the existing bump workflow and publish dry-run gate, verify packaging and tests, merge the shared-crate PR, dispatch Bump and release for shell-completions, and verify the version on crates.io before consumers adopt it. The release-untagged-head version step reads the selected package version without planning unrelated workspace bumps; test both existing and unknown packages. No manual cargo publish. Done when the managed pipeline publishes the crate and downstream registry dependencies resolve.
+
+Validation: `cargo publish --dry-run -p shell-completions --locked` and all four generator tests passed. The release-current regression covers selected and unknown packages. PR #92 was merged; managed bump and release published version 0.1.0 through tag `shell-completions-v0.1.0`. The initial tag attempt failed after main moved during its checks; a new managed run on current main completed without permission changes or manual publication.
+
+Publication: https://crates.io/crates/shell-completions/0.1.0 and https://github.com/pyrlyn/crates/actions/runs/39146869914. All three downstream lockfiles resolve the registry package with checksum `4608c4bf4c4178d17877ff5c2c5631c5d414c64f1a76346adbdfab8fd7c6bf12`; standalone locked metadata passed in isolated Git archives. Existing dependency versions were preserved.

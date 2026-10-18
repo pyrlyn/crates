@@ -6,7 +6,6 @@ Cargo workspace of five small published crates shared by ketch and rtok — git-
 
 | # | Status | Priority | Complexity | Readiness | Agent |
 | --- | --- | --- | --- | --- | --- |
-| T31 | in progress | P1 | 2 | 0% | OpenAI / GPT-6 |
 | T1 | todo | P1 | 3 | 0% | |
 | T2 | todo | P1 | 2 | 0% | |
 | T3 | todo | P2 | 2 | 0% | |
@@ -162,7 +161,3 @@ Plan:
 4. Check: fmt, clippy `-D warnings`, `cargo test --workspace --locked`, `cargo publish --dry-run -p keychain-secret --locked`.
 
 Left: review and merge; GitHub Actions must be enabled on this repository and `CARGO_REGISTRY_TOKEN` must cover `keychain-secret` before its first `bump.yml` run. The first consumer (Mailune C1, or runa) migrates once the crate is on crates.io.
-
-### T31. Publish shell-completions through the managed release pipeline
-
-Publish the extracted crate so independently checked-out applications build in CI. Execution plan: enable publication in the crate manifest, add it to the existing bump workflow and publish dry-run gate, verify packaging and tests, merge the shared-crate PR, dispatch Bump and release for shell-completions, and verify the version on crates.io before consumers adopt it. The release-untagged-head version step reads the selected package version without planning unrelated workspace bumps; test both existing and unknown packages. No manual cargo publish. Done when the managed pipeline publishes the crate and downstream registry dependencies resolve.
