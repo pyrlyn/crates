@@ -182,3 +182,19 @@ jobs:
         cargo test --workspace --locked
         # Smoke run of the performance cases (no budgets without --bench).
         cargo test -p plugwright-host --benches --locked
+
+  # The workflow lint the pre-push hook (hk.pkl) runs, with .github/jactionlint.yaml and its
+  # baseline. install_args keeps it to the lint tools; the versions match mise.toml.
+  jactionlint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@9149ea85001c7435d5a66bb127d6a1b6227cb0a5 # v5.0.0
+        with:
+          install_args: github:jdx/jactionlint@2.0.2 shellcheck@0.11.0
+      - run: jactionlint --color
