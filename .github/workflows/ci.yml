@@ -54,7 +54,7 @@ jobs:
   # comes from mise.toml (with rust-src), pinned exactly (every job fails on another rustc).
   rust:
     if: github.event_name != 'pull_request' || !github.event.pull_request.draft
-    uses: pyrlyn/ci/.github/workflows/ci-rust.yml@863d8960601216eec62d4aa78924f84ce61d72b9
+    uses: pyrlyn/ci/.github/workflows/ci-rust.yml@main
     permissions:
       contents: read
       actions: write # cancel-run on failure
@@ -153,7 +153,7 @@ jobs:
   plugwright:
     needs: plugwright-changes
     if: needs.plugwright-changes.outputs.run == 'true'
-    uses: pyrlyn/ci/.github/workflows/ci-rust.yml@863d8960601216eec62d4aa78924f84ce61d72b9
+    uses: pyrlyn/ci/.github/workflows/ci-rust.yml@main
     permissions:
       contents: read
       actions: write # cancel-run on failure
