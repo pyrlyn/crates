@@ -82,7 +82,7 @@ jobs:
   verify:
     needs: version
     if: needs.version.outputs.publish == 'true'
-    uses: pyrlyn/ci/.github/workflows/ci-rust.yml@863d8960601216eec62d4aa78924f84ce61d72b9 # same pin as ci.yml
+    uses: pyrlyn/ci/.github/workflows/ci-rust.yml@main # same pin as ci.yml
     permissions:
       contents: read
       actions: write # cancel-run on failure
@@ -189,7 +189,7 @@ jobs:
     permissions:
       actions: read # failed job names
       issues: write
-    uses: pyrlyn/ci/.github/workflows/notify-release-failure.yml@c875cd763ad0c4abbd936e480be5752330d3b66b # main 2026-10-07
+    uses: pyrlyn/ci/.github/workflows/notify-release-failure.yml@main
     with:
       ref: ${{ needs.version.outputs.tag || inputs.tag }}
       needs: ${{ toJSON(needs) }}
