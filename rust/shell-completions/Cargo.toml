@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2021"
 rust-version = "1.86"
 license.workspace = true
-publish = false
 repository = "https://github.com/pyrlyn/crates"
 description = "Shared clap shell completion generation, including Clink"
 

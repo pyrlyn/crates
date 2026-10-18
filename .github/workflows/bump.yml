@@ -41,6 +41,7 @@ on:
           - perm-rules
           - proc-sandbox
           - shell-classify
+          - shell-completions
           - speech-capture
           - text-sanitize
           - wasm-plugin-host
