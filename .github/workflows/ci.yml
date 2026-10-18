@@ -67,6 +67,8 @@ jobs:
         {"os": "windows-latest", "target": "x86_64-pc-windows-msvc"}
         ]
       feature-args: ""
+      # Hosted macos-latest supplies its own Xcode; this Rust workspace does not require 27.
+      xcode-version: ""
       clippy-args: --locked
       # speech-capture links ALSA through cpal's alsa-sys on Linux.
       setup-command: |
@@ -159,6 +161,7 @@ jobs:
       actions: write # cancel-run on failure
     with:
       working-directory: plugwright
+      xcode-version: ""
       rust-version: "1.97.1" # plugwright/rust-toolchain.toml channel = "1.97.1"
       matrix: >-
         [
