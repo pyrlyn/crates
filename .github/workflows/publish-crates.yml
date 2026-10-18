@@ -1,10 +1,24 @@
 name: publish-crates
 
-# Every merge to main publishes the workspace crates whose current version is not on
-# crates.io yet (scripts/publish-new-crates.sh: dependency order, an existing version is
-# skipped). bump.yml / release.yml stay the way to version, tag and release a crate; this
-# only covers what a plain merge to main leaves unpublished (a new crate, a changed
-# version). No tags or releases are created here.
+# Selective publishing with cargo-workspaces (pinned in mise.toml as `cargo:cargo-workspaces`).
+#
+# A crate is published when its `Cargo.toml` version is not on crates.io yet: a crate whose
+# version was not bumped is skipped ("already published"), so an unchanged crate never goes
+# out. A change is released by bumping the crate (`cargo ws version`, or by hand) in a pull
+# request; merging that bump is what publishes it. Dependency order is cargo-workspaces' own
+# and it waits for the registry index between dependent crates.
+#
+# - pull request: lists the crates changed against the base branch (`cargo ws changed`) and
+#   runs `cargo ws publish --publish-as-is --dry-run`. Nothing is uploaded and no token is used.
+# - push to main: the same listing against the previous main commit, then the publish. It is
+#   real only when the repository variable CRATES_PUBLISH is `true` (the first runs are dry:
+#   crates that never reached crates.io would all go out at once). CARGO_REGISTRY_TOKEN is
+#   passed as an environment variable and never written to disk or printed.
+# - workflow_dispatch: `dry-run: false` publishes for real regardless of the variable.
+#
+# No tags or releases are created here: bump.yml / release.yml stay the way to tag and release.
+# `cargo ws changed` compares against the last git tag (or --since); the existing
+# `<crate>-v<version>` tags predate most crates' content, so it is a report, not the gate.
 on:
   push:
     branches: [main]
@@ -12,43 +26,87 @@ on:
       - "rust/**"
       - Cargo.toml
       - Cargo.lock
-      - scripts/publish-new-crates.sh
+      - mise.toml
+      - .github/workflows/publish-crates.yml
+  pull_request:
+    branches: [main]
+    paths:
+      - "rust/**"
+      - Cargo.toml
+      - Cargo.lock
+      - mise.toml
       - .github/workflows/publish-crates.yml
   workflow_dispatch:
     inputs:
       dry-run:
-        description: only list what would be published
-        default: false
+        description: only package and list what would be published
+        default: true
         type: boolean
 
 permissions:
   contents: read
 
 concurrency:
-  group: publish-crates
-  cancel-in-progress: false
+  group: publish-crates-${{ github.event_name == 'pull_request' && github.ref || 'main' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   publish:
+    # Draft pull requests skip the dry run.
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v7
-      - uses: Swatinem/rust-cache@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # `cargo ws changed` diffs against another commit
+          persist-credentials: false
+      - uses: jdx/mise-action@9149ea85001c7435d5a66bb127d6a1b6227cb0a5 # v5.0.0
+        with:
+          install_args: rust cargo:cargo-workspaces
       - name: System libraries (speech-capture links ALSA)
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libasound2-dev pkg-config
-      - name: Publish crates not yet on crates.io
+      - name: Changed crates
+        shell: bash
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          case "$EVENT" in
+            pull_request) since="origin/$BASE_REF" ;;
+            push) since="$BEFORE" ;;
+            *) since="" ;;
+          esac
+          {
+            echo "### Crates changed since ${since:-the last tag}"
+            echo '```'
+            if [ -n "$since" ]; then cargo ws changed --since "$since"; else cargo ws changed; fi || true
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Publish (dry run unless enabled)
+        shell: bash
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-          DRY_RUN: ${{ inputs.dry-run && '1' || '0' }}
+          EVENT: ${{ github.event_name }}
+          VARIABLE: ${{ vars.CRATES_PUBLISH }}
+          DISPATCH_DRY_RUN: ${{ inputs.dry-run }}
         run: |
-          if [ "$DRY_RUN" != 1 ]; then
+          real=0
+          if [ "$EVENT" = push ] && [ "$VARIABLE" = true ]; then real=1; fi
+          if [ "$EVENT" = workflow_dispatch ] && [ "$DISPATCH_DRY_RUN" = false ]; then real=1; fi
+          args=(--publish-as-is --allow-branch '*' --publish-interval 10)
+          if [ "$real" = 1 ]; then
             if [ -z "$CARGO_REGISTRY_TOKEN" ]; then
               echo "CARGO_REGISTRY_TOKEN is not set: a crates.io API token." >&2
               exit 1
             fi
-            mkdir -p "$HOME/.cargo"
-            printf '[registry]\ntoken = "%s"\n' "$CARGO_REGISTRY_TOKEN" > "$HOME/.cargo/credentials.toml"
+            echo "::notice title=publish-crates::publishing crates whose version is not on crates.io"
+          else
+            # Without the dependencies on the registry a dependent crate cannot be verified.
+            args+=(--dry-run --no-verify)
+            echo "::notice title=publish-crates::dry run, nothing is uploaded"
           fi
-          scripts/publish-new-crates.sh
+          cargo ws publish "${args[@]}"
