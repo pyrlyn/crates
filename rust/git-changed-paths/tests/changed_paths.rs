@@ -5,7 +5,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use git_changed_paths::{Error, changed_paths};
+use git_changed_paths::{Error, changed_paths, toplevel};
 use tempfile::TempDir;
 
 fn git(dir: &Path, args: &[&str]) -> String {
@@ -227,4 +227,14 @@ fn subdirectory_argument_yields_top_level_relative_paths() {
     write(tmp.path(), "a.txt", "changed\n");
     let result = changed_paths(&tmp.path().join("sub"), "main").unwrap();
     assert_eq!(result.paths, set(&["a.txt", "sub/c.txt"]));
+}
+
+#[test]
+fn toplevel_from_a_subdirectory_is_the_work_tree() {
+    let tmp = repo();
+    let top = toplevel(&tmp.path().join("sub")).unwrap();
+    assert_eq!(
+        top.canonicalize().unwrap(),
+        tmp.path().canonicalize().unwrap()
+    );
 }

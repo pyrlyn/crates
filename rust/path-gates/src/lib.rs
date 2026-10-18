@@ -198,5 +198,18 @@ fn compile(gate: GateSpec) -> Result<Gate, Error> {
 
 fn normalise(path: &Path) -> String {
     let text = path.to_string_lossy().replace('\\', "/");
-    text.strip_prefix("./").unwrap_or(&text).to_owned()
+    let mut parts: Vec<&str> = Vec::new();
+    for part in text.split('/') {
+        match part {
+            "" | "." => {}
+            ".." => match parts.last() {
+                None | Some(&"..") => parts.push(".."),
+                Some(_) => {
+                    parts.pop();
+                }
+            },
+            other => parts.push(other),
+        }
+    }
+    parts.join("/")
 }
