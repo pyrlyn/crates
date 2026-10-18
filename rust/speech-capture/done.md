@@ -8,7 +8,7 @@ Merged cox's `crates/cox-voice` capture (aulo task T1.13) with runa's `crates/ru
 
 Added `InputDevice` (`find(Option<&str>)` by name or the default, `name`, `sample_rate_hz`, `start(sink)`) and the `InputStream` guard, which stops the stream on drop. The sink receives mono `f32` at the device rate from the audio thread in stack-sized chunks, with no lock and no allocation of its own; the `cpal` stream lives on its own thread because it is not `Send` on every platform. `Recorder` was rebuilt on it, so `src/input.rs` is the only place that opens a `cpal` stream; its behaviour is unchanged (same ring, same overflow count, same 16 kHz result). New `Error::DeviceNotFound`. New cargo feature `decode` (default on) gates `decode_audio` and symphonia, hound, sha2 and serde, so a caller that only captures can use `default-features = false`. Added for aulo's `aulo-audio` (T6.1). Check: `cargo test -p speech-capture` (also `--no-default-features`), `cargo clippy -p speech-capture --all-targets -- -D warnings` green.
 
-### T30. Correct speech preprocessing boundaries and reduce VAD allocations
+### T32. Correct speech preprocessing boundaries and reduce VAD allocations
 
 The VAD compared already-padded spans, merging 300–600 ms pauses despite its documented 300 ms cutoff. It now merges unpadded frame spans only for gaps shorter than 300 ms, then adds the existing 150 ms context. Resampling rejects zero source or destination rates before empty-input shortcuts. Regression tests for 270/300/450/630 ms gaps and zero rates failed before the fixes and pass afterward; NaN-frame fallback and gap behavior are also pinned.
 
