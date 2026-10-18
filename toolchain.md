@@ -33,11 +33,13 @@ Direct dependencies of the workspace members. Path crates are this repo.
 | keychain-secret | local | https://github.com/pyrlyn/crates | Secrets from the environment or the OS keychain |
 | anyhow | local | https://github.com/dtolnay/anyhow | Top-level errors of `scoped-check` |
 | assert_cmd | local | https://github.com/assert-rs/assert_cmd | Tests that run the `scoped-check` binary |
-| clap | local | https://github.com/clap-rs/clap | `scoped-check` CLI |
+| clap | local | https://github.com/clap-rs/clap | CLI trees and shared completion generation |
+| clap_complete | local | https://crates.io/crates/clap_complete | Standard shell completion generators |
 | determinator | local | https://github.com/guppy-rs/guppy/tree/main/determinator | Maps changed paths to affected packages |
 | globset | local | https://github.com/BurntSushi/ripgrep/tree/master/crates/globset | Compile and match gate globs |
 | guppy | local | https://github.com/guppy-rs/guppy | Cargo package graph |
 | rstest | local | https://github.com/la10736/rstest | Parameterized tests in `file-backup` |
+| same-file | local | https://github.com/BurntSushi/same-file | Hard-link check on every platform in `file-backup` |
 | serde | local | https://github.com/serde-rs/serde | Config types |
 | serde_json | local | https://github.com/serde-rs/json | `scoped-check` JSON output |
 | shlex | local | https://github.com/comex/rust-shlex | Shell-quoting substituted values |

@@ -8,7 +8,6 @@ The audit tasks (T1–T10) are already in `plan.md`.
 
 Approved by the creator on 2026-10-07: extract the filesystem and daemon logic duplicated across apps into one crate per concern here. Each crate is its own task (500-line cap); each consumer migrates in its own task in that app's plan once the crate is published. ketch's MSRV goes to 1.89 for `lock-file` (approved).
 
-- T12. `file-backup`: subfolder target and keep-N pruning (rtok-agent-sdk `backup`/`prune_backups`), together with T4.
 - T14. `path-within`: lexical `normalize`, Windows case-insensitive `within`/`same_path`/`strip_prefix`, `canonical_within`, untrusted relative path parse (zip-slip guard), `confine`. From rtok `src/fs.rs`, ketch `platform/mod.rs`, `extract/mod.rs`, cox-sandbox `path.rs`.
 - T15. `lock-file`: exclusive lock (std, Rust 1.89), holder record (pid or JSON), in-process re-entrancy registry, `holder()` probe. From rtok-sys, cox-store `lock.rs`, aulo `instance.rs`.
 - T16. `dir-ops`: `remove_any`, `copy_tree` with symlink policy and optional fsync, `swap_dir` with rollback, `probe_writable`. From ketch (three copies each), cox-plugin `install.rs`. `remove_any` and `copy_tree` (with a symlink policy) are in `fs-kit` `tree`; `swap_dir` and `probe_writable` are left and go there too.

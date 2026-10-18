@@ -10,6 +10,12 @@ First slice of the shared WASM plugin host that cox and scull both build on (cre
 
 Merged in pyrlyn/crates-packages#33 (`77ba2b1`): 10 tests, clippy, fmt, publish dry-run and `cargo +1.98 check` green. `rust.md` lists the crate (listepo/workspace#5, `0af0a5c`).
 
+### T12. file-backup: subfolder target and keep-N pruning
+
+rtok's agent SDK keeps its own copy of the folder mode (`BACKUP_DIR`, `backup`, `prune_backups`, `stale_backups` in `rtok-agent-sdk/src/lib.rs`) so it cannot depend on `file-backup`. Done means: `file-backup` offers that mode beside the existing sibling mode, with the same semantics and tests ported, so rtok can later swap its copy for the crate.
+
+`Folder { name, keep }` with `backup`, `backup_at`, `prune` and `stale`, plus `DEFAULT_FOLDER = "_backup"`; `backup`/`backup_at` beside the file are unchanged. Both modes share one `create_new` copy loop and one byte-equality dedup check (symlinks and hard links to the source are not backups). A folder name that is not one plain path component is `InvalidInput`. Check: fmt, clippy `-D warnings` and `cargo test --workspace --locked` green (105 tests, 20 in `file-backup`).
+
 ### T11. Add the required project files
 
 The project was missing `AGENTS.md`, `done.md`, `roadmap.md`, `ideas.md`, and `toolchain.md`. Done means: all files exist, and `toolchain.md` lists the workspace crates per the rulebook (also update `rust.md` then).
@@ -66,3 +72,13 @@ The VAD compared already-padded spans, merging 300–600 ms pauses despite its d
 The VAD reuses its RMS buffer for speech decisions instead of allocating another per-frame mask, and uses slice chunks rather than manual frame slicing. Both resampling APIs share the existing rate validation through one private helper. The workspace search found no other VAD or rate-validation helper to reuse; no dependencies or public signatures changed.
 
 Validation under mise: `cargo test -p speech-capture --locked` (28 tests), the same with `--no-default-features` (22 tests), `cargo nextest run -p speech-capture --locked` (28 tests; installed nextest 0.9.148), clippy with `--all-targets --locked -- -D warnings` for both feature sets, and `cargo fmt --all -- --check`. The optional whisper backend and full workspace were not rebuilt; no microphone or model is needed for the new tests.
+
+### T30. Extract reusable shell completion generation
+
+Use the local `shell-completions` crate in `packages/crates/rust`. Preserve rtok scripts and ketch package-name completion and installation behavior. Add `cox completions <shell>` without loading configuration, credentials, telemetry or a session.
+
+Execution plan: establish existing completion tests; extract the clap generator and Clink implementation with regression tests into the shared crate; connect consumers through local Cargo paths; update dependency inventories; run focused tests, formatting and clippy. Application-specific installation policies and ketch dynamic package lookup stay with their owners. Done when generation has one owner and the three CLI surfaces pass their checks.
+
+Validation: Four generator tests passed, including upstream byte parity for five shells, Clink aliases/hidden values/escaping and writer errors. Formatting and all-target clippy passed. Consumer checks verified all 11 existing application scripts byte for byte. Existing dependency versions and unrelated lockfile edges were preserved.
+
+Reused `clap_complete` and the existing rtok Clink generator. No replacement library or custom generator was introduced. Local path dependencies resolve in the standard apps/packages layout.

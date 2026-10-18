@@ -72,6 +72,25 @@ pub struct ChangedPaths {
     pub paths: BTreeSet<PathBuf>,
 }
 
+/// Absolute path of the work tree that contains `repo`.
+///
+/// `repo` may be any directory inside the work tree. The path is trimmed so a
+/// Windows git that prints `\r\n` still yields a usable directory.
+///
+/// # Errors
+///
+/// [`Error::NotARepository`] when `repo` is not inside a work tree;
+/// [`Error::GitMissing`] / [`Error::Spawn`] when git cannot be started.
+pub fn toplevel(repo: &Path) -> Result<PathBuf, Error> {
+    let text = run(repo, &["rev-parse", "--show-toplevel"], |out, _| {
+        Error::NotARepository {
+            path: repo.to_path_buf(),
+            stderr: stderr_text(out),
+        }
+    })?;
+    Ok(PathBuf::from(text.trim()))
+}
+
 /// Paths changed in the work tree of `repo` relative to `base`.
 ///
 /// `repo` may be any directory inside the work tree. Returned paths are relative to the
@@ -83,15 +102,7 @@ pub struct ChangedPaths {
 /// See [`Error`]: git missing, `repo` not a work tree, unknown `base`, no common history,
 /// or output that is not UTF-8.
 pub fn changed_paths(repo: &Path, base: &str) -> Result<ChangedPaths, Error> {
-    let top = PathBuf::from(
-        run(repo, &["rev-parse", "--show-toplevel"], |out, _| {
-            Error::NotARepository {
-                path: repo.to_path_buf(),
-                stderr: stderr_text(out),
-            }
-        })?
-        .trim_end_matches('\n'),
-    );
+    let top = toplevel(repo)?;
 
     // A leading dash would be parsed as an option by the commands below.
     let unknown = || Error::BaseUnknown(base.to_owned());

@@ -15,6 +15,7 @@ Small, focused Rust crates shared by the creator's projects (`ketch`, `rtok`, `s
 | [`change-preview`](rust/change-preview) | Preview what a command would change: diff or `--stat` of edits, size and file count of removals, totals |
 | [`operation-icons`](rust/operation-icons) | Emoji icons for the verb of a status line and the fixed-width gutter they sit in |
 | [`config-schema`](rust/config-schema) | Schema-checked TOML config: stale JSON Schema check, figment layering with per-key provenance, comment-preserving key edits (not published yet) |
+| [`d2-render`](rust/d2-render) | Render D2 diagrams to SVG/PNG in pure Rust, with an optional d2 CLI backend, structured diagnostics and freshness checks |
 | [`fs-kit`](rust/fs-kit) | One entry point for file and directory work: `\\?\`-free paths, atomic writes, tree usage, copy and removal, backups |
 | [`file-backup`](rust/file-backup) | Copy a file to `<name>.bak-<unix-seconds>` beside it before replacing it |
 | [`gettext-catalog`](rust/gettext-catalog) | gettext `.po` catalogs for an application's own strings: plural rules, named placeholders, language negotiation and per-message fallback |

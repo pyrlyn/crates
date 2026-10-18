@@ -178,6 +178,18 @@ fn windows_separators_and_dot_prefix_are_normalised() {
 }
 
 #[test]
+fn repeated_dot_and_empty_segments_are_collapsed() {
+    let r =
+        Rules::from_toml("unmatched = \"ignore\"\n[[gate]]\nname = \"top\"\npaths = [\"*.rs\"]")
+            .unwrap();
+    for path in ["././foo.rs", ".//foo.rs", "foo/../bar.rs"] {
+        let s = r.select([path]);
+        assert_eq!(s.gates, names(&["top"]), "{path}");
+        assert!(s.unmatched.is_empty(), "{path}");
+    }
+}
+
+#[test]
 fn gate_names_keep_config_order() {
     let r = rules("");
     assert_eq!(r.gate_names().collect::<Vec<_>>(), ["rust", "docs"]);

@@ -1,0 +1,26 @@
+# Language features the native backend implements beyond plain shapes.
+vars: {
+  d2-config: {theme-id: 4}
+  team: Platform
+}
+classes: {
+  db: {shape: cylinder; style.multiple: true}
+  hot: {style: {stroke: red; bold: true}}
+}
+title: ${team} overview {near: top-center; shape: text}
+legend: Legend {near: bottom-right}
+api: API {class: hot}
+store: {class: [db; hot]}
+grid: {
+  grid-columns: 2
+  one
+  two
+  three
+}
+api -> store: writes {
+  source-arrowhead: 1
+  target-arrowhead: {shape: diamond; style.filled: true}
+}
+api -> grid.one: {style.stroke-dash: 3}
+store.tooltip: Primary database
+api.link: https://example.com

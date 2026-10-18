@@ -10,6 +10,9 @@ on:
 env:
   CARGO_TERM_COLOR: always
 
+permissions:
+  contents: read
+
 jobs:
   # release-plz derives the next version and the changelog from these messages,
   # so a pull request's subjects are linted here. Pushes to main skip this:
@@ -67,6 +70,8 @@ jobs:
         {"os": "windows-latest", "target": "x86_64-pc-windows-msvc"}
         ]
       feature-args: ""
+      # Hosted macos-latest supplies its own Xcode; this Rust workspace does not require 27.
+      xcode-version: ""
       clippy-args: --locked
       # speech-capture links ALSA through cpal's alsa-sys on Linux.
       setup-command: |
@@ -95,6 +100,8 @@ jobs:
           cargo publish --dry-run -p injecta-macros --locked
           cargo publish --dry-run -p sccache-r2 --locked
           cargo publish --dry-run -p app-home --locked
+          cargo publish --dry-run -p shell-completions --locked
+          bash scripts/tests/release-current.sh
           # A host with its own secret store and HTTP stack (Mailune) builds llm-http without
           # its default features, so that build is tested and must not link the crates those
           # features gate. The workspace run above only sees default features.
@@ -158,6 +165,7 @@ jobs:
       actions: write # cancel-run on failure
     with:
       working-directory: plugwright
+      xcode-version: ""
       rust-version: "1.97.1" # plugwright/rust-toolchain.toml channel = "1.97.1"
       matrix: >-
         [
