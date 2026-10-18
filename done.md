@@ -10,6 +10,12 @@ First slice of the shared WASM plugin host that cox and scull both build on (cre
 
 Merged in pyrlyn/crates-packages#33 (`77ba2b1`): 10 tests, clippy, fmt, publish dry-run and `cargo +1.98 check` green. `rust.md` lists the crate (listepo/workspace#5, `0af0a5c`).
 
+### T12. file-backup: subfolder target and keep-N pruning
+
+rtok's agent SDK keeps its own copy of the folder mode (`BACKUP_DIR`, `backup`, `prune_backups`, `stale_backups` in `rtok-agent-sdk/src/lib.rs`) so it cannot depend on `file-backup`. Done means: `file-backup` offers that mode beside the existing sibling mode, with the same semantics and tests ported, so rtok can later swap its copy for the crate.
+
+`Folder { name, keep }` with `backup`, `backup_at`, `prune` and `stale`, plus `DEFAULT_FOLDER = "_backup"`; `backup`/`backup_at` beside the file are unchanged. Both modes share one `create_new` copy loop and one byte-equality dedup check (symlinks and hard links to the source are not backups). A folder name that is not one plain path component is `InvalidInput`. Check: fmt, clippy `-D warnings` and `cargo test --workspace --locked` green (105 tests, 20 in `file-backup`).
+
 ### T11. Add the required project files
 
 The project was missing `AGENTS.md`, `done.md`, `roadmap.md`, `ideas.md`, and `toolchain.md`. Done means: all files exist, and `toolchain.md` lists the workspace crates per the rulebook (also update `rust.md` then).
@@ -52,3 +58,11 @@ Updated the shared WASM host and cox to Extism 1.41.0 / Wasmtime 49, removing th
 ### T20.5. abi-drift: permit Extism-compatible cbindgen patch
 
 Lowered abi-drift's cbindgen minimum to 0.29.3, which Extism 1.41.0 pins exactly. Confirmed the API is compatible and generated C/C# outputs are unchanged. Verified abi-drift tests, workspace tests, clippy, fmt, and CI on pyrlyn/crates#74.
+
+### T30. Correct speech preprocessing boundaries and reduce VAD allocations
+
+The VAD compared already-padded spans, merging 300–600 ms pauses despite its documented 300 ms cutoff. It now merges unpadded frame spans only for gaps shorter than 300 ms, then adds the existing 150 ms context. Resampling rejects zero source or destination rates before empty-input shortcuts. Regression tests for 270/300/450/630 ms gaps and zero rates failed before the fixes and pass afterward; NaN-frame fallback and gap behavior are also pinned.
+
+The VAD reuses its RMS buffer for speech decisions instead of allocating another per-frame mask, and uses slice chunks rather than manual frame slicing. Both resampling APIs share the existing rate validation through one private helper. The workspace search found no other VAD or rate-validation helper to reuse; no dependencies or public signatures changed.
+
+Validation under mise: `cargo test -p speech-capture --locked` (28 tests), the same with `--no-default-features` (22 tests), `cargo nextest run -p speech-capture --locked` (28 tests; installed nextest 0.9.148), clippy with `--all-targets --locked -- -D warnings` for both feature sets, and `cargo fmt --all -- --check`. The optional whisper backend and full workspace were not rebuilt; no microphone or model is needed for the new tests.
