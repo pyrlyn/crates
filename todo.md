@@ -16,3 +16,4 @@
 - T23. sqlite-change-feed: cross-process SQLite change feed
 - T24. abi-drift: drift tests for generated bindings
 - T25. keychain-secret: secrets from the environment or the OS keychain
+- T36. Publish MIT-licensed shell-completions 0.1.1

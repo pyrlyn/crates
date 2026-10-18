@@ -1,6 +1,5 @@
 // Copyright (c) 2026 Ivan Tugay
-// SPDX-License-Identifier: GPL-3.0-or-later
-// Licensed under GPL-3.0 or later; see https://www.gnu.org/licenses/gpl-3.0.html
+// SPDX-License-Identifier: MIT
 
 //! Shared clap shell generation plus Clink, the completion
 //! system `cmd.exe` gets through <https://chrisant996.github.io/clink/>. All of them come from

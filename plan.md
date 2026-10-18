@@ -6,6 +6,7 @@ Cargo workspace of five small published crates shared by ketch and rtok — git-
 
 | # | Status | Priority | Complexity | Readiness | Agent |
 | --- | --- | --- | --- | --- | --- |
+| T36 | in progress | P1 | 2 | 0% | OpenAI / GPT-6 |
 | T1 | todo | P1 | 3 | 0% | |
 | T2 | todo | P1 | 2 | 0% | |
 | T3 | todo | P2 | 2 | 0% | |
@@ -161,3 +162,10 @@ Plan:
 4. Check: fmt, clippy `-D warnings`, `cargo test --workspace --locked`, `cargo publish --dry-run -p keychain-secret --locked`.
 
 Left: review and merge; GitHub Actions must be enabled on this repository and `CARGO_REGISTRY_TOKEN` must cover `keychain-secret` before its first `bump.yml` run. The first consumer (Mailune C1, or runa) migrates once the crate is on crates.io.
+
+
+### T36. Publish MIT-licensed shell-completions 0.1.1
+
+The published 0.1.0 release is GPL-3.0-or-later and conflicts with downstream consumers' explicit license allowlist. Publish version 0.1.1 under MIT so applications can adopt it while preserving their license guard. Execution plan: update only the shell-completions crate manifest and license header/text; verify the crate archive includes the MIT license and normalized manifest, preserving every unrelated lockfile package; run its existing tests and formatting; run `cargo publish --dry-run -p shell-completions --locked`; commit and open a PR for managed publication. Do not publish manually. Done when the managed pipeline publishes 0.1.1 and downstream consumers resolve it.
+
+Validation: the existing crate test suite passed (4/4), `cargo clippy -p shell-completions --all-targets --locked -- -D warnings` passed, `cargo fmt --all -- --check` passed, and `cargo publish --dry-run -p shell-completions --locked --allow-dirty` packaged and compiled 0.1.1. The archive contains only `src`, `README.md`, and `LICENSE` plus Cargo metadata; its normalized manifest declares `license = "MIT"`. `Cargo.lock` changes only the shell-completions package version. The standard MIT text comes from [SPDX MIT license](https://spdx.org/licenses/MIT.txt), checked 2026-10-18.
