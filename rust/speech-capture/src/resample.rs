@@ -21,6 +21,9 @@ pub const TARGET_SAMPLE_RATE: u32 = 16_000;
 /// Mono audio at `rate` to [`TARGET_SAMPLE_RATE`], same duration; a clip
 /// already at the target rate comes back unchanged.
 pub fn resample_to_16k(mono: &[f32], rate: u32) -> Result<Vec<f32>, Error> {
+    if rate == 0 {
+        return Err(Error::Resample("source sample rate is 0".into()));
+    }
     if rate == TARGET_SAMPLE_RATE || mono.is_empty() {
         return Ok(mono.to_vec());
     }
@@ -45,6 +48,9 @@ pub fn resample_to_16k(mono: &[f32], rate: u32) -> Result<Vec<f32>, Error> {
 pub fn resample_mono(input: &[f32], from: u32, to: u32) -> Result<Vec<f32>, Error> {
     if from == 0 {
         return Err(Error::Resample("source sample rate is 0".into()));
+    }
+    if to == 0 {
+        return Err(Error::Resample("destination sample rate is 0".into()));
     }
     if input.is_empty() {
         return Ok(Vec::new());
@@ -112,5 +118,22 @@ mod tests {
             Err(Error::Resample(_))
         ));
         assert!(resample_mono(&[], 8_000, 16_000).expect("empty").is_empty());
+    }
+
+    #[test]
+    fn zero_rates_are_rejected_before_empty_input_shortcuts() {
+        for samples in [&[][..], &[0.1][..]] {
+            assert!(matches!(
+                resample_to_16k(samples, 0),
+                Err(Error::Resample(_))
+            ));
+            for (from, to) in [(0, TARGET_SAMPLE_RATE), (TARGET_SAMPLE_RATE, 0), (0, 0)] {
+                assert!(
+                    matches!(resample_mono(samples, from, to), Err(Error::Resample(_))),
+                    "rates {from} -> {to} with {} samples",
+                    samples.len()
+                );
+            }
+        }
     }
 }
