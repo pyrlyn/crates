@@ -7,6 +7,9 @@ description = "Copy a file to `<name>.bak-<unix-seconds>` beside it before repla
 license.workspace = true
 repository = "https://github.com/pyrlyn/crates"
 
+[dependencies]
+same-file = "1"
+
 [lints.rust]
 unsafe_code = "forbid"
 

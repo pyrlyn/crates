@@ -10,6 +10,9 @@ on:
 env:
   CARGO_TERM_COLOR: always
 
+permissions:
+  contents: read
+
 jobs:
   # release-plz derives the next version and the changelog from these messages,
   # so a pull request's subjects are linted here. Pushes to main skip this:

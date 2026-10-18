@@ -38,6 +38,7 @@ Direct dependencies of the workspace members. Path crates are this repo.
 | globset | local | https://github.com/BurntSushi/ripgrep/tree/master/crates/globset | Compile and match gate globs |
 | guppy | local | https://github.com/guppy-rs/guppy | Cargo package graph |
 | rstest | local | https://github.com/la10736/rstest | Parameterized tests in `file-backup` |
+| same-file | local | https://github.com/BurntSushi/same-file | Hard-link check on every platform in `file-backup` |
 | serde | local | https://github.com/serde-rs/serde | Config types |
 | serde_json | local | https://github.com/serde-rs/json | `scoped-check` JSON output |
 | shlex | local | https://github.com/comex/rust-shlex | Shell-quoting substituted values |

@@ -1940,6 +1940,7 @@ name = "file-backup"
 version = "0.2.0"
 dependencies = [
  "rstest",
+ "same-file",
  "tempfile",
 ]
 

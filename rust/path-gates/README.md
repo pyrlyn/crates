@@ -28,7 +28,8 @@ let selection = rules.select(["src/lib.rs", "README.md"]);
 
 An unclaimed path selects every gate (`selection.all`), so a forgotten rule runs
 too much instead of too little. Paths are matched as `/`-separated repo-relative
-strings; `\` is read as a separator and `**/x` also matches `x` at the root.
+strings; `\` is read as a separator, `.` / empty segments are collapsed, and
+`**/x` also matches `x` at the root.
 
 Unknown keys (a host tool's `run = "..."`, `base = "..."`) are ignored. A host
 can also deserialize its own struct holding `GateSpec` values and build rules
