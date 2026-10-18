@@ -47,10 +47,10 @@ pub fn energy_vad(samples: &[f32], sample_rate: u32) -> Vec<VadSpan> {
         while i < n_frames && speech[i] {
             i += 1;
         }
-        let start = (start_f * frame).saturating_sub(pad);
-        let end = ((i * frame).min(samples.len()) + pad).min(samples.len());
+        let start = start_f * frame;
+        let end = (i * frame).min(samples.len());
         if let Some(last) = spans.last_mut()
-            && start <= last.end + merge
+            && start < last.end + merge
         {
             last.end = end;
             continue;
@@ -63,6 +63,10 @@ pub fn energy_vad(samples: &[f32], sample_rate: u32) -> Vec<VadSpan> {
             end: samples.len(),
         }]
     } else {
+        for span in &mut spans {
+            span.start = span.start.saturating_sub(pad);
+            span.end = (span.end + pad).min(samples.len());
+        }
         spans
     }
 }
@@ -72,6 +76,51 @@ mod tests {
     use super::*;
 
     const SR: u32 = 16_000;
+
+    #[test]
+    fn gap_merging_is_decided_before_padding() {
+        const SAMPLE_RATE: u32 = 1_000;
+        const BURST_SAMPLES: usize = 90;
+        const PAD_SAMPLES: usize = 150;
+        for (gap, expected_spans) in [(270, 1), (300, 2), (450, 2), (630, 2)] {
+            let mut pcm = vec![1.0; BURST_SAMPLES];
+            pcm.extend(std::iter::repeat_n(0.0, gap));
+            pcm.extend(std::iter::repeat_n(1.0, BURST_SAMPLES));
+            let spans = energy_vad(&pcm, SAMPLE_RATE);
+            assert_eq!(spans.len(), expected_spans, "gap of {gap} ms: {spans:?}");
+            assert_eq!(spans[0].start, 0);
+            assert_eq!(spans.last().unwrap().end, pcm.len());
+            assert!(spans.iter().all(|s| s.start < s.end && s.end <= pcm.len()));
+            if expected_spans == 2 {
+                assert_eq!(spans[0].end, BURST_SAMPLES + PAD_SAMPLES);
+                assert_eq!(spans[1].start, BURST_SAMPLES + gap - PAD_SAMPLES);
+            }
+        }
+    }
+
+    #[test]
+    fn nonfinite_frames_keep_the_same_fallback_and_gap_behavior() {
+        const CLIP_SAMPLES: usize = 1_000;
+        assert_eq!(
+            energy_vad(&[f32::NAN; CLIP_SAMPLES], SR),
+            [VadSpan {
+                start: 0,
+                end: CLIP_SAMPLES
+            }]
+        );
+        const BURST_SAMPLES: usize = 90;
+        const GAP_SAMPLES: usize = 450;
+        let clip = |gap| {
+            let mut pcm = vec![1.0; BURST_SAMPLES];
+            pcm.extend(std::iter::repeat_n(gap, GAP_SAMPLES));
+            pcm.extend(std::iter::repeat_n(1.0, BURST_SAMPLES));
+            pcm
+        };
+        assert_eq!(
+            energy_vad(&clip(f32::NAN), 1_000),
+            energy_vad(&clip(0.0), 1_000)
+        );
+    }
 
     #[test]
     fn energy_vad_keeps_tone_drops_leading_silence_shape() {
