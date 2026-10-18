@@ -20,10 +20,9 @@ pub const TARGET_SAMPLE_RATE: u32 = 16_000;
 
 /// Mono audio at `rate` to [`TARGET_SAMPLE_RATE`], same duration; a clip
 /// already at the target rate comes back unchanged.
+/// A zero source rate is an error, including for an empty clip.
 pub fn resample_to_16k(mono: &[f32], rate: u32) -> Result<Vec<f32>, Error> {
-    if rate == 0 {
-        return Err(Error::Resample("source sample rate is 0".into()));
-    }
+    validate_rates(rate, TARGET_SAMPLE_RATE)?;
     if rate == TARGET_SAMPLE_RATE || mono.is_empty() {
         return Ok(mono.to_vec());
     }
@@ -45,13 +44,9 @@ pub fn resample_to_16k(mono: &[f32], rate: u32) -> Result<Vec<f32>, Error> {
 }
 
 /// Mono audio from `from` Hz to `to` Hz with a windowed-sinc resampler.
+/// Either rate being zero is an error, including for an empty clip.
 pub fn resample_mono(input: &[f32], from: u32, to: u32) -> Result<Vec<f32>, Error> {
-    if from == 0 {
-        return Err(Error::Resample("source sample rate is 0".into()));
-    }
-    if to == 0 {
-        return Err(Error::Resample("destination sample rate is 0".into()));
-    }
+    validate_rates(from, to)?;
     if input.is_empty() {
         return Ok(Vec::new());
     }
@@ -78,6 +73,15 @@ pub fn resample_mono(input: &[f32], from: u32, to: u32) -> Result<Vec<f32>, Erro
         out.truncate(expected);
     }
     Ok(out)
+}
+
+fn validate_rates(from: u32, to: u32) -> Result<(), Error> {
+    for (rate, kind) in [(from, "source"), (to, "destination")] {
+        if rate == 0 {
+            return Err(Error::Resample(format!("{kind} sample rate is 0")));
+        }
+    }
+    Ok(())
 }
 
 #[cfg(test)]

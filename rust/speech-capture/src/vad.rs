@@ -5,6 +5,13 @@
 //! A dependency-free energy voice-activity detector: cheap enough to run
 //! before any model, good enough to trim silence off a clip.
 
+const FRAME_MS: usize = 30;
+const PAD_MS: usize = 150;
+const MERGE_GAP_MS: usize = 300;
+const MILLIS_PER_SECOND: usize = 1_000;
+const PEAK_THRESHOLD_RATIO: f32 = 0.15;
+const MIN_RMS_THRESHOLD: f32 = 0.01;
+
 /// One speech span in samples (inclusive start, exclusive end).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct VadSpan {
@@ -14,7 +21,7 @@ pub struct VadSpan {
     pub end: usize,
 }
 
-/// Energy VAD: 30 ms frames, merge gaps shorter than 300 ms, pad 150 ms.
+/// Energy VAD: 30 ms frames, merge gaps shorter than 300 ms, then pad 150 ms.
 /// A clip with no frame above the threshold comes back as one span over the
 /// whole clip, because tones and quiet speech must not be dropped.
 pub fn energy_vad(samples: &[f32], sample_rate: u32) -> Vec<VadSpan> {
@@ -22,29 +29,29 @@ pub fn energy_vad(samples: &[f32], sample_rate: u32) -> Vec<VadSpan> {
         return Vec::new();
     }
     let sr = sample_rate.max(1) as usize;
-    let frame = (sr * 30 / 1000).max(1);
-    let pad = sr * 150 / 1000;
-    let merge = sr * 300 / 1000;
-    let n_frames = samples.len().div_ceil(frame);
-    let mut rms = Vec::with_capacity(n_frames);
-    for i in 0..n_frames {
-        let a = i * frame;
-        let b = (a + frame).min(samples.len());
-        let e = samples[a..b].iter().map(|s| s * s).sum::<f32>() / (b - a) as f32;
-        rms.push(e.sqrt());
-    }
+    let frame = (sr * FRAME_MS / MILLIS_PER_SECOND).max(1);
+    let pad = sr * PAD_MS / MILLIS_PER_SECOND;
+    let merge = sr * MERGE_GAP_MS / MILLIS_PER_SECOND;
+    let rms: Vec<_> = samples
+        .chunks(frame)
+        .map(|chunk| {
+            let energy = chunk.iter().map(|s| s * s).sum::<f32>() / chunk.len() as f32;
+            energy.sqrt()
+        })
+        .collect();
     let peak = rms.iter().copied().fold(0.0f32, f32::max);
-    let thresh = (peak * 0.15).max(0.01);
-    let speech: Vec<bool> = rms.iter().map(|&e| e >= thresh).collect();
+    let thresh = (peak * PEAK_THRESHOLD_RATIO).max(MIN_RMS_THRESHOLD);
+    let speech = |i: usize| rms[i] >= thresh;
+    let n_frames = rms.len();
     let mut spans: Vec<VadSpan> = Vec::new();
     let mut i = 0;
     while i < n_frames {
-        if !speech[i] {
+        if !speech(i) {
             i += 1;
             continue;
         }
         let start_f = i;
-        while i < n_frames && speech[i] {
+        while i < n_frames && speech(i) {
             i += 1;
         }
         let start = start_f * frame;
