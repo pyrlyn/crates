@@ -41,6 +41,7 @@ on:
           - perm-rules
           - proc-sandbox
           - shell-classify
+          - shell-completions
           - speech-capture
           - text-sanitize
           - wasm-plugin-host
@@ -92,7 +93,7 @@ jobs:
       level: ${{ inputs.level }}
       # A prerelease goes through scripts/prerelease.sh (<version>-<suffix>; a
       # `-` version makes the GitHub Release a prerelease); otherwise release-plz.
-      release-script: ${{ inputs.prerelease != '' && 'scripts/prerelease.sh' || '' }}
+      release-script: ${{ inputs.prerelease != '' && 'scripts/prerelease.sh' || inputs.release-untagged-head && 'scripts/release-current.sh' || '' }}
       release-script-args: ${{ inputs.prerelease }} ${{ inputs.package }}
       dry-run: ${{ inputs.dry-run }}
       release-untagged-head: ${{ inputs.release-untagged-head }}
