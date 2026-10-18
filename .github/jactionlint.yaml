@@ -2,3 +2,8 @@
 # The default profile applies. `baseline: auto` hides the findings recorded in
 # .github/jactionlint-baseline.json; refresh it with `mise x -- jactionlint --baseline-write`.
 baseline: auto
+
+ignores:
+  - rule: unpinned-uses
+    uses: pyrlyn/ci/*@main
+    reason: Organization-maintained shared workflows intentionally follow main.

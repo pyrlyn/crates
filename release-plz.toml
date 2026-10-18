@@ -29,7 +29,7 @@ features_always_increment_minor = true
 # scoped-check need no entry of their own.
 
 # One tag per crate: release.yml derives `file-backup-v<version>` from
-# `file-backup/Cargo.toml`, and the changelog headings link to the release page.
+# `rust/file-backup/Cargo.toml`, and the changelog headings link to the release page.
 git_tag_name = "{{ package }}-v{{ version }}"
 
 [changelog]

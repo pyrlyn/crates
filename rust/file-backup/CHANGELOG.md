@@ -18,3 +18,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - *(license)* [**breaking**] license crates-packages under GPL-3.0-or-later only ([#15](https://github.com/pyrlyn/crates-packages/pull/15))
 - point GitHub links at the pyrlyn org ([#9](https://github.com/pyrlyn/crates-packages/pull/9))
 - clean up target dirs with dunnage after tests
+
+## [0.1.1](https://github.com/listepo/crates-packages/releases/tag/file-backup-v0.1.1)
+
+First published release of `file-backup` on crates.io. The `0.1.0` sources
+were tagged (`file-backup-v0.1.0`) but never published; this patch release is
+the first one the release pipeline publishes.

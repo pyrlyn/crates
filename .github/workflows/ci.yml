@@ -54,7 +54,7 @@ jobs:
   # comes from mise.toml (with rust-src), pinned exactly (every job fails on another rustc).
   rust:
     if: github.event_name != 'pull_request' || !github.event.pull_request.draft
-    uses: pyrlyn/ci/.github/workflows/ci-rust.yml@863d8960601216eec62d4aa78924f84ce61d72b9
+    uses: pyrlyn/ci/.github/workflows/ci-rust.yml@main
     permissions:
       contents: read
       actions: write # cancel-run on failure
@@ -74,8 +74,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libasound2-dev pkg-config
         fi
-      # Publishing happens only from release.yml on a version-bump merge. Every other push
-      # proves the crate is publish-ready, so a broken publish breaks here, not at release.
+      # Publish dry-runs cover release-ready crates; feature-specific tests stay below.
       test-command: |
         cargo test --workspace --locked
         if [ "$TARGET" = x86_64-unknown-linux-gnu ]; then
@@ -153,7 +152,7 @@ jobs:
   plugwright:
     needs: plugwright-changes
     if: needs.plugwright-changes.outputs.run == 'true'
-    uses: pyrlyn/ci/.github/workflows/ci-rust.yml@863d8960601216eec62d4aa78924f84ce61d72b9
+    uses: pyrlyn/ci/.github/workflows/ci-rust.yml@main
     permissions:
       contents: read
       actions: write # cancel-run on failure
@@ -195,3 +194,5 @@ jobs:
         with:
           install_args: github:jdx/jactionlint@2.0.2 shellcheck@0.11.0
       - run: jactionlint --color
+      - name: Release helper tests
+        run: python3 .github/scripts/test_release.py

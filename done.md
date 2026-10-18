@@ -52,3 +52,9 @@ Updated the shared WASM host and cox to Extism 1.41.0 / Wasmtime 49, removing th
 ### T20.5. abi-drift: permit Extism-compatible cbindgen patch
 
 Lowered abi-drift's cbindgen minimum to 0.29.3, which Extism 1.41.0 pins exactly. Confirmed the API is compatible and generated C/C# outputs are unchanged. Verified abi-drift tests, workspace tests, clippy, fmt, and CI on pyrlyn/crates#74.
+
+### T31. Reconcile release PR #39 with current workflow behavior
+
+Resolved the older release branch against the current Rust package layout, preserving existing prerelease/dev-release options and feature-specific CI checks. Release helpers validate package names, publishability, versions and dependency release order; changelog notes come from the selected crate. Both historical file-backup changelog sections survive the move. Shared CI references use `@main` as in PR #90.
+
+Six stubbed release-helper tests, shellcheck, workflow lint and diff checks pass locally. The tests run in CI; no release workflow was dispatched and nothing was published.
