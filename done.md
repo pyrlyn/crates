@@ -82,3 +82,9 @@ Execution plan: establish existing completion tests; extract the clap generator 
 Validation: Four generator tests passed, including upstream byte parity for five shells, Clink aliases/hidden values/escaping and writer errors. Formatting and all-target clippy passed. Consumer checks verified all 11 existing application scripts byte for byte. Existing dependency versions and unrelated lockfile edges were preserved.
 
 Reused `clap_complete` and the existing rtok Clink generator. No replacement library or custom generator was introduced. Local path dependencies resolve in the standard apps/packages layout.
+
+### T34. Integrate remaining local build settings
+
+Ported the three remaining local build-setting commits onto current main: optional sccache, Linux mold through mise, and shared CI R2 cache support. Existing tool pins and CI behavior remain intact; only the required R2 credentials are forwarded. Updated the toolchain inventory and existing Windows/Cranelift documentation. Reused the existing shared workflow rather than adding cache logic.
+
+Validation: mise renders the macOS wrapper and empty Linux flags correctly; the recursion guard clears the wrapper. All 20 existing file-backup tests, all-target clippy, workspace formatting and jactionlint pass. Real compilation reaches sccache. This configuration-only integration uses existing tests and the required platform CI instead of a new test harness.

@@ -1,5 +1,7 @@
 # Rust is pinned here (CI installs it from this file); lint tools below serve the pre-push hook.
 [tools]
+mold = { version = "2.42.1", os = ["linux"] } # linker, Linux only; mise [env] below turns it on where it is installed
+sccache = { version = "0.18.0", os = ["linux", "macos"] } # compiler cache; mise [env] below makes it the rustc wrapper where it is installed
 # Same pin as rust-toolchain.toml; CI installs Rust from here. rust-src makes rustc quote
 # std's source in diagnostics, so trybuild's expected stderr is the same on every machine.
 rust = { version = "1.99.0", profile = "minimal", components = "rustfmt,clippy,rust-src" }
@@ -7,3 +9,17 @@ rust = { version = "1.99.0", profile = "minimal", components = "rustfmt,clippy,r
 "github:jdx/jactionlint" = "2.0.2" # the pre-push hook and `mise x -- jactionlint`; the local mise registry lacks the short name
 hk = "2.5.0" # runs jactionlint as a pre-push hook (hk.pkl); `mise x -- hk install --mise`
 shellcheck = "0.11.0" # used by jactionlint for run: scripts; the global mise shim has no version without a pin
+
+[env]
+# mold as the Linux linker only where mise has installed it (clang is the driver, mold is not one):
+# without mold the variable is empty and the default linker stays. Not in .cargo/config.toml: a missing
+# mold or clang there would break every Linux build, CI included. Cargo takes the target rustflags only when
+# RUSTFLAGS is unset. Rust >= 1.90 already links x86_64-unknown-linux-gnu with rust-lld. macOS keeps Apple
+# ld (mold has no macOS support); Windows uses rust-lld through .cargo/config.toml.
+CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUSTFLAGS = "{% if os() == 'linux' and get_env(name='MISE_MOLD_PROBE', default='') == '' %}{{ exec(command='MISE_MOLD_PROBE=1 \"' ~ mise_bin ~ '\" which mold >/dev/null 2>&1 && echo \"-C linker=clang -C link-arg=-fuse-ld=mold\" || true') }}{% endif %}"
+CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_RUSTFLAGS = "{% if os() == 'linux' and get_env(name='MISE_MOLD_PROBE', default='') == '' %}{{ exec(command='MISE_MOLD_PROBE=1 \"' ~ mise_bin ~ '\" which mold >/dev/null 2>&1 && echo \"-C linker=clang -C link-arg=-fuse-ld=mold\" || true') }}{% endif %}"
+# sccache as the rustc wrapper only where mise has it installed; empty means no wrapper (CI jobs
+# that install just Rust, Windows, machines without the tool). Not in .cargo/config.toml: there a
+# missing sccache would break every build. The probe variable stops `mise which` from recursing
+# into this same template. CI uses the shared pyrlyn/ci workflow for its optional R2 backend.
+RUSTC_WRAPPER = "{% if os() != 'windows' and get_env(name='MISE_SCCACHE_PROBE', default='') == '' %}{{ exec(command='MISE_SCCACHE_PROBE=1 \"' ~ mise_bin ~ '\" which sccache 2>/dev/null || true') }}{% endif %}"
