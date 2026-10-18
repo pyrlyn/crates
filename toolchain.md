@@ -4,6 +4,8 @@ Workspace pin: `rust-toolchain.toml` channel `1.99.0` (profile `minimal`, compon
 
 | Program | How to install | Why here | Source |
 | --- | --- | --- | --- |
+| sccache | mise (`mise.toml`, Linux and macOS) | Optional compiler cache; shared CI uses Cloudflare R2 when configured | https://github.com/mozilla/sccache |
+| mold | mise (`mise.toml`, Linux only) | Faster linking through clang when installed | https://github.com/rui314/mold |
 | rustc | rustup, via `rust-toolchain.toml` | Build | https://github.com/rust-lang/rust |
 | cargo | rustup, via `rust-toolchain.toml` | Build, test, and `cargo metadata` | https://github.com/rust-lang/cargo |
 | git | system package | `git-changed-paths` shells out to it | https://git-scm.com |
@@ -84,6 +86,10 @@ Direct dependencies of the workspace members. Path crates are this repo.
 ## Linkers
 
 - **Windows (MSVC):** `rust-lld` through `.cargo/config.toml` (`[target.*-pc-windows-msvc] linker`). It ships with rustup, nothing to install.
-- **Linux:** default linker (Rust >= 1.90 already links `x86_64-unknown-linux-gnu` with rust-lld); mold is not wired here because CI does not use mise.
+- **Linux:** mise selects mold through clang when mold is installed; otherwise the default linker remains (Rust >= 1.90 already uses rust-lld for `x86_64-unknown-linux-gnu`).
 - **macOS:** Apple's native linker (mold has no macOS support).
-- **Cranelift:** not used. It needs a nightly toolchain and this repository is on stable.
+- **Cranelift:** opt-in dev builds through `cargo +nightly --config .cargo/cranelift.toml build`; the stable default and release builds keep LLVM.
+
+## Compiler cache
+
+`mise exec` selects the installed sccache as `RUSTC_WRAPPER` on Linux and macOS; a missing tool leaves the wrapper empty. The shared Rust CI workflow uses the optional R2 cache configuration and reads the cache on pull requests. Without its backend settings, CI continues without the remote cache.
