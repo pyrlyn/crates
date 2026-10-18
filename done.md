@@ -88,3 +88,9 @@ Reused `clap_complete` and the existing rtok Clink generator. No replacement lib
 Ported the three remaining local build-setting commits onto current main: optional sccache, Linux mold through mise, and shared CI R2 cache support. Existing tool pins and CI behavior remain intact; only the required R2 credentials are forwarded. Updated the toolchain inventory and existing Windows/Cranelift documentation. Reused the existing shared workflow rather than adding cache logic.
 
 Validation: mise renders the macOS wrapper and empty Linux flags correctly; the recursion guard clears the wrapper. All 20 existing file-backup tests, all-target clippy, workspace formatting and jactionlint pass. Real compilation reaches sccache. This configuration-only integration uses existing tests and the required platform CI instead of a new test harness.
+
+### T35. Fix publish workflow bootstrap after enabling sccache
+
+Added the existing pinned sccache tool to publish-crates mise installation. The cargo backend requires its configured compiler wrapper even when installing cargo-workspaces; the restricted tool list omitted it and failed before any publish command (main run 39146935615). Publication gates and pinned versions are unchanged.
+
+Workflow lint and diff checks pass locally. The existing pull-request publish job exercises a clean Linux bootstrap and dry-run publication as integration regression proof; it uploads no crates on pull requests.
