@@ -83,7 +83,9 @@ fn methods_follow_the_wire_convention() {
     assert_eq!(call(&mut c, "label", br#"["n=", true]"#).unwrap(), "N=12");
     assert_eq!(call(&mut c, "label", br#"{"upper":false,"prefix":"n="}"#).unwrap(), "n=12");
     assert_eq!(call(&mut c, "check", b"3").unwrap(), "ok");
-    assert!(call(&mut c, "check", b"-3").unwrap_err().contains("out of range"));
+    // std's wording changed in Rust 1.99; what matters is that the error's `Display` comes through.
+    let std_err = u32::try_from(-3i64).unwrap_err().to_string();
+    assert!(call(&mut c, "check", b"-3").unwrap_err().contains(&std_err));
     assert_eq!(call(&mut c, "type", b"").unwrap(), "counter");
     assert_eq!(Counter::not_exported(), 7);
 }
