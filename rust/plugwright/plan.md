@@ -1,6 +1,6 @@
 # plugwright — plan
 
-GitHub: https://github.com/pyrlyn/crates/tree/main/plugwright
+GitHub: https://github.com/pyrlyn/crates/tree/main/rust/plugwright
 
 Rust library that builds, caches, loads, isolates and unloads plugins: native libraries in process
 or in a sandboxed runner, static libraries relinked by the host, and Wasm modules on wasmtime,
