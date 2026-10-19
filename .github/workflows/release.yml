@@ -98,10 +98,12 @@ jobs:
       # Rust comes from mise.toml, as in ci.yml.
       feature-args: ""
       clippy-args: --locked
-      # speech-capture links ALSA through cpal's alsa-sys on Linux; ci.yml installs it too.
+      # speech-capture links ALSA through cpal's alsa-sys on Linux; ci.yml installs it too, and
+      # the Wasm target plugwright's tests build plugins for.
       setup-command: |
         sudo apt-get update
         sudo apt-get install -y --no-install-recommends libasound2-dev pkg-config
+        rustup target add wasm32-unknown-unknown
       # `cargo test --workspace` already runs the doctests.
       test-command: cargo test --workspace --locked
       doc-tests: false
