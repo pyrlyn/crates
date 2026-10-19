@@ -1,0 +1,34 @@
+[package]
+name = "plugwright-wasmer"
+description = "wasmer engine adapter for plugwright (separate lockfile: wasmer 7.5 and wasmtime 49 pin incompatible cranelift versions)"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.96"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/pyrlyn/crates"
+# Not a member of the root workspace, so the release path (bump.yml, release.yml) cannot reach it.
+publish = false
+
+[dependencies]
+plugwright-abi = { path = "../plugwright-abi", version = "0.1.0" }
+plugwright-core = { path = "../plugwright-core", version = "0.1.0" }
+plugwright-wasm = { path = "../plugwright-wasm", version = "0.1.0" }
+wasmer = { version = "7.5.0", default-features = false, features = ["sys", "cranelift"] }
+wasmer-middlewares = "7.5.0"
+tracing = "0.1.44"
+
+[dev-dependencies]
+# The manager drives the e2e test; no built-in engines (wasmtime would clash).
+plugwright = { path = "../plugwright", version = "0.1.0", default-features = false }
+
+[features]
+default = ["host-interrupt"]
+# Enforce `timeout` on unix by interrupting the guest with SIGUSR1 (wasmer's
+# `experimental-host-interrupt`). wasmer then owns the SIGUSR1 handler and
+# chains signals that are not its own to the previous handler.
+host-interrupt = ["wasmer/experimental-host-interrupt"]
+
+[workspace]
+
+[profile.dev]
+debug = 0

@@ -1,0 +1,29 @@
+[package]
+name = "plugwright-trust"
+description = "Detached minisign (ed25519) signatures for plugin artifacts and a trust policy that decides what loads"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.89"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/pyrlyn/crates"
+keywords = ["plugin", "signature", "minisign", "ed25519"]
+
+[features]
+# Signing pulls scrypt and a password prompt; hosts only verify.
+sign = ["dep:minisign"]
+
+[dependencies]
+plugwright-core.workspace = true
+minisign = { workspace = true, optional = true }
+minisign-verify.workspace = true
+serde.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+# Enables `sign` for this crate's own tests.
+plugwright-trust = { path = ".", features = ["sign"] }
+tempfile.workspace = true
+toml.workspace = true
+
+[lints]
+workspace = true
