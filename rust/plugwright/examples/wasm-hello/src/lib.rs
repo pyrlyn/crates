@@ -1,5 +1,5 @@
 //! Example Wasm plugin (build for `wasm32-unknown-unknown`). No WASI: it can
-//! only compute and log. `loop`, `oom` and `trap` exercise the host's limits.
+//! only compute, log and call the functions its host registered. `loop`, `oom` and `trap` exercise the host's limits.
 
 use plugwright_sdk::{log, plugin, serde::Deserialize};
 
@@ -34,6 +34,11 @@ impl Hello {
 
     fn reverse(&self, s: &str) -> String {
         s.chars().rev().collect()
+    }
+
+    /// The host function `name` on `input`, as text.
+    fn ask(&self, name: String, input: String) -> Result<String, String> {
+        plugwright_sdk::host::call(&name, input.as_bytes()).map(|out| String::from_utf8_lossy(&out).into_owned())
     }
 
     #[plugwright(name = "loop")]

@@ -33,5 +33,8 @@ pub use plugin::{Backend, Plugin, PluginExt, PluginInfo, Release};
 pub use plugwright_macros::interface;
 pub use sandbox::SandboxPolicy;
 pub use trust::TrustPolicy;
-pub use wasm::{ModuleCache, WasmEngine, WasmError, WasmInstance, WasmLimits, WasmModule, WasmPlugin, WasmVal};
+pub use wasm::{
+    HostFunctions, Imports, ModuleCache, WasmEngine, WasmError, WasmInstance, WasmLimits, WasmModule, WasmPlugin,
+    WasmVal,
+};
 pub use watch::{Reloader, WatchOptions, Watcher};

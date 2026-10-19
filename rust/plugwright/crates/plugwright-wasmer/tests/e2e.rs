@@ -47,6 +47,19 @@ fn wasm_on_wasmer() {
     assert!(text(m.call("w", "greet", b"again")).contains("call #1"), "fresh instance after trap");
 }
 
+#[test]
+fn guests_call_host_functions() {
+    use plugwright::HostFunctions;
+    let mut m = manager();
+    m.set_host_functions(|_| HostFunctions::new().with("upper", |i: &[u8]| Ok(i.to_ascii_uppercase())));
+    m.load(spec("h")).unwrap();
+    assert_eq!(text(m.call("h", "ask", br#"["upper","abc"]"#)), "ABC");
+    match m.call("h", "ask", br#"["nope","x"]"#) {
+        Err(PluginError::Call { message, .. }) => assert_eq!(message, "unknown host function `nope`"),
+        other => panic!("{other:?}"),
+    }
+}
+
 /// With practically unlimited fuel, only the wall clock can stop `loop`.
 #[test]
 #[cfg(unix)]

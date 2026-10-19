@@ -213,6 +213,35 @@ fn wasm_on_wasmi() {
     exercise_wasm("wasmi");
 }
 
+/// Each plugin gets the host functions its factory builds for its id.
+#[test]
+fn wasm_guests_call_host_functions_on_every_engine() {
+    use plugwright::HostFunctions;
+    let mut m = manager();
+    m.set_host_functions(|id| {
+        let id = id.to_owned();
+        HostFunctions::new()
+            .with("upper", |i: &[u8]| Ok(i.to_ascii_uppercase()))
+            .with("whoami", move |_: &[u8]| Ok(id.clone().into_bytes()))
+            .with("refuse", |i: &[u8]| Err(format!("refused {}", String::from_utf8_lossy(i))))
+    });
+    for engine in ["wasmtime", "wasmi"] {
+        let id = format!("h-{engine}");
+        m.load(wasm(&id, engine)).unwrap_or_else(|e| panic!("{engine}: {e}"));
+        let ask = |m: &mut PluginManager, name: &str, input: &str| {
+            m.call(&id, "ask", format!(r#"["{name}","{input}"]"#).as_bytes())
+        };
+        assert_eq!(text(ask(&mut m, "upper", "abc")), "ABC", "{engine}");
+        assert_eq!(text(ask(&mut m, "whoami", "")), id, "{engine}");
+        for (name, want) in [("refuse", "refused x"), ("nope", "unknown host function `nope`")] {
+            match ask(&mut m, name, "x") {
+                Err(PluginError::Call { message, .. }) => assert_eq!(message, want, "{engine}"),
+                other => panic!("{engine}: {other:?}"),
+            }
+        }
+    }
+}
+
 /// With practically unlimited fuel, only the wall clock can stop `loop`.
 #[test]
 fn wasm_wall_clock_timeout_on_every_engine() {

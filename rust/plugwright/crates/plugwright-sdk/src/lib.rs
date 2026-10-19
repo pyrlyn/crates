@@ -90,6 +90,22 @@ macro_rules! debug { ($($arg:tt)*) => { $crate::log::emit($crate::abi::LOG_DEBUG
 #[macro_export]
 macro_rules! trace { ($($arg:tt)*) => { $crate::log::emit($crate::abi::LOG_TRACE, &::std::format!($($arg)*)) } }
 
+/// Functions the embedding application registered for its Wasm plugins
+/// (`plugwright.host_call`). Native plugins run as host code and have none.
+pub mod host {
+    /// Call the host function `name` with `input`. `Err` carries the host's
+    /// message: the function failed, panicked or is not registered.
+    pub fn call(name: &str, input: &[u8]) -> Result<Vec<u8>, String> {
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let _ = input;
+            Err(format!("host function `{name}`: host functions are only available to Wasm plugins"))
+        }
+        #[cfg(target_arch = "wasm32")]
+        crate::__wasm::host_call(name, input)
+    }
+}
+
 fn install_panic_logger() {
     static ONCE: std::sync::Once = std::sync::Once::new();
     ONCE.call_once(|| {
@@ -215,6 +231,27 @@ pub mod __wasm {
     unsafe extern "C" {
         #[link_name = "log"]
         fn host_log(level: i32, ptr: i32, len: i32);
+        #[link_name = "host_call"]
+        fn pw_host_call(name_ptr: i32, name_len: i32, in_ptr: i32, in_len: i32) -> i32;
+        #[link_name = "host_take"]
+        fn pw_host_take(ptr: i32, len: i32) -> i32;
+    }
+
+    pub fn host_call(name: &str, input: &[u8]) -> Result<Vec<u8>, String> {
+        let n =
+            unsafe { pw_host_call(name.as_ptr() as i32, name.len() as i32, input.as_ptr() as i32, input.len() as i32) };
+        if n <= 0 {
+            return Err(format!("host function `{name}`: the host could not read the call"));
+        }
+        let mut out = vec![0u8; n as usize];
+        if unsafe { pw_host_take(out.as_mut_ptr() as i32, n) } != 0 {
+            return Err(format!("host function `{name}`: the host lost the result"));
+        }
+        let status = out.remove(0) as u32;
+        match status {
+            STATUS_OK => Ok(out),
+            _ => Err(String::from_utf8_lossy(&out).into_owned()),
+        }
     }
 
     pub fn emit_log(level: u32, msg: &str) {

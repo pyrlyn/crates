@@ -144,7 +144,21 @@ pub type EntryFn = unsafe extern "C" fn() -> *const PwPluginDecl;
 /// `pw_alloc` and return a buffer whose first byte is a status code
 /// ([`STATUS_OK`], [`STATUS_ERROR`]) followed by the payload.
 ///
-/// The only import is `plugwright.log(level: i32, ptr: i32, len: i32)`.
+/// Imports, all in module `plugwright`; a module may use any subset:
+///
+/// | import      | signature                                       | meaning                                  |
+/// |-------------|-------------------------------------------------|------------------------------------------|
+/// | `log`       | `(level: i32, ptr: i32, len: i32)`              | log a UTF-8 line                         |
+/// | `host_call` | `(nptr, nlen, iptr, ilen) -> i32`               | run the host function named by `nptr`    |
+/// | `host_take` | `(ptr: i32, len: i32) -> i32`                   | copy the pending `host_call` result      |
+///
+/// `host_call` runs a function the embedder registered under that name on the
+/// input bytes and returns the length of its result, a status byte followed
+/// by the output or the error message, or `-1` when the name or input lies
+/// outside memory. The guest allocates that many bytes and calls
+/// `host_take`, which copies the result there and returns `0`, or `-1` when no
+/// result of that length is pending. Two calls, because the host cannot
+/// allocate in the guest while the guest is running.
 pub mod wasm {
     pub const EXPORT_MEMORY: &str = "memory";
     pub const EXPORT_ABI_VERSION: &str = "pw_abi_version";
@@ -155,6 +169,10 @@ pub mod wasm {
     pub const EXPORT_CALL: &str = "pw_call";
     pub const IMPORT_MODULE: &str = "plugwright";
     pub const IMPORT_LOG: &str = "log";
+    pub const IMPORT_HOST_CALL: &str = "host_call";
+    pub const IMPORT_HOST_TAKE: &str = "host_take";
+    /// Longest host function name `host_call` reads.
+    pub const MAX_HOST_NAME: u32 = 256;
 
     pub const fn pack(ptr: u32, len: u32) -> i64 {
         (((ptr as u64) << 32) | len as u64) as i64
