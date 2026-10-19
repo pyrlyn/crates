@@ -74,6 +74,9 @@ impl std::fmt::Display for Release {
     }
 }
 
+/// Stops a plugin's running call; a no-op when nothing runs.
+pub type Interrupt = std::sync::Arc<dyn Fn() + Send + Sync>;
+
 /// The one interface every backend implements.
 ///
 /// Inputs and outputs are bytes; [`PluginExt::call_json`] adds a typed layer.
@@ -82,6 +85,20 @@ impl std::fmt::Display for Release {
 pub trait Plugin: Send {
     fn info(&self) -> &PluginInfo;
     fn call(&mut self, method: &str, input: &[u8]) -> Result<Vec<u8>>;
+
+    /// Whether `method` exists. [`crate::worker::Worker`] answers `None` for a
+    /// method that does not, so optional hooks need no error path. Backends
+    /// that cannot tell say `true` and let [`Plugin::call`] decide.
+    fn has_method(&self, _method: &str) -> bool {
+        true
+    }
+
+    /// A handle that stops the running call from another thread, which then
+    /// returns an error. [`crate::worker::Worker`] fires it at a call's
+    /// deadline; `None` means the backend's own limits are the only bound.
+    fn interrupter(&self) -> Option<Interrupt> {
+        None
+    }
 
     /// Destroy the plugin and report whether its code actually left the host.
     /// Dropping without calling this does the same work, minus the report.

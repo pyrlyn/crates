@@ -33,7 +33,8 @@ Workspace:
 |---|---|
 | `plugwright-abi` | `#![no_std]`, zero deps: `#[repr(C)]` native decl table + core-Wasm ABI constants |
 | `plugwright-sdk` | plugin side: `trait Plugin` + `export_plugin!` emitting the native **or** Wasm ABI from the same source |
-| `plugwright-core` | host-side `Plugin` trait, `PluginInfo`, `Release`, `PluginError`/`WasmError`, logging sink |
+| `plugwright-core` | host-side `Plugin` trait, `PluginInfo`, `Release`, `PluginError`/`WasmError`, logging sink, `Worker` (a thread per plugin: control and event lanes, deadline interrupts) |
+| `plugwright-packages` | installed packages on disk: `package_digest`, `versions/<digest12>/` staging, `current` / `previous` / `link`, guarded `remove`, discovery over the application's `Manifest` |
 | `plugwright-build` | cargo builder (with a `crate-type` override), content-addressed cache, git sources, static-library relink, build acceleration (`accel`), workspace package lookup (`package`) |
 | `plugwright-native` | in-process loader, unload probe, artifact format detection (`format`) |
 | `plugwright-sandbox` | runner self-sandbox: Seatbelt / Landlock + seccomp / low integrity + job object |
@@ -41,6 +42,7 @@ Workspace:
 | `plugwright-isolate` | child-process isolation: protocol, runner, restart budget, timeouts |
 | `plugwright-wasm` | engine traits `WasmEngine → WasmModule → WasmInstance` + `WasmPlugin` ABI glue, `ModuleCache` (compiled modules in memory and on disk) |
 | `plugwright-wasmtime`, `plugwright-wasmi` | engine adapters (features `wasmtime`, `wasmi` of the loader and the facade) |
+| `plugwright-extism` | extism-ABI modules as a `Plugin`: application host functions (`HostEnv`), memory cap, call budget, cancel at the deadline, opt-in WASI preview 1 (D27) |
 | `plugwright-loader` | in-process loading without a manifest: `NativeLoader` (cdylib, staticlib → `NativePlugin`), `WasmLoader` (feature `wasm`: engine, `ModuleCache`, limits → `WasmPlugin`), `Loader` over both (dispatch by magic bytes); `builtin_engines` |
 | `plugwright-wasmer` | wasmer adapter; **outside the workspace** with its own lockfile (see T13) |
 | `plugwright` | facade: manifest, lockfile, `PluginManager` on top of `plugwright-loader`, re-exports of every layer |
@@ -51,7 +53,7 @@ Workspace:
 | `examples/wasm-hello` | Wasm plugin (methods: `greet`, `reverse`, `loop`, `oom`, `trap`) |
 | `examples/host` | `plugwright-host` demo CLI; e2e tests in `examples/host/tests/e2e.rs` |
 
-Crate graph: `core ← {sandbox, trust, build, native, wasm} ← {isolate, wasmtime, wasmi, wasmer} ← plugwright ← cargo-plugwright`.
+Crate graph: `core ← {sandbox, trust, build, native, wasm, extism} ← {isolate, wasmtime, wasmi, wasmer} ← plugwright ← cargo-plugwright`.
 
 ## 2. Decisions
 
@@ -83,6 +85,7 @@ Crate graph: `core ← {sandbox, trust, build, native, wasm} ← {isolate, wasmt
 | D24 | `#[interface]` keeps the trait as written (methods return `plugwright::Result<T>`) and generates `<Trait>Client<I: Invoke>`; `Invoke` is implemented for `Bound` (via the manager), `dyn Plugin`, `&mut T`, `Box<T>` | an honest signature (every call can fail), mockable trait, calls through the manager keep logging/timeouts/restarts |
 | D25 | Artifact signatures are detached minisign files (`<artifact>.minisig`, prehashed ed25519), verified with `minisign-verify` against a per-source `TrustPolicy` before the sha256 pin, relinking, compiling or mapping; signing (`minisign`) is an opt-in feature | the format and tool users already have; zero dependencies on the host's load path, while signing's scrypt and password prompt stay out of hosts; a check before anything runs the artifact's code |
 | D26 | Isolated payloads of at least `shm_threshold` bytes travel through one fixed-size shared memory region per runner (POSIX `shm_open` / a pagefile-backed section), mapped by the runner before LOAD applies the sandbox; frames carry `offset, length`, the pipe stays the control channel and the fallback | a 4 MiB call no longer streams through a pipe twice; mapping before the sandbox needs no new sandbox rule, and with the name unlinked and every descriptor closed nothing can resize the region under the host. Raw `libc` / `windows-sys`: `shared_memory` is unmaintained, `memmap2` maps files only, `ipc-channel` is heavy |
+| D27 | extism modules run through `plugwright-extism`, beside plugwright's own Wasm ABI: extism's ABI and kernel, host functions the application grants through `HostEnv`, WASI preview 1 only when the application passes `Wasi` directories, exception handling on, no compilation cache; each such plugin runs on a `Worker` whose deadline thread cancels the call through extism's `CancelHandle` | kerf, weft and cox already ship extism guests (Rust, Go, Kotlin PDKs) and need host functions and, for cox, WASI, which D13 rules out for plugwright's own ABI; D13 still holds for `plugwright-wasm`. Ported from `wasm-plugin-host` 0.1, which it replaces |
 
 
 ## 3. Security model

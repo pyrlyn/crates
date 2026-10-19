@@ -1,0 +1,29 @@
+[package]
+name = "plugwright-extism"
+description = "extism backend for plugwright: host functions, a memory cap, per-call deadlines and opt-in WASI"
+version.workspace = true
+edition.workspace = true
+rust-version = "1.96"
+license.workspace = true
+repository.workspace = true
+keywords = ["plugin", "wasm", "extism"]
+
+[dependencies]
+# `wasmtime-exceptions` turns on the Wasm exception-handling proposal: Kotlin/Wasm
+# output uses it unconditionally and does not parse without it. One engine
+# configuration for every consumer, so a plugin built for one loads in another.
+extism = { version = "1.41.0", default-features = false, features = ["wasmtime-exceptions"] }
+plugwright-core.workspace = true
+semver.workspace = true
+# extism 1.41.0 does not build with its default features off: it relies on
+# wasmtime 49's `anyhow` feature, which only its `wasmtime-default-features`
+# turns on. This enables that one feature by feature unification, on the
+# workspace's wasmtime so the lockfile keeps a single wasmtime.
+wasmtime = { workspace = true, features = ["anyhow"] }
+
+[dev-dependencies]
+serde_json.workspace = true
+tempfile.workspace = true
+
+[lints]
+workspace = true

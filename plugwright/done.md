@@ -278,6 +278,34 @@ succeed with it disabled (macOS locally, Linux in a container).
 **Done when:** `loop` with huge fuel returns `Timeout` within `timeout + 100 ms` on every engine.
 **Result:** wasmtime/wasmi in `wasm_wall_clock_timeout_on_every_engine`, wasmer in its own e2e.
 
+### T47 — Absorb wasm-plugin-host into plugwright (C4)
+`pyrlyn/crates/rust/wasm-plugin-host` (crates.io 0.1.7) ran extism plugins for kerf, weft and cox.
+What plugwright lacked moved in: the generic parts serve every backend, the extism ABI and host
+functions live only in `plugwright-extism`. Consumer migrations and the wasm-plugin-host
+deprecation release are separate PRs in their own repositories.
+* T47.1 `plugwright-core::worker`: `Worker` owns a `Box<dyn Plugin>` on its own thread with two
+  lanes, control before events (`CONTROL_DEPTH` 16, `EVENT_DEPTH` 256, `PluginError::Busy` when
+  full, `PluginError::Stopped` after shutdown). A `<name>-deadline` thread fires the plugin's
+  `Interrupt` at the call's deadline, capped by the call budget, and the call answers
+  `PluginError::Timeout(deadline)` whatever text the backend gives. A method the plugin lacks
+  answers `None`. A panicking plugin answers `Panicked` and the worker refuses further calls.
+  `Worker::close` reports the plugin's `Release`. `Plugin` gained the defaulted `has_method` and
+  `interrupter`, so existing backends are unchanged.
+* T47.2 `plugwright-packages`: `package_digest` (same bytes as wasm-plugin-host, pinned by a
+  test), staging into `versions/<digest12>/`, `current` / `previous` / `link`, guarded `remove`,
+  discovery of user and project packages over the application's `Manifest`. Renames:
+  `discover::Plugin` → `Package`, `Manifest::wasm` → `artifact`.
+* T47.3 `plugwright-extism`: `ExtismPlugin<E: HostEnv>` implements `Plugin` over extism 1.41.0
+  (exceptions proposal on, no compilation cache, memory cap, manifest timeout, interrupt through
+  `CancelHandle`; `timeout` → `PluginError::Timeout`, `oom` → `WasmError::MemoryLimit`, other
+  failures → `WasmError::Trap`). `load` / `load_with_wasi` return a `Worker`; `Wasi` mounts
+  `(host, guest)` directories (`ro:` prefix = read-only) with no environment or arguments.
+  Design D27 records why extism guests may get WASI while D13 still holds for `plugwright-wasm`.
+**Done when:** the wasm-plugin-host and cox host tests pass against the new crates.
+**Result:** 10 worker tests, 19 package tests and 13 extism tests (wasm-plugin-host's suite plus
+cox's three WASI tests and a manifest-timeout test) pass. `Cargo.lock` keeps one wasmtime
+(49.0.2); extism adds second copies of sha2 0.10, thiserror 1 and a few of their deps.
+
 ### T21 — Unload verification (C3)
 After `dlclose`: unix `dlopen(path, RTLD_NOLOAD)` (balanced by `dlclose`), Windows
 `GetModuleHandleExW(UNCHANGED_REFCOUNT)`. `Plugin::close(self: Box<Self>) -> Release`
