@@ -34,6 +34,7 @@
 | tracing-subscriber | local | https://github.com/tokio-rs/tracing | Logging in the demo host and the CLI |
 | wasmtime | local | https://github.com/bytecodealliance/wasmtime | Wasm engine (feature `wasmtime`) |
 | wasmi, wasmi_core | local | https://github.com/wasmi-labs/wasmi | Wasm interpreter (feature `wasmi`) |
+| extism | local (`plugwright-extism`) | https://github.com/extism/extism | Runs extism-ABI plugins with host functions (exceptions proposal on) |
 | wasmer, wasmer-middlewares | local (`crates/plugwright-wasmer`, own lockfile) | https://github.com/wasmerio/wasmer | Wasm engine adapter outside the workspace |
 | windows-sys | local | https://github.com/microsoft/windows-rs | Job objects, integrity levels, module probes, shared memory sections on Windows |
 | tempfile | local (dev) | https://github.com/Stebalien/tempfile | Test directories |

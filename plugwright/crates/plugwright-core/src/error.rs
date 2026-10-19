@@ -59,6 +59,14 @@ pub enum PluginError {
     #[error("plugin `{0}` is disabled after too many crashes")]
     Disabled(String),
 
+    /// The worker's queue for this lane is full.
+    #[error("plugin queue is full")]
+    Busy,
+
+    /// The worker has shut down, or its thread died.
+    #[error("plugin worker has stopped")]
+    Stopped,
+
     #[error("protocol error talking to plugin runner: {0}")]
     Protocol(String),
 
@@ -163,6 +171,8 @@ mod tests {
             (PluginError::Crashed("SIGSEGV".into()), "plugin process crashed: SIGSEGV"),
             (PluginError::Timeout(Duration::from_millis(1500)), "plugin call timed out after 1.5s"),
             (PluginError::Disabled("p".into()), "plugin `p` is disabled after too many crashes"),
+            (PluginError::Busy, "plugin queue is full"),
+            (PluginError::Stopped, "plugin worker has stopped"),
             (PluginError::Protocol("short frame".into()), "protocol error talking to plugin runner: short frame"),
             (PluginError::NotFound("p".into()), "no plugin with id `p`"),
             (PluginError::AlreadyLoaded("p".into()), "plugin `p` is already loaded"),

@@ -1,6 +1,6 @@
 [package]
 name = "plugwright-core"
-description = "Core types of plugwright: the Plugin trait, errors and guest log forwarding"
+description = "Core types of plugwright: the Plugin trait, errors, guest log forwarding and a per-plugin worker thread"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

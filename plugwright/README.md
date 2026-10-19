@@ -16,13 +16,15 @@ Research and sources: [research.md](research.md). Tools and crates: [toolchain.m
 | `crates/plugwright-abi` | `#![no_std]` binary contract: native decl table + core-Wasm ABI |
 | `crates/plugwright-sdk` | plugin side: `#[plugin]`, `trait Plugin`, `export_plugin!` (native and Wasm from one source), `log` |
 | `crates/plugwright-macros` | proc macros: `#[plugin]` (re-exported by the SDK) and `#[interface]` (by `plugwright`), one wire convention |
-| `crates/plugwright-core` | host-side `Plugin` trait, `PluginInfo`, `Release`, errors, logging |
+| `crates/plugwright-core` | host-side `Plugin` trait, `PluginInfo`, `Release`, errors, logging, `Worker` (thread per plugin, two lanes, deadlines) |
+| `crates/plugwright-packages` | installed packages on disk: digest, versioned staging with rollback, dev links, discovery |
 | `crates/plugwright-build` | cargo builder, content-addressed cache, git sources, static-library relink, build acceleration |
 | `crates/plugwright-native` | in-process loader, unload verification, artifact format detection |
 | `crates/plugwright-sandbox` | OS sandbox the runner applies to itself (Seatbelt, Landlock + seccomp, low integrity + job) |
 | `crates/plugwright-isolate` | child-process isolation: protocol, runner, restarts, timeouts |
 | `crates/plugwright-wasm` | Wasm engine traits and the `WasmPlugin` glue |
 | `crates/plugwright-wasmtime`, `-wasmi` | engine adapters |
+| `crates/plugwright-extism` | extism modules with host functions and opt-in WASI, on a `Worker` |
 | `crates/plugwright-wasmer` | wasmer adapter — **outside the workspace**, own `Cargo.lock` |
 | `crates/plugwright` | facade: manifest, lockfile, `PluginManager`, re-exports |
 | `crates/plugwright-runner` | standalone runner for isolated plugins (when the host cannot re-exec itself) |

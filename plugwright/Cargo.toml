@@ -15,6 +15,8 @@ members = [
     "crates/plugwright-wasm",
     "crates/plugwright-wasmtime",
     "crates/plugwright-wasmi",
+    "crates/plugwright-extism",
+    "crates/plugwright-packages",
     "crates/plugwright-loader",
     "crates/plugwright",
     "crates/plugwright-runner",
@@ -38,6 +40,8 @@ default-members = [
     "crates/plugwright-wasm",
     "crates/plugwright-wasmtime",
     "crates/plugwright-wasmi",
+    "crates/plugwright-extism",
+    "crates/plugwright-packages",
     "crates/plugwright-loader",
     "crates/plugwright",
     "crates/plugwright-runner",
@@ -66,6 +70,7 @@ plugwright-isolate = { path = "crates/plugwright-isolate", version = "0.1.0" }
 plugwright-wasm = { path = "crates/plugwright-wasm", version = "0.1.0" }
 plugwright-wasmtime = { path = "crates/plugwright-wasmtime", version = "0.1.0" }
 plugwright-wasmi = { path = "crates/plugwright-wasmi", version = "0.1.0" }
+plugwright-packages = { path = "crates/plugwright-packages", version = "0.1.0" }
 plugwright-loader = { path = "crates/plugwright-loader", version = "0.1.0", default-features = false }
 # Third-party versions shared by the host crates.
 cc = "1.8.0"
