@@ -30,7 +30,7 @@ Small, focused Rust crates shared by the creator's projects (`ketch`, `rtok`, `s
 | [`injecta`](rust/injecta) | Compile-time dependency injection: one `container!` declaration, derive `Injectable`, no runtime registry |
 | [`injecta-macros`](rust/injecta-macros) | Procedural macros behind `injecta` (`container!`, `#[derive(Injectable)]`, `#[injectable]`) |
 | [`path-gates`](rust/path-gates) | Map changed paths to named gates by glob rules from a TOML config |
-| [`plugwright`](plugwright) | Plugin manager for Rust hosts: native (in-process or isolated) and Wasm (wasmtime, wasmi, wasmer) plugins from one manifest, cached builds, `#[plugin]`/`#[interface]` macros (separate workspace, not published yet) |
+| [`plugwright`](rust/plugwright) | Plugin manager for Rust hosts: native (in-process or isolated) and Wasm (wasmtime, wasmi, wasmer) plugins from one manifest, cached builds, `#[plugin]`/`#[interface]` macros (crates under `rust/plugwright/crates`; `plugwright-wasmer` stays outside the workspace and unpublished) |
 | [`perm-rules`](rust/perm-rules) | Permission rules for tool calls: `Tool(subject)` grammar, deny/allow/ask decision order, risk fallback |
 | [`sccache-r2`](rust/sccache-r2) | Wire sccache to a Cloudflare R2 bucket from env vars: validate, export (GitHub Actions or shell), check the bucket, print stats; off without the secrets |
 | [`proc-sandbox`](rust/proc-sandbox) | Confine a child process: Seatbelt on macOS, bubblewrap or Landlock plus seccomp on Linux, and a path guard for workspace roots |
@@ -112,6 +112,19 @@ build, and dev-dependencies that carry a version) is on crates.io at the version
 in this repository: crates.io resolves the dependencies when a crate is
 published. Both workflows check it and stop before a pull request or a publish.
 The rest of the order is free, so release the crates others wait for first.
+
+plugwright's crates, a step at a time (any order inside a step; the steps follow
+from their normal, build and versioned dev-dependencies):
+
+1. `plugwright-abi`, `plugwright-macros`, `plugwright-packages`, `plugwright-sandbox`
+2. `plugwright-core`, `plugwright-sdk`
+3. `plugwright-build`, `plugwright-extism`, `plugwright-native`, `plugwright-trust`, `plugwright-wasm`
+4. `plugwright-isolate`, `plugwright-wasmi`, `plugwright-wasmtime`
+5. `plugwright-loader`, `plugwright-runner`
+6. `plugwright`
+7. `cargo-plugwright`
+
+That is 18 new crates: past the burst of 5 below, a new crate every 10 minutes.
 
 crates.io limits how fast new crates appear: a burst of 5 new crates, then one
 every 10 minutes; new versions of existing crates have a burst of 30 and one per

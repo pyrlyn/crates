@@ -15,7 +15,7 @@ Cargo workspace of five small Rust crates shared by ketch and rtok:
 | `git-changed-paths` | Paths a git working tree changed relative to a base ref |
 | `keychain-secret` | Application secrets from an environment variable or the OS keychain, never a config file, with a test guard against the real keychain |
 | `path-gates` | Map changed paths to named gates by glob rules from a TOML config |
-| `plugwright` | Plugin manager for Rust hosts (native and Wasm); a separate workspace excluded from this one, with its own `Cargo.lock`, `rust-toolchain.toml` (1.97.1) and `AGENTS.md`; CI job `plugwright` |
+| `plugwright` | Plugin manager for Rust hosts (native and Wasm): the `plugwright-*` crates under `rust/plugwright/crates` (with its own `AGENTS.md`, design and plan), members of this workspace; `plugwright-wasmer` stays outside it (own `Cargo.lock`, not published) |
 | `scoped-check` | Binary that runs only the check commands a change touches |
 | `telemetry-setup` | `tracing` setup with rotating JSON logs, optional OTLP traces and secret redaction, shared by aulo and Mailune |
 | `sqlite-change-feed` | Change feed for a SQLite database shared between processes: `PRAGMA data_version` through Diesel |
