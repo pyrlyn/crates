@@ -1,0 +1,14 @@
+[package]
+name = "plugwright-runner"
+description = "Out-of-process runner that hosts one isolated plugwright native plugin"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.89"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/pyrlyn/crates"
+
+[dependencies]
+plugwright-isolate.workspace = true
+
+[lints]
+workspace = true

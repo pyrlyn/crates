@@ -1,9 +1,9 @@
 [workspace]
-members = ["rust/abi-drift", "rust/agent-ext", "rust/agent-host-config", "rust/agent-loop", "rust/app-home", "rust/atomic-replace", "rust/cargo-changed-packages", "rust/change-preview", "rust/config-schema", "rust/d2-render", "rust/file-backup", "rust/fs-kit", "rust/gettext-catalog", "rust/git-changed-paths", "rust/injecta", "rust/injecta-macros", "rust/keychain-secret", "rust/llm-catalog", "rust/llm-http", "rust/llm-wire", "rust/llm-wire-anthropic", "rust/llm-wire-openai", "rust/mcp-client-host", "rust/operation-icons", "rust/owner-listener", "rust/path-gates", "rust/perm-rules", "rust/proc-sandbox", "rust/sccache-r2", "rust/scoped-check", "rust/shell-classify", "rust/shell-completions", "rust/speech-capture", "rust/sqlite-change-feed", "rust/telemetry-setup", "rust/text-sanitize", "rust/wasm-plugin-host", "rust/workspace-graph"]
+members = ["rust/abi-drift", "rust/agent-ext", "rust/agent-host-config", "rust/agent-loop", "rust/app-home", "rust/atomic-replace", "rust/cargo-changed-packages", "rust/change-preview", "rust/config-schema", "rust/d2-render", "rust/file-backup", "rust/fs-kit", "rust/gettext-catalog", "rust/git-changed-paths", "rust/injecta", "rust/injecta-macros", "rust/keychain-secret", "rust/llm-catalog", "rust/llm-http", "rust/llm-wire", "rust/llm-wire-anthropic", "rust/llm-wire-openai", "rust/mcp-client-host", "rust/operation-icons", "rust/owner-listener", "rust/path-gates", "rust/perm-rules", "rust/plugwright/crates/cargo-plugwright", "rust/plugwright/crates/plugwright", "rust/plugwright/crates/plugwright-abi", "rust/plugwright/crates/plugwright-build", "rust/plugwright/crates/plugwright-core", "rust/plugwright/crates/plugwright-extism", "rust/plugwright/crates/plugwright-isolate", "rust/plugwright/crates/plugwright-loader", "rust/plugwright/crates/plugwright-macros", "rust/plugwright/crates/plugwright-native", "rust/plugwright/crates/plugwright-packages", "rust/plugwright/crates/plugwright-runner", "rust/plugwright/crates/plugwright-sandbox", "rust/plugwright/crates/plugwright-sdk", "rust/plugwright/crates/plugwright-trust", "rust/plugwright/crates/plugwright-wasm", "rust/plugwright/crates/plugwright-wasmi", "rust/plugwright/crates/plugwright-wasmtime", "rust/plugwright/examples/host", "rust/plugwright/examples/native-hello", "rust/plugwright/examples/static-hello", "rust/plugwright/examples/wasm-hello", "rust/proc-sandbox", "rust/sccache-r2", "rust/scoped-check", "rust/shell-classify", "rust/shell-completions", "rust/speech-capture", "rust/sqlite-change-feed", "rust/telemetry-setup", "rust/text-sanitize", "rust/wasm-plugin-host", "rust/workspace-graph"]
 resolver = "2"
 # Separate workspaces with their own Cargo.lock: rust/injecta/bench (unpublished benchmarks) and
-# plugwright (wasmtime and wasmer pin cranelift versions this workspace does not need).
-exclude = ["rust/injecta/bench", "plugwright"]
+# plugwright-wasmer (wasmer 7.5 pins cranelift-codegen =0.136.0; wasmtime 49 here needs ^0.136.2).
+exclude = ["rust/injecta/bench", "rust/plugwright/crates/plugwright-wasmer"]
 
 # cargo-workspaces (`cargo ws`, from mise.toml). Releases stay with bump.yml/release.yml; this is
 # for `cargo ws publish --publish-as-is --dry-run` and dependency-ordered publishing. Tags follow
@@ -15,3 +15,51 @@ no_global_tag = true
 
 [workspace.package]
 license = "GPL-3.0-or-later"
+
+[workspace.dependencies]
+# plugwright's crates (rust/plugwright) inherit these; the other crates pin their own.
+plugwright-abi = { path = "rust/plugwright/crates/plugwright-abi", version = "0.1.0" }
+plugwright-sdk = { path = "rust/plugwright/crates/plugwright-sdk", version = "0.1.0" }
+plugwright-macros = { path = "rust/plugwright/crates/plugwright-macros", version = "0.1.0" }
+plugwright = { path = "rust/plugwright/crates/plugwright", version = "0.1.0", default-features = false }
+plugwright-core = { path = "rust/plugwright/crates/plugwright-core", version = "0.1.0" }
+plugwright-sandbox = { path = "rust/plugwright/crates/plugwright-sandbox", version = "0.1.0" }
+plugwright-trust = { path = "rust/plugwright/crates/plugwright-trust", version = "0.1.0" }
+plugwright-build = { path = "rust/plugwright/crates/plugwright-build", version = "0.1.0" }
+plugwright-native = { path = "rust/plugwright/crates/plugwright-native", version = "0.1.0" }
+plugwright-isolate = { path = "rust/plugwright/crates/plugwright-isolate", version = "0.1.0" }
+plugwright-wasm = { path = "rust/plugwright/crates/plugwright-wasm", version = "0.1.0" }
+plugwright-wasmtime = { path = "rust/plugwright/crates/plugwright-wasmtime", version = "0.1.0" }
+plugwright-wasmi = { path = "rust/plugwright/crates/plugwright-wasmi", version = "0.1.0" }
+plugwright-packages = { path = "rust/plugwright/crates/plugwright-packages", version = "0.1.0" }
+plugwright-loader = { path = "rust/plugwright/crates/plugwright-loader", version = "0.1.0", default-features = false }
+# Third-party versions shared by the plugwright crates.
+cc = "1.8.0"
+cargo_metadata = "0.23.1"
+libc = "0.2"
+libloading = "0.9.0"
+minisign = "0.10.0"
+minisign-verify = "0.3.0"
+notify = "8.2.0"
+semver = { version = "1.0.28", features = ["serde"] }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.154"
+sha2 = "0.11.1"
+tempfile = "3.27.0"
+thiserror = "2.0.21"
+toml = "1.1.8"
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+trybuild = "1.0.122"
+wasmi = "2.0.0"
+wasmi_core = "2.0.0"
+wasmtime = { version = "49.0.2", default-features = false, features = ["cranelift", "runtime", "std"] }
+windows-sys = "0.61.2"
+
+# Inherited only by crates with `[lints] workspace = true` (the plugwright crates).
+[workspace.lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+
+# plugwright hashes every artifact on a cold lookup; unoptimised sha2 is ~10x slower.
+[profile.dev.package.sha2]
+opt-level = 3
