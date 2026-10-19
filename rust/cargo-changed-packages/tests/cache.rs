@@ -4,9 +4,12 @@
 #![cfg(unix)]
 
 use std::fs;
+use std::io;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::thread;
+use std::time::Duration;
 
 use cargo_changed_packages::{CacheStatus, Error, Resolver};
 use tempfile::TempDir;
@@ -15,6 +18,33 @@ fn write(root: &Path, rel: &str, content: &str) {
     let path = root.join(rel);
     fs::create_dir_all(path.parent().unwrap()).unwrap();
     fs::write(path, content).unwrap();
+}
+
+/// Every shim starts with this line, so `write_shim` can run it without side effects.
+const PROBE: &str = "[ -n \"$SHIM_PROBE\" ] && exit 0\n";
+
+/// Write an executable `sh` script and wait until it can be executed.
+///
+/// Tests run in parallel threads. A thread that spawns a process while this one still holds the
+/// script open for writing hands that descriptor to its child until the child execs, and running
+/// the script in that window fails with ETXTBSY ("Text file busy"). Once one probe run succeeds,
+/// no process holds the file open for writing and none can get it again, so later runs are safe.
+fn write_shim(path: &Path, body: &str) {
+    fs::write(path, format!("#!/bin/sh\n{PROBE}{body}")).unwrap();
+    fs::set_permissions(path, fs::Permissions::from_mode(0o755)).unwrap();
+    for _ in 0..200 {
+        match Command::new(path).env("SHIM_PROBE", "1").status() {
+            Ok(status) => {
+                assert!(status.success(), "probe of {} failed", path.display());
+                return;
+            }
+            Err(e) if e.kind() == io::ErrorKind::ExecutableFileBusy => {
+                thread::sleep(Duration::from_millis(10));
+            }
+            Err(e) => panic!("cannot run {}: {e}", path.display()),
+        }
+    }
+    panic!("{} stayed busy", path.display());
 }
 
 fn manifest(name: &str, deps: &str) -> String {
@@ -60,13 +90,12 @@ impl Fixture {
         let shim = root.join("cargo-shim");
         // CARGO_SHIM_VERSION fakes a different cargo version; CARGO_SHIM_FAIL breaks metadata.
         let script = format!(
-            "#!/bin/sh\necho \"$@\" >> '{log}'\n\
+            "echo \"$@\" >> '{log}'\n\
              if [ \"$1\" = --version ] && [ -n \"$CARGO_SHIM_VERSION\" ]; then echo \"$CARGO_SHIM_VERSION\"; exit 0; fi\n\
              exec '{real}' \"$@\"\n",
             log = log.display(),
         );
-        fs::write(&shim, script).unwrap();
-        fs::set_permissions(&shim, fs::Permissions::from_mode(0o755)).unwrap();
+        write_shim(&shim, &script);
         Self {
             dir,
             cache: tempfile::tempdir().unwrap(),
@@ -246,15 +275,13 @@ fn a_different_cargo_version_invalidates() {
         .unwrap();
     assert_eq!(String::from_utf8_lossy(&other.stdout).trim(), "cargo 0.0.0");
     let version_shim = fx.dir.path().join("cargo-other");
-    fs::write(
+    write_shim(
         &version_shim,
-        format!(
-            "#!/bin/sh\nif [ \"$1\" = --version ]; then echo cargo 0.0.0; exit 0; fi\nexec '{}' \"$@\"\n",
+        &format!(
+            "if [ \"$1\" = --version ]; then echo cargo 0.0.0; exit 0; fi\nexec '{}' \"$@\"\n",
             fx.shim.display()
         ),
-    )
-    .unwrap();
-    fs::set_permissions(&version_shim, fs::Permissions::from_mode(0o755)).unwrap();
+    );
     let resolver = Resolver::new(&fx.root())
         .cargo(&version_shim)
         .cache_dir(fx.cache.path());
@@ -331,12 +358,10 @@ fn two_workspaces_do_not_share_an_entry() {
 fn a_failing_cargo_metadata_is_an_error_with_cargos_message() {
     let fx = Fixture::new();
     let failing = fx.dir.path().join("cargo-fail");
-    fs::write(
+    write_shim(
         &failing,
-        "#!/bin/sh\nif [ \"$1\" = metadata ]; then echo 'boom from cargo' >&2; exit 101; fi\necho cargo 1\n",
-    )
-    .unwrap();
-    fs::set_permissions(&failing, fs::Permissions::from_mode(0o755)).unwrap();
+        "if [ \"$1\" = metadata ]; then echo 'boom from cargo' >&2; exit 101; fi\necho cargo 1\n",
+    );
     let resolver = Resolver::new(&fx.root())
         .cargo(&failing)
         .cache_dir(fx.cache.path());
