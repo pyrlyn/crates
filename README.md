@@ -14,6 +14,7 @@ Small, focused Rust crates shared by the creator's projects (`ketch`, `rtok`, `s
 | [`cargo-changed-packages`](rust/cargo-changed-packages) | Workspace packages a set of changed paths affects, including reverse dependencies |
 | [`change-preview`](rust/change-preview) | Preview what a command would change: diff or `--stat` of edits, size and file count of removals, totals |
 | [`operation-icons`](rust/operation-icons) | Emoji icons for the verb of a status line and the fixed-width gutter they sit in |
+| [`owner-listener`](rust/owner-listener) | Owner-only Unix socket and Windows named pipe for a local gRPC agent, with tonic `Connected` peer info and login-service install (not published) |
 | [`config-schema`](rust/config-schema) | Schema-checked TOML config: stale JSON Schema check, figment layering with per-key provenance, comment-preserving key edits (not published yet) |
 | [`d2-render`](rust/d2-render) | Render D2 diagrams to SVG/PNG in pure Rust, with an optional d2 CLI backend, structured diagnostics and freshness checks |
 | [`fs-kit`](rust/fs-kit) | One entry point for file and directory work: `\\?\`-free paths, atomic writes, tree usage, copy and removal, backups |
@@ -148,7 +149,7 @@ Licensed under the [GNU General Public License v3.0 or later](LICENSE)
 (`GPL-3.0-or-later`).
 
 The crates shared with cox and aulo (`agent-ext`, `agent-host-config`,
-`agent-loop`, `config-schema`, `llm-*`, `mcp-client-host`, `perm-rules`,
+`agent-loop`, `config-schema`, `llm-*`, `mcp-client-host`, `owner-listener`, `perm-rules`,
 `proc-sandbox`, `shell-classify`, `speech-capture`, `text-sanitize`) are
 offered under `GPL-3.0-or-later OR LicenseRef-Royalty-Free`: the second option
 is [`LICENSE-ROYALTY-FREE.md`](LICENSE-ROYALTY-FREE.md). Each package ships
