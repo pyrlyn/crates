@@ -13,7 +13,11 @@ tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 
 [dev-dependencies]
+# Workspace paths without the Windows `\\?\` prefix for the scratch crates.
+fs-kit.workspace = true
 tempfile = "3.27.0"
+# Writes those paths into scratch manifests as escaped TOML strings.
+toml.workspace = true
 
 # Performance tests with budgets: `cargo bench -p plugwright-host --bench perf`.
 [[bench]]
