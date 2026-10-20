@@ -35,6 +35,7 @@ Small, focused Rust crates shared by the creator's projects (`ketch`, `rtok`, `s
 | [`perm-rules`](rust/perm-rules) | Permission rules for tool calls: `Tool(subject)` grammar, deny/allow/ask decision order, risk fallback |
 | [`sccache-r2`](rust/sccache-r2) | Wire sccache to a Cloudflare R2 bucket from env vars: validate, export (GitHub Actions or shell), check the bucket, print stats; off without the secrets |
 | [`proc-sandbox`](rust/proc-sandbox) | Confine a child process: Seatbelt on macOS, bubblewrap or Landlock plus seccomp on Linux, and a path guard for workspace roots |
+| [`rgba-png`](rust/rgba-png) | RGBA8 frames and PNG files: encode, decode any PNG to RGBA under an allocation cap, per-pixel comparison with a threshold, diff images (not published) |
 | [`scoped-check`](rust/scoped-check) | Run only the check commands a change touches (binary) |
 | [`telemetry-setup`](rust/telemetry-setup) | `tracing` setup: rotating JSON log, stderr log, optional OTLP traces, secrets masked before they leave the process |
 | [`sqlite-change-feed`](rust/sqlite-change-feed) | Change feed for a SQLite database shared between processes: `PRAGMA data_version` through Diesel |
