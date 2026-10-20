@@ -96,7 +96,7 @@ Crate graph: `core ← {sandbox, trust, build, native, wasm, extism} ← {isolat
 | tampered **artifact** in cache | sha256 recorded at build, verified on every load; `sha256` pin for prebuilt artifacts | attacker with write access to both cache and lock |
 | forged or swapped prebuilt **artifact** | minisign signature against the source's trusted keys, before mapping / relinking / compiling; unsigned = deny / warn / allow per source (D25) | stolen signing key; a swap between the check and the load by someone with write access |
 | native plugin memory corruption / crash | `Isolation::Process` (default); env cleared; core dumps off | — |
-| native plugin reaching the system | runner sandbox: Seatbelt / Landlock + seccomp / low integrity + job | Windows: reads and network open (F2: AppContainer); Linux without Landlock: files open (reported) |
+| native plugin reaching the system | runner sandbox: Seatbelt / Landlock + seccomp / low integrity + job | Windows: reads and network open (T49: AppContainer); Linux without Landlock: files open (reported) |
 | in-process native plugin | explicit opt-in only; unload verified and leaks counted | full trust: same address space |
 | native plugin panic | `catch_unwind` in SDK, forced `panic=unwind`, Cranelift never in-process (D22) | plugin built without the SDK |
 | wrong or foreign file | magic-byte detection, kind / architecture / image type checked before `dlopen` (D19) | — |

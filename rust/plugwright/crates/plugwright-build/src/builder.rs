@@ -300,7 +300,7 @@ impl Builder {
             tail.into_iter().collect::<Vec<_>>().join("\n")
         });
 
-        let want_manifest = std::fs::canonicalize(&manifest).unwrap_or(manifest.clone());
+        let want_manifest = fs_kit::path::canonicalize(&manifest).unwrap_or(manifest.clone());
         let ext = req.target.artifact_ext();
         let (mut found, mut staticlib) = (None, None);
         let stdout = child.stdout.take().expect("piped");
@@ -309,7 +309,7 @@ impl Builder {
             if msg.reason != "compiler-artifact" {
                 continue;
             }
-            let same = msg.manifest_path.as_deref().and_then(|p| std::fs::canonicalize(p).ok()).as_ref()
+            let same = msg.manifest_path.as_deref().and_then(|p| fs_kit::path::canonicalize(p).ok()).as_ref()
                 == Some(&want_manifest);
             let has = |ty: &str| msg.target.as_ref().is_some_and(|t| t.crate_types.iter().any(|c| c == ty));
             if same && has("cdylib") {
@@ -341,9 +341,11 @@ impl Builder {
     /// hashed on its own.
     fn fingerprint(&self, req: &BuildRequest) -> Result<(String, PathBuf)> {
         let sources = crate::sources::sources(&req.crate_dir).map_err(|e| PluginError::build(&req.id, e))?;
+        // Package roots come canonical from fs-kit (long names, no `\\?\`), so the cache root is
+        // compared in that form too; the spelling it was opened with stays for a missing root.
         let skip: Vec<PathBuf> = [self.cache.root().to_path_buf()]
             .into_iter()
-            .chain(std::fs::canonicalize(self.cache.root()).ok())
+            .chain(fs_kit::path::canonicalize(self.cache.root()).ok())
             .collect();
         let mut files = BTreeSet::new();
         for root in &sources.packages {
@@ -523,7 +525,10 @@ fn collect_files(dir: &Path, skip: &[PathBuf], out: &mut BTreeSet<PathBuf>) -> R
         if ft.is_dir() {
             let n = name.to_string_lossy();
             // `.cargo/config.toml` changes the build, other dot-dirs (.git, …) do not.
-            if n == "target" || (n.starts_with('.') && n != ".cargo") || skip.iter().any(|s| s == &path) {
+            if n == "target"
+                || (n.starts_with('.') && n != ".cargo")
+                || skip.iter().any(|s| fs_kit::path::same_path(s, &path))
+            {
                 continue;
             }
             collect_files(&path, skip, out)?;
@@ -788,6 +793,22 @@ mod tests {
         assert_ne!(edited, with_config, "a source edit changes the key");
         std::fs::write(dir.path().join("src/new.rs"), "").unwrap();
         assert_ne!(key(&b, &r), edited, "a new file changes the key");
+    }
+
+    // std::fs::canonicalize spells a path `\\?\C:\…`, fs-kit (and so the walked sources) `C:\…`:
+    // a cache opened under either spelling must still be left out of the fingerprint.
+    #[cfg(windows)]
+    #[test]
+    fn a_verbatim_cache_root_inside_the_crate_is_not_a_source() {
+        let dir = tempfile::tempdir().unwrap();
+        scratch_crate(dir.path());
+        let verbatim = std::fs::canonicalize(dir.path()).unwrap().join("pwcache");
+        assert!(verbatim.to_string_lossy().starts_with(r"\\?\"), "{verbatim:?}");
+        let b = builder(&verbatim, BuildOptions::default());
+        let r = req(dir.path());
+        let base = key(&b, &r);
+        std::fs::write(verbatim.join("junk"), "j").unwrap();
+        assert_eq!(key(&b, &r), base, "the cache is not a source");
     }
 
     #[test]
