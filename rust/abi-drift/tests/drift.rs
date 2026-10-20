@@ -4,7 +4,7 @@
 
 use std::path::{Path, PathBuf};
 
-use abi_drift::{Drift, Error, Outcome, cbindgen_header, csbindgen_file};
+use abi_drift::{cbindgen_header, csbindgen_file, Drift, Error, Outcome};
 
 fn fixture() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/ffi")
@@ -143,10 +143,9 @@ fn an_unset_bless_variable_compares_and_names_itself() {
         .bless_from_env("ABI_DRIFT_TEST_VARIABLE_NEVER_SET")
         .check("include/ffi.h", "new\n")
         .expect_err("compares, does not bless");
-    assert!(
-        err.to_string()
-            .contains("run `ABI_DRIFT_TEST_VARIABLE_NEVER_SET=1 cargo test`")
-    );
+    assert!(err
+        .to_string()
+        .contains("run `ABI_DRIFT_TEST_VARIABLE_NEVER_SET=1 cargo test`"));
 }
 
 #[test]

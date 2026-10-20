@@ -49,7 +49,7 @@ pub mod web;
 pub use backend::{Backend, BackendOutput};
 #[cfg(feature = "cli")]
 pub use cli::{CliBackend, D2_BIN_ENV};
-pub use diagnostic::{Diagnostic, ParsedOutput, Severity, parse_stderr};
+pub use diagnostic::{parse_stderr, Diagnostic, ParsedOutput, Severity};
 pub use error::{Error, Result};
 pub use fresh::{Freshness, StaleOutput};
 #[cfg(feature = "native")]

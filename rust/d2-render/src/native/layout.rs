@@ -519,7 +519,11 @@ impl Ctx<'_> {
                             .as_ref()
                             .map(|t| {
                                 let (tw, th) = measure(t, EDGE_LABEL_FONT, false);
-                                if horizontal { tw + 20.0 } else { th + 10.0 }
+                                if horizontal {
+                                    tw + 20.0
+                                } else {
+                                    th + 10.0
+                                }
                             })
                             .unwrap_or(0.0);
                         edges.push((u, v, ei, lab));

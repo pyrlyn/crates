@@ -11,7 +11,7 @@ use std::thread::JoinHandle;
 use std::time::Duration;
 
 use notify::{RecommendedWatcher, RecursiveMode};
-use notify_debouncer_mini::{DebounceEventResult, Debouncer, new_debouncer};
+use notify_debouncer_mini::{new_debouncer, DebounceEventResult, Debouncer};
 
 use crate::{Error, Format, RenderReport, Renderer, Result};
 

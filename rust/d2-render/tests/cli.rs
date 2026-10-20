@@ -270,12 +270,10 @@ fn freshness_roundtrip() {
     assert_eq!(stale.len(), 1);
     let refreshed = stamped.refresh_dir(dir.path(), Format::Svg).unwrap();
     assert_eq!(refreshed.len(), 1);
-    assert!(
-        stamped
-            .verify_dir(dir.path(), Format::Svg)
-            .unwrap()
-            .is_empty()
-    );
+    assert!(stamped
+        .verify_dir(dir.path(), Format::Svg)
+        .unwrap()
+        .is_empty());
 
     // PNG uses a sidecar.
     let png = dir.path().join("a.png");

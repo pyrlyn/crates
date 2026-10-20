@@ -4,8 +4,8 @@ use std::fmt;
 use std::io;
 use std::path::PathBuf;
 
-use crate::Format;
 use crate::diagnostic::Diagnostic;
+use crate::Format;
 
 /// Result alias used throughout the crate.
 pub type Result<T, E = Error> = std::result::Result<T, E>;
