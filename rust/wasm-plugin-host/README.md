@@ -11,6 +11,8 @@ part every plugin host repeats:
   reported as typed errors the caller fails open on;
 - no WASI and no extism HTTP: everything a plugin may do goes through host
   functions the application grants.
+- feature `pulley` runs every plugin on wasmtime's Pulley interpreter instead
+  of native code, for iOS and other platforms that refuse executable memory.
 
 ```rust
 use std::sync::Arc;
