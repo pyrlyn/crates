@@ -55,6 +55,10 @@ The `single_thread_is_not_sync` trybuild diagnostic depended on whether standard
 
 Updated the shared WASM host and cox to Extism 1.41.0 / Wasmtime 49, removing the four now-fixed Wasmtime advisory ignores. The host API remains unchanged. Verified focused and workspace tests, clippy, fmt, and CI on pyrlyn/crates#74; no crate was manually published.
 
+### T20.6. wasm-plugin-host and plugwright-extism: Pulley interpreter feature
+
+Kerf's mobile plugin backend (kerf T15): iOS forbids executable memory at run time, so a host there cannot run wasmtime's native code. Feature `pulley` on both crates passes extism a `wasmtime::Config` whose target is Pulley (`pulley64`, or `pulley32` on 32-bit), wasmtime's own interpreter; extism keeps the target. The host API is unchanged. Done when both crates' full test suites pass with the feature on, a test checks that the engine built from the config is Pulley, and CI runs them.
+
 ### T20.5. abi-drift: permit Extism-compatible cbindgen patch
 
 Lowered abi-drift's cbindgen minimum to 0.29.3, which Extism 1.41.0 pins exactly. Confirmed the API is compatible and generated C/C# outputs are unchanged. Verified abi-drift tests, workspace tests, clippy, fmt, and CI on pyrlyn/crates#74.

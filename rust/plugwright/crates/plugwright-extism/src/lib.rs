@@ -106,12 +106,13 @@ impl<E: HostEnv> ExtismPlugin<E> {
         }
         // The default cache writes under the user's system cache dir, which
         // belongs to no application in particular.
-        let plugin = PluginBuilder::new(manifest)
+        let builder = PluginBuilder::new(manifest)
             .with_wasi(wasi.is_some())
             .with_cache_disabled()
-            .with_functions(env.functions())
-            .build()
-            .map_err(|e| PluginError::Load(format!("{e:#}")))?;
+            .with_functions(env.functions());
+        #[cfg(feature = "pulley")]
+        let builder = builder.with_wasmtime_config(pulley_config()?);
+        let plugin = builder.build().map_err(|e| PluginError::Load(format!("{e:#}")))?;
         if !plugin.function_exists(options.required_export) {
             return Err(WasmError::MissingExport(options.required_export.to_owned()).into());
         }
@@ -196,6 +197,21 @@ fn call_error(err: &extism::Error, call_cap: Duration) -> PluginError {
         "oom" => WasmError::MemoryLimit.into(),
         message => WasmError::Trap(message.to_owned()).into(),
     }
+}
+
+/// The Pulley target of this host's pointer width. iOS and Android are
+/// little-endian, so the big-endian variants are not needed.
+#[cfg(feature = "pulley")]
+const PULLEY: &str = if cfg!(target_pointer_width = "64") { "pulley64" } else { "pulley32" };
+
+/// Cranelift emits Pulley bytecode instead of machine code, so loading a
+/// plugin never maps executable memory, which iOS forbids. extism keeps the
+/// target and only overrides the proposals and interruption it needs.
+#[cfg(feature = "pulley")]
+fn pulley_config() -> Result<wasmtime::Config> {
+    let mut config = wasmtime::Config::new();
+    config.target(PULLEY).map_err(|e| PluginError::Load(format!("{e:#}")))?;
+    Ok(config)
 }
 
 #[cfg(test)]

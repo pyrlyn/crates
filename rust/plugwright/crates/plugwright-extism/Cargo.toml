@@ -21,6 +21,12 @@ semver.workspace = true
 # workspace's wasmtime so the lockfile keeps a single wasmtime.
 wasmtime = { workspace = true, features = ["anyhow"] }
 
+[features]
+# wasmtime's Pulley interpreter instead of native code, for iOS and other
+# platforms that refuse executable memory at run time. Every plugin this crate
+# loads runs interpreted while it is on.
+pulley = ["wasmtime/pulley"]
+
 [dev-dependencies]
 serde_json.workspace = true
 tempfile.workspace = true
