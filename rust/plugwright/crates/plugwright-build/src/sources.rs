@@ -8,7 +8,7 @@
 //! a cache miss; a missing one would serve a stale artifact.
 
 use std::collections::{BTreeSet, HashMap};
-use std::path::{Component, Path, PathBuf};
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 use toml::{Table, Value};
@@ -113,22 +113,10 @@ fn cargo_home() -> Option<PathBuf> {
 }
 
 /// Canonical when the path exists (so `a/../b` and `b` are one package),
-/// lexically cleaned when it does not.
+/// lexically cleaned when it does not. fs-kit drops the `\\?\` prefix std adds on Windows, so
+/// these paths still compare equal to ones built with `Path::join`.
 fn normalize(p: &Path) -> PathBuf {
-    if let Ok(c) = std::fs::canonicalize(p) {
-        return c;
-    }
-    let mut out = PathBuf::new();
-    for c in p.components() {
-        match c {
-            Component::ParentDir if out.file_name().is_some() => {
-                out.pop();
-            }
-            Component::CurDir => {}
-            c => out.push(c),
-        }
-    }
-    out
+    fs_kit::path::canonicalize(p).unwrap_or_else(|_| fs_kit::path::clean(p))
 }
 
 /// Parsed TOML files, each read once.
@@ -202,6 +190,22 @@ mod tests {
     }
 
     const PKG: &str = "[package]\nname = \"x\"\nversion = \"0.1.0\"\n";
+
+    #[test]
+    fn normalize_canonicalizes_existing_paths_and_cleans_missing_ones() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(dir.path().join("a/b")).unwrap();
+        let real = normalize(&dir.path().join("a/./b/../b"));
+        assert_eq!(real, fs_kit::path::canonicalize(dir.path().join("a/b")).unwrap());
+        assert!(real.is_absolute());
+        #[cfg(windows)]
+        assert!(!real.to_string_lossy().starts_with(r"\\?\"), "{real:?}");
+
+        // Nothing on disk to ask, so `..` folds lexically and a leading one stays.
+        let gone = dir.path().join("gone/x/../y");
+        assert_eq!(normalize(&gone), fs_kit::path::clean(&dir.path().join("gone/y")));
+        assert_eq!(normalize(Path::new("../no-such-plugwright-dir/../missing")), Path::new("../missing"));
+    }
 
     #[test]
     fn path_dependencies_are_followed_through_every_table_but_dev() {
