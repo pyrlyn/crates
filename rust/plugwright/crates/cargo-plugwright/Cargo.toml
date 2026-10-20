@@ -1,0 +1,19 @@
+[package]
+name = "cargo-plugwright"
+description = "cargo subcommand for plugwright: build, list, call and diagnose plugins"
+version = "0.1.0"
+edition = "2024"
+# wasmtime 49 needs 1.96.
+rust-version = "1.96"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/pyrlyn/crates"
+
+[dependencies]
+plugwright = { workspace = true, features = ["wasmtime", "wasmi"] }
+tracing-subscriber.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

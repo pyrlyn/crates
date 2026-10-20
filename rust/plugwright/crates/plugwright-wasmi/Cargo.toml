@@ -1,0 +1,20 @@
+[package]
+name = "plugwright-wasmi"
+description = "wasmi engine for plugwright: fuel, memory limit, timeout via resumable fuel slices"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.89"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/pyrlyn/crates"
+keywords = ["plugin", "wasm", "wasmi"]
+
+[dependencies]
+plugwright-abi.workspace = true
+plugwright-core.workspace = true
+plugwright-wasm.workspace = true
+wasmi.workspace = true
+# wasmi 2.0 does not re-export `LimiterError`, needed to implement `ResourceLimiter`.
+wasmi_core.workspace = true
+
+[lints]
+workspace = true
