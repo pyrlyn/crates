@@ -61,6 +61,12 @@ Direct dependencies of the workspace members. Path crates are this repo.
 | unic-langid | local | https://github.com/zbraniecki/unic-locale | `gettext-catalog` language identifiers |
 | diesel | local | https://github.com/diesel-rs/diesel | `sqlite-change-feed` connection and pragma query |
 | libsqlite3-sys | local | https://github.com/rusqlite/rusqlite | Bundled SQLite in `sqlite-change-feed` tests |
+| tokio | local | https://github.com/tokio-rs/tokio | `owner-listener` async sockets and pipes |
+| tokio-stream | local | https://github.com/tokio-rs/tokio | `owner-listener` incoming-connection stream for tonic |
+| tokio-util | local | https://github.com/tokio-rs/tokio | `owner-listener` cancellation token that stops the pipe accept loop |
+| tonic | local | https://github.com/hyperium/tonic | `owner-listener` `Connected` impls |
+| rustix | local | https://github.com/bytecodealliance/rustix | `owner-listener` peer credentials and modes on Unix |
+| windows-sys | local | https://github.com/microsoft/windows-rs | `owner-listener` pipe DACL, token and client pid on Windows |
 | cbindgen | local | https://github.com/mozilla/cbindgen | `abi-drift` renders C headers |
 | csbindgen | local | https://github.com/Cysharp/csbindgen | `abi-drift` renders C# bindings |
 | similar | local | https://github.com/mitsuhiko/similar | Unified diffs in `abi-drift` and `change-preview` |
