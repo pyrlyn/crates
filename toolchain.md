@@ -33,6 +33,8 @@ Direct dependencies of the workspace members. Path crates are this repo.
 | sqlite-change-feed | local | https://github.com/pyrlyn/crates | Cross-process SQLite change feed |
 | abi-drift | local | https://github.com/pyrlyn/crates | Drift tests for generated bindings |
 | keychain-secret | local | https://github.com/pyrlyn/crates | Secrets from the environment or the OS keychain |
+| rgba-png | local | https://github.com/pyrlyn/crates | RGBA8 frames and PNG files for screenshot tests and image decoding |
+| png | local | https://github.com/image-rs/image-png | PNG encode and decode in `rgba-png` |
 | anyhow | local | https://github.com/dtolnay/anyhow | Top-level errors of `scoped-check` |
 | assert_cmd | local | https://github.com/assert-rs/assert_cmd | Tests that run the `scoped-check` binary |
 | clap | local | https://github.com/clap-rs/clap | CLI trees and shared completion generation |

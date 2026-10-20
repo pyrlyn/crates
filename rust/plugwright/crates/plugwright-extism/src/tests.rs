@@ -68,6 +68,13 @@ fn init(worker: &Worker) -> Option<Value> {
     worker.call_json(Lane::Control, INIT, &json!({ "greeting": "hi" }), worker.call_cap()).expect("init")
 }
 
+#[cfg(feature = "pulley")]
+#[test]
+fn pulley_feature_compiles_for_the_interpreter() {
+    let engine = wasmtime::Engine::new(&pulley_config().expect("config")).expect("engine");
+    assert!(engine.is_pulley());
+}
+
 #[test]
 fn wat_plugin_round_trips_json() {
     let env = Arc::new(Env::default());

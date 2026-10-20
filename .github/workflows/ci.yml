@@ -129,6 +129,12 @@ jobs:
           cargo clippy -p plugwright-loader --no-default-features --all-targets --locked -- -D warnings
           cargo clippy -p plugwright-sdk -p wasm-hello --target wasm32-unknown-unknown --locked -- -D warnings
           cargo test -p plugwright-host --benches --locked
+          # iOS and Android hosts turn on `pulley` (wasmtime's interpreter); the workspace run
+          # above only sees default features.
+          cargo test -p wasm-plugin-host -p plugwright-extism \
+            --features wasm-plugin-host/pulley,plugwright-extism/pulley --locked
+          cargo clippy -p wasm-plugin-host -p plugwright-extism \
+            --features wasm-plugin-host/pulley,plugwright-extism/pulley --all-targets --locked -- -D warnings
           # The first step of plugwright's release order (README); the rest need these on crates.io.
           cargo publish --dry-run -p plugwright-abi --locked
           cargo publish --dry-run -p plugwright-macros --locked
