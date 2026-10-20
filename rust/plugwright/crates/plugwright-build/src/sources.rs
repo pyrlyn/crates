@@ -194,7 +194,11 @@ mod tests {
 
     fn names(root: &Path, set: &BTreeSet<PathBuf>) -> Vec<String> {
         let root = normalize(root);
-        set.iter().filter_map(|p| p.strip_prefix(&root).ok()).map(|p| p.display().to_string()).collect()
+        // Joined with `/` so the expectations read the same on Windows, where `display` uses `\`.
+        set.iter()
+            .filter_map(|p| p.strip_prefix(&root).ok())
+            .map(|p| p.iter().map(|c| c.to_string_lossy()).collect::<Vec<_>>().join("/"))
+            .collect()
     }
 
     const PKG: &str = "[package]\nname = \"x\"\nversion = \"0.1.0\"\n";
