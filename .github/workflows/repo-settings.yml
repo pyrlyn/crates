@@ -1,0 +1,22 @@
+name: repo-settings
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Applying settings is idempotent, so a newer run supersedes an older one.
+concurrency:
+  group: repo-settings
+  cancel-in-progress: true
+
+jobs:
+  repo-settings:
+    uses: pyrlyn/ci/.github/workflows/repo-settings.yml@main
+    secrets:
+      REPO_ADMIN_TOKEN: ${{ secrets.REPO_ADMIN_TOKEN }}
