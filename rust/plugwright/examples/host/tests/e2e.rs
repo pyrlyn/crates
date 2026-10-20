@@ -21,7 +21,7 @@ macro_rules! assert_err {
 }
 
 fn workspace() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("../..").canonicalize().unwrap()
+    fs_kit::path::canonicalize(Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")).unwrap()
 }
 
 fn manager() -> PluginManager {
@@ -174,7 +174,16 @@ fn sandbox_denies_writes_network_exec_and_foreign_reads() {
     s.sandbox.network = true;
     m.load(s).unwrap();
     assert_eq!(text(probe(&mut m, "opened", "read_file", secret.to_str().unwrap())), "read 10 bytes");
-    assert_eq!(text(probe(&mut m, "opened", "write_file", out.to_str().unwrap())), "wrote");
+    // Windows' low integrity level cannot open single medium-integrity paths; the sandbox
+    // reports that gap, and then the write must stay denied rather than silently succeed.
+    let opened = m.list().find(|(id, ..)| *id == "opened").unwrap().1.sandbox.clone().unwrap_or_default();
+    let write = probe(&mut m, "opened", "write_file", out.to_str().unwrap());
+    if opened.contains("not enforced:") && opened.contains("write allow-list") {
+        assert!(matches!(write, Err(PluginError::Call { .. })), "{opened}: {write:?}");
+        assert!(!out.exists());
+    } else {
+        assert_eq!(text(write), "wrote", "{opened}");
+    }
     assert_eq!(text(probe(&mut m, "opened", "connect", &addr)), "connected");
 
     // Disabled sandbox: processes can be spawned again.
@@ -269,8 +278,9 @@ fn scratch_crate(dir: &Path, lib_rs: &str, dep: &str) {
         dir.join("Cargo.toml"),
         format!(
             "[package]\nname = \"scratch\"\nversion = \"0.1.0\"\nedition = \"2024\"\n\n[lib]\ncrate-type = [\"cdylib\"]\n\n\
-             [dependencies]\n{dep} = {{ path = \"{}\" }}\n\n[workspace]\n",
-            root.join("crates").join(dep).display()
+             [dependencies]\n{dep} = {{ path = {} }}\n\n[workspace]\n",
+            // A TOML string, escaped: Windows paths are full of `\\`.
+            toml::Value::String(root.join("crates").join(dep).to_string_lossy().into_owned())
         ),
     )
     .unwrap();
