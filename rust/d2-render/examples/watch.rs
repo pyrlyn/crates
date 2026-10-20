@@ -4,8 +4,8 @@
 
 use std::path::PathBuf;
 
-use d2_render::watch::{watch, WatchConfig, WatchEvent};
 use d2_render::Renderer;
+use d2_render::watch::{WatchConfig, WatchEvent, watch};
 
 fn main() -> Result<(), d2_render::Error> {
     let target = PathBuf::from(std::env::args().nth(1).unwrap_or_else(|| ".".into()));

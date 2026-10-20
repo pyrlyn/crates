@@ -362,7 +362,7 @@ mod tests {
     #[cfg(unix)]
     mod unix {
         use super::*;
-        use std::os::unix::fs::{symlink, PermissionsExt};
+        use std::os::unix::fs::{PermissionsExt, symlink};
 
         fn mode(p: &Path) -> u32 {
             fs::metadata(p).unwrap().permissions().mode() & 0o777
@@ -403,10 +403,12 @@ mod tests {
             fs::write(&real, "old").unwrap();
             symlink("real.json", &link).unwrap();
             atomic(&link, "new").unwrap();
-            assert!(fs::symlink_metadata(&link)
-                .unwrap()
-                .file_type()
-                .is_symlink());
+            assert!(
+                fs::symlink_metadata(&link)
+                    .unwrap()
+                    .file_type()
+                    .is_symlink()
+            );
             assert_eq!(fs::read_to_string(&real).unwrap(), "new");
         }
 
@@ -416,10 +418,12 @@ mod tests {
             let link = dir.path().join("link");
             symlink("missing", &link).unwrap();
             atomic(&link, "made").unwrap();
-            assert!(fs::symlink_metadata(&link)
-                .unwrap()
-                .file_type()
-                .is_symlink());
+            assert!(
+                fs::symlink_metadata(&link)
+                    .unwrap()
+                    .file_type()
+                    .is_symlink()
+            );
             assert_eq!(
                 fs::read_to_string(dir.path().join("missing")).unwrap(),
                 "made"

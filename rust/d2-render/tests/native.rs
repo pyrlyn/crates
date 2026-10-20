@@ -43,9 +43,10 @@ fn renders_fixture_without_d2() {
     let svg = report.svg.unwrap();
     assert!(svg.width.unwrap() > 200.0);
     assert!(svg.shapes().any(|s| s == "backend.queue"));
-    assert!(svg
-        .connections()
-        .any(|c| c == "backend.(worker -> queue)[0]"));
+    assert!(
+        svg.connections()
+            .any(|c| c == "backend.(worker -> queue)[0]")
+    );
 }
 
 #[test]
@@ -118,9 +119,11 @@ fn unsupported_features_warn_or_fail() {
     }
     assert!(check("...@other").unwrap_err().is_syntax());
     assert!(check("*.style.fill: red").unwrap_err().is_syntax());
-    assert!(check("vars: {a: {b: 1}}\nx: {...${a}}")
-        .unwrap_err()
-        .is_syntax());
+    assert!(
+        check("vars: {a: {b: 1}}\nx: {...${a}}")
+            .unwrap_err()
+            .is_syntax()
+    );
     let err = check("a: ${missing}").unwrap_err();
     assert_eq!(
         err.diagnostics()[0].message,
@@ -231,10 +234,12 @@ fn themes_and_text_transform() {
     assert!(out.svg.contains("monospace"));
     let terminal = render_svg("box: {a}", &RenderOptions::new().theme(300)).unwrap();
     assert!(terminal.svg.contains(">BOX</tspan>"), "CapsLock rule");
-    assert!(terminal
-        .warnings
-        .iter()
-        .any(|w| w.contains("ContainerDots")));
+    assert!(
+        terminal
+            .warnings
+            .iter()
+            .any(|w| w.contains("ContainerDots"))
+    );
     let missing = render_svg("a", &RenderOptions::new().theme(9999)).unwrap();
     assert!(missing.warnings.iter().any(|w| w.contains("9999")));
 }

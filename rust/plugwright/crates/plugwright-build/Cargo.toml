@@ -14,6 +14,8 @@ plugwright-abi.workspace = true
 cc.workspace = true
 # Finds a workspace package by name (`cargo plugwright lib|wasm|plugin`).
 cargo_metadata.workspace = true
+# Canonical paths without the Windows `\\?\` prefix, lexical cleanup for missing ones.
+fs-kit.workspace = true
 plugwright-core.workspace = true
 serde.workspace = true
 serde_json.workspace = true

@@ -5,7 +5,7 @@ mod common;
 
 use std::env;
 
-use d2_render::{CliBackend, Format, Renderer, D2_BIN_ENV};
+use d2_render::{CliBackend, D2_BIN_ENV, Format, Renderer};
 
 #[test]
 fn d2_bin_env_overrides_path_lookup() {
