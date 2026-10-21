@@ -268,6 +268,31 @@ fn shell_braces_stay_literal() {
     assert!(out.contains("echo ${HOME:+set} {a,b}"), "{out}");
 }
 
+#[test]
+fn config_below_the_repository_top_plans_from_the_top() {
+    // `{changed}` must name a file that exists from where the gate runs: the repository top.
+    let config = format!(
+        "{CONFIG}\n[[gate]]\nname = \"exists\"\npaths = [\"**/*.rs\"]\nrun = \"test -f {{changed}} && echo found\"\n"
+    );
+    let repo = fixture(&config);
+    write(repo.path(), "ci/scoped-check.toml", &config);
+    git(repo.path(), &["add", "-A"]);
+    git(repo.path(), &["commit", "-q", "-m", "nested config"]);
+    write(repo.path(), "b/src/lib.rs", "// edit\n");
+    // From the top with a nested `--config`, and from inside the config's directory.
+    for (cwd, arg) in [
+        (repo.path().to_path_buf(), "ci/scoped-check.toml"),
+        (repo.path().join("ci"), "scoped-check.toml"),
+    ] {
+        let out = stdout_of(&cwd, &["run", "--config", arg]);
+        assert!(
+            out.contains("== test: echo test -p a -p b -E 'package(=a) | package(=b)'"),
+            "{out}"
+        );
+        assert!(out.contains("found\n"), "{out}");
+    }
+}
+
 // ---- shared by the strict-mode, keep-going and cache tests ----
 
 fn text(bytes: &[u8]) -> String {

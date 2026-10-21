@@ -8,7 +8,6 @@ Cargo workspace of five small published crates shared by ketch and rtok — git-
 | --- | --- | --- | --- | --- | --- |
 | T36 | in progress | P1 | 2 | 0% | OpenAI / GPT-6 |
 | T2 | todo | P1 | 2 | 0% | |
-| T3 | todo | P2 | 2 | 0% | |
 | T5 | todo | P3 | 1 | 0% | |
 | T6 | todo | P2 | 2 | 0% | |
 | T7 | todo | P3 | 2 | 0% | |
@@ -30,10 +29,6 @@ Audit note (2026-10-07): verified defenses — git argument injection refused, P
 ### T2. `{changed}` silently expands to empty in full mode
 
 `rust/scoped-check/src/plan.rs:87-91` sets `changed: String::new()` for `--all`, unmatched-path fallback, and error fallbacks, while `paths` is usually already known (`plan.rs:58-63`). A gate `run = "gofmt -w {changed}"` becomes `gofmt -w` (reads stdin, hangs CI); test `cli.rs:176-180` pins the trailing-empty behavior. Done means: the full quoted path list is substituted whenever paths are known, and a forced plan that still contains `{changed}` with unknown paths warns or refuses.
-
-### T3. `--config` outside the repository top mixes path bases
-
-`git-changed-paths` returns repo-top-relative paths, but `Config::parse` sets `dir` to the config file's parent (`rust/scoped-check/src/config.rs:96-99`) and `plan::build` uses that dir both for git and as the cargo root (`plan.rs:58,174`), so `--config sub/scoped-check.toml` feeds determinator wrong relative paths and gates get wrong package sets. Done means: `dir` is resolved via `git rev-parse --show-toplevel` from the config parent, with a test.
 
 ### T5. Error-quality fixes: canonicalize and NotARepository
 

@@ -2,6 +2,7 @@
 //! `path-gates` compiles from the same text.
 
 use std::path::{Component, Path, PathBuf};
+use std::process::Command;
 
 use anyhow::{Context, Result, bail};
 use path_gates::Rules;
@@ -52,7 +53,8 @@ impl Gate {
 
 /// The parsed configuration.
 pub struct Config {
-    /// Directory holding the config file; commands run here and it is the repository top.
+    /// Git top level of the config file's directory (the directory itself outside git):
+    /// commands run here, and changed paths, globs and `workspace` are relative to it.
     pub dir: PathBuf,
     pub base: Option<String>,
     /// Cargo workspace root, relative to [`dir`](Self::dir); empty for the directory itself.
@@ -70,7 +72,15 @@ impl Config {
     pub fn load(path: &Path) -> Result<Self> {
         let text = std::fs::read_to_string(path)
             .with_context(|| format!("cannot read config {}", path.display()))?;
-        Self::parse(&text, path).with_context(|| format!("invalid config {}", path.display()))
+        let mut cfg = Self::parse(&text, path)
+            .with_context(|| format!("invalid config {}", path.display()))?;
+        // `git-changed-paths` reports paths relative to the repository top, so a config kept
+        // below it must still plan from the top. Outside git the config's directory stays;
+        // planning then fails there with exit 3.
+        if let Some(top) = toplevel(&cfg.dir) {
+            cfg.dir = top;
+        }
+        Ok(cfg)
     }
 
     fn parse(text: &str, path: &Path) -> Result<Self> {
@@ -115,6 +125,18 @@ impl Config {
             gates,
         })
     }
+}
+
+/// Git top level of the repository holding `dir`; `None` outside git or without git.
+pub fn toplevel(dir: &Path) -> Option<PathBuf> {
+    Command::new("git")
+        .args(["rev-parse", "--show-toplevel"])
+        .current_dir(dir)
+        .output()
+        .ok()
+        .filter(|o| o.status.success())
+        .and_then(|o| String::from_utf8(o.stdout).ok())
+        .map(|s| PathBuf::from(s.trim_end_matches('\n')))
 }
 
 // Only `{identifier}` is a placeholder. Other braces (`awk '{print $1}'`, `{a,b}`) and
