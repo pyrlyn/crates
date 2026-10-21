@@ -16,11 +16,29 @@ rtok's agent SDK keeps its own copy of the folder mode (`BACKUP_DIR`, `backup`, 
 
 `Folder { name, keep }` with `backup`, `backup_at`, `prune` and `stale`, plus `DEFAULT_FOLDER = "_backup"`; `backup`/`backup_at` beside the file are unchanged. Both modes share one `create_new` copy loop and one byte-equality dedup check (symlinks and hard links to the source are not backups). A folder name that is not one plain path component is `InvalidInput`. Check: fmt, clippy `-D warnings` and `cargo test --workspace --locked` green (105 tests, 20 in `file-backup`).
 
+### T4. file-backup: name-probe race and symlink-following overwrite
+
+`rust/file-backup/src/lib.rs:39-45` does `while bak.exists()` then `fs::copy` — two concurrent backups can pick the same name and the second silently truncates the first (exactly what the comment claims to prevent), and a planted `<name>.bak-<ts>` dangling symlink is followed by `fs::copy`. Done means: the destination is created with `OpenOptions::create_new(true)` + `io::copy`, bumping the suffix on `AlreadyExists`.
+
+The `create_new` loop with the suffix bump and the planted-symlink tests landed with T12 (`3313567`). Closing it added: the copy is opened with the source's mode on Unix, so a 0600 file is never readable by others while the bytes go in; a failed write or chmod removes the partial copy instead of leaving a truncated file under a backup name; a test races 16 writers with distinct bytes into one name and second, and fails with a non-exclusive open. The bytes checked by the identical-copy skip are the bytes written (`write_all` of the one read), not a second `io::copy` read of a file that may have changed in between.
+
 ### T11. Add the required project files
 
 The project was missing `AGENTS.md`, `done.md`, `roadmap.md`, `ideas.md`, and `toolchain.md`. Done means: all files exist, and `toolchain.md` lists the workspace crates per the rulebook (also update `rust.md` then).
 
 Those files are in the workspace root. `toolchain.md` lists `cargo-changed-packages`, `file-backup`, `git-changed-paths`, `path-gates`, and `scoped-check`. `rust.md` names the same five under shared crates. `file-backup` tests already live in `src/lib.rs`; the other four crates already have `tests/`.
+
+### T1. Windows: POSIX quoting handed to cmd.exe in scoped-check
+
+`rust/scoped-check/src/plan.rs:139,155-157` builds `{changed}`/`{packages}` with `shlex::try_join`/`try_quote` (POSIX single quotes), but `rust/scoped-check/src/main.rs:146-149` runs commands via `cmd /C` on Windows, which does not honor them. A file named `docs/x & calc & .md` executes `calc`; plain spaces break arguments. Tests are `#![cfg(unix)]` (`rust/scoped-check/tests/cli.rs:4`), so the path is untested. Done means: Windows-appropriate quoting (or raw argument passing) with tests covering it.
+
+`src/quote.rs` quotes substituted values for the platform shell: `shlex` for `sh`, double quotes for `cmd.exe` (trailing backslashes doubled for the MSVC argument parser). `%`, `"` and control characters have no cmd.exe escape inside quotes, so such a value is a planning error (exit 3). Windows passes `cmd /D /V:OFF /S /C "<command>"` through `raw_arg`, because std's MSVC quoting of a single argument is not what cmd.exe parses; `/V:OFF` keeps `!` literal and `/D` skips AutoRun. Unit tests cover the cmd.exe quoter on every host; `tests/quoting.rs` runs a gate on paths with spaces, `&`, `'`, `^`, `;`, `!` and parentheses under the platform shell, plus a Windows-only `%` refusal test.
+
+### T3. `--config` outside the repository top mixes path bases
+
+`git-changed-paths` returns repo-top-relative paths, but `Config::parse` sets `dir` to the config file's parent (`rust/scoped-check/src/config.rs:96-99`) and `plan::build` uses that dir both for git and as the cargo root (`plan.rs:58,174`), so `--config sub/scoped-check.toml` feeds determinator wrong relative paths and gates get wrong package sets. Done means: `dir` is resolved via `git rev-parse --show-toplevel` from the config parent, with a test.
+
+`Config::load` replaces `dir` with the git top level of the config's directory (kept as is outside git, where planning still fails with exit 3), so `workspace`, `paths` globs and `{changed}` are relative to the repository top and gates run there. The top-level lookup is one `config::toplevel` helper, also used for the default config path. Test `config_below_the_repository_top_plans_from_the_top` runs `--config ci/scoped-check.toml` from the top and from `ci/`; without the fix it exits 3 (`ci/ is not the workspace root`).
 
 ### T11. atomic-replace: one atomic file write for every project
 

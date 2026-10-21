@@ -197,16 +197,33 @@ fn copy_unless_present(
     }
     // `create_new` is O_EXCL: a planted symlink (dangling or live) makes the
     // open fail instead of following it, and two processes cannot share a name.
+    let mut open = OpenOptions::new();
+    open.write(true).create_new(true);
+    // Born with the source's mode (less the umask), so a 0600 secret is never
+    // readable by others while the bytes go in.
+    #[cfg(unix)]
+    std::os::unix::fs::OpenOptionsExt::mode(
+        &mut open,
+        std::os::unix::fs::PermissionsExt::mode(&perm),
+    );
     loop {
         let bak = if n == 0 {
             dir.join(format!("{name}.bak-{ts}"))
         } else {
             dir.join(format!("{name}.bak-{ts}-{n}"))
         };
-        match OpenOptions::new().write(true).create_new(true).open(&bak) {
+        match open.open(&bak) {
             Ok(mut dest) => {
-                dest.write_all(&body)?;
-                dest.set_permissions(perm)?;
+                let written = dest
+                    .write_all(&body)
+                    .and_then(|()| dest.set_permissions(perm.clone()));
+                if let Err(e) = written {
+                    // A truncated copy under a backup name would pass for an undo
+                    // and could push a whole one out of the prune window.
+                    drop(dest);
+                    let _ = fs::remove_file(&bak);
+                    return Err(e);
+                }
                 return Ok(Some(bak));
             }
             Err(e) if e.kind() == io::ErrorKind::AlreadyExists => {
@@ -387,6 +404,68 @@ mod tests {
             !victim.exists(),
             "dangling symlink must not create the target"
         );
+    }
+
+    #[rstest]
+    fn concurrent_backups_in_one_second_never_share_a_name(tmp: TempDir) {
+        // Each racer stands for a process that read a different version of
+        // `settings.json`: distinct bytes, so the identical-copy skip never hides a loser.
+        const RACERS: usize = 16;
+        let bodies: Vec<String> = (0..RACERS)
+            .map(|i| format!("{i}:").repeat(1 << 16))
+            .collect();
+        let srcs: Vec<PathBuf> = bodies
+            .iter()
+            .enumerate()
+            .map(|(i, b)| {
+                let p = tmp.path().join(format!("src-{i}"));
+                fs::write(&p, b).unwrap();
+                p
+            })
+            .collect();
+        let (start, dir) = (std::sync::Barrier::new(RACERS), tmp.path());
+        let mut taken: Vec<PathBuf> = std::thread::scope(|s| {
+            let racers: Vec<_> = srcs
+                .iter()
+                .map(|src| {
+                    let start = &start;
+                    s.spawn(move || {
+                        start.wait();
+                        copy_unless_present(src, 7, dir, "settings.json", false)
+                            .unwrap()
+                            .expect("distinct bytes are copied")
+                    })
+                })
+                .collect();
+            racers.into_iter().map(|r| r.join().unwrap()).collect()
+        });
+        let mut got: Vec<String> = taken
+            .iter()
+            .map(|b| fs::read_to_string(b).unwrap())
+            .collect();
+        got.sort();
+        let mut want = bodies.clone();
+        want.sort();
+        assert_eq!(got, want, "every version survives whole");
+        taken.sort();
+        taken.dedup();
+        assert_eq!(taken.len(), RACERS, "two racers got one name");
+    }
+
+    #[cfg(unix)]
+    #[rstest]
+    fn backup_keeps_the_source_mode_even_read_only(tmp: TempDir) {
+        use std::os::unix::fs::{MetadataExt, PermissionsExt};
+        let src = tmp.path().join("secret.toml");
+        fs::write(&src, "token").unwrap();
+        fs::set_permissions(&src, fs::Permissions::from_mode(0o600)).unwrap();
+        let bak = backup_at(&src, 1).unwrap().unwrap();
+        assert_eq!(fs::metadata(&bak).unwrap().mode() & 0o777, 0o600);
+        fs::set_permissions(&src, fs::Permissions::from_mode(0o400)).unwrap();
+        fs::remove_file(&bak).unwrap();
+        let bak = backup_at(&src, 2).unwrap().expect("read-only source");
+        assert_eq!(fs::read_to_string(&bak).unwrap(), "token");
+        assert_eq!(fs::metadata(&bak).unwrap().mode() & 0o777, 0o400);
     }
 
     #[cfg(unix)]
