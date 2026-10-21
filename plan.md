@@ -7,7 +7,6 @@ Cargo workspace of five small published crates shared by ketch and rtok — git-
 | # | Status | Priority | Complexity | Readiness | Agent |
 | --- | --- | --- | --- | --- | --- |
 | T36 | in progress | P1 | 2 | 0% | OpenAI / GPT-6 |
-| T3 | todo | P2 | 2 | 0% | |
 | T5 | todo | P3 | 1 | 0% | |
 | T6 | todo | P2 | 2 | 0% | |
 | T7 | todo | P3 | 2 | 0% | |
@@ -25,10 +24,6 @@ Cargo workspace of five small published crates shared by ketch and rtok — git-
 | T25 | in progress | P1 | 2 | 90% | Cursor / claude-opus-5.5 |
 
 Audit note (2026-10-07): verified defenses — git argument injection refused, POSIX shell quoting correct, path traversal blocked, fail-safe direction is always "everything changed". The tasks below are what remains.
-
-### T3. `--config` outside the repository top mixes path bases
-
-`git-changed-paths` returns repo-top-relative paths, but `Config::parse` sets `dir` to the config file's parent (`rust/scoped-check/src/config.rs:96-99`) and `plan::build` uses that dir both for git and as the cargo root (`plan.rs:58,174`), so `--config sub/scoped-check.toml` feeds determinator wrong relative paths and gates get wrong package sets. Done means: `dir` is resolved via `git rev-parse --show-toplevel` from the config parent, with a test.
 
 ### T5. Error-quality fixes: canonicalize and NotARepository
 
