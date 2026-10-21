@@ -9,7 +9,6 @@ Cargo workspace of five small published crates shared by ketch and rtok — git-
 | T36 | in progress | P1 | 2 | 0% | OpenAI / GPT-6 |
 | T2 | todo | P1 | 2 | 0% | |
 | T3 | todo | P2 | 2 | 0% | |
-| T4 | todo | P2 | 2 | 0% | |
 | T5 | todo | P3 | 1 | 0% | |
 | T6 | todo | P2 | 2 | 0% | |
 | T7 | todo | P3 | 2 | 0% | |
@@ -35,10 +34,6 @@ Audit note (2026-10-07): verified defenses — git argument injection refused, P
 ### T3. `--config` outside the repository top mixes path bases
 
 `git-changed-paths` returns repo-top-relative paths, but `Config::parse` sets `dir` to the config file's parent (`rust/scoped-check/src/config.rs:96-99`) and `plan::build` uses that dir both for git and as the cargo root (`plan.rs:58,174`), so `--config sub/scoped-check.toml` feeds determinator wrong relative paths and gates get wrong package sets. Done means: `dir` is resolved via `git rev-parse --show-toplevel` from the config parent, with a test.
-
-### T4. file-backup: name-probe race and symlink-following overwrite
-
-`rust/file-backup/src/lib.rs:39-45` does `while bak.exists()` then `fs::copy` — two concurrent backups can pick the same name and the second silently truncates the first (exactly what the comment claims to prevent), and a planted `<name>.bak-<ts>` dangling symlink is followed by `fs::copy`. Done means: the destination is created with `OpenOptions::create_new(true)` + `io::copy`, bumping the suffix on `AlreadyExists`.
 
 ### T5. Error-quality fixes: canonicalize and NotARepository
 

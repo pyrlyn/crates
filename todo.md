@@ -1,6 +1,5 @@
 - T2. `{changed}` silently expands to empty in full mode
 - T3. `--config` outside the repository top mixes path bases
-- T4. file-backup: name-probe race and symlink-following overwrite
 - T5. Error-quality fixes: canonicalize and NotARepository
 - T6. Deduplicate git-toplevel discovery
 - T7. Extract the shared test fixtures

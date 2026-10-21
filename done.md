@@ -16,6 +16,12 @@ rtok's agent SDK keeps its own copy of the folder mode (`BACKUP_DIR`, `backup`, 
 
 `Folder { name, keep }` with `backup`, `backup_at`, `prune` and `stale`, plus `DEFAULT_FOLDER = "_backup"`; `backup`/`backup_at` beside the file are unchanged. Both modes share one `create_new` copy loop and one byte-equality dedup check (symlinks and hard links to the source are not backups). A folder name that is not one plain path component is `InvalidInput`. Check: fmt, clippy `-D warnings` and `cargo test --workspace --locked` green (105 tests, 20 in `file-backup`).
 
+### T4. file-backup: name-probe race and symlink-following overwrite
+
+`rust/file-backup/src/lib.rs:39-45` does `while bak.exists()` then `fs::copy` — two concurrent backups can pick the same name and the second silently truncates the first (exactly what the comment claims to prevent), and a planted `<name>.bak-<ts>` dangling symlink is followed by `fs::copy`. Done means: the destination is created with `OpenOptions::create_new(true)` + `io::copy`, bumping the suffix on `AlreadyExists`.
+
+The `create_new` loop with the suffix bump and the planted-symlink tests landed with T12 (`3313567`). Closing it added: the copy is opened with the source's mode on Unix, so a 0600 file is never readable by others while the bytes go in; a failed write or chmod removes the partial copy instead of leaving a truncated file under a backup name; a test races 16 writers with distinct bytes into one name and second, and fails with a non-exclusive open. The bytes checked by the identical-copy skip are the bytes written (`write_all` of the one read), not a second `io::copy` read of a file that may have changed in between.
+
 ### T11. Add the required project files
 
 The project was missing `AGENTS.md`, `done.md`, `roadmap.md`, `ideas.md`, and `toolchain.md`. Done means: all files exist, and `toolchain.md` lists the workspace crates per the rulebook (also update `rust.md` then).
