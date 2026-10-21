@@ -8,6 +8,7 @@ use path_gates::Selection;
 use serde::Serialize;
 
 use crate::config::{Config, Gate, Part};
+use crate::quote;
 
 /// A command that will run.
 #[derive(Serialize)]
@@ -204,9 +205,8 @@ fn scoped(
                 None => values.packages = "--workspace".to_owned(),
                 Some(filter) => {
                     let flags = affected.packages.iter().flat_map(|p| ["-p", p.as_str()]);
-                    values.packages = shlex::try_join(flags).map_err(|e| e.to_string())?;
-                    let quoted = shlex::try_quote(&filter).map_err(|e| e.to_string())?;
-                    values.filter = format!("-E {quoted}");
+                    values.packages = quote::join(flags)?;
+                    values.filter = format!("-E {}", quote::quote(&filter)?);
                 }
             }
         }
@@ -219,7 +219,7 @@ fn scoped(
 fn quote(paths: &[&PathBuf]) -> Result<String, String> {
     let words: Option<Vec<&str>> = paths.iter().map(|p| p.to_str()).collect();
     let words = words.ok_or("a changed path is not valid UTF-8")?;
-    shlex::try_join(words).map_err(|e| format!("cannot quote a changed path: {e}"))
+    quote::join(words).map_err(|e| format!("cannot quote a changed path: {e}"))
 }
 
 fn affected(cfg: &Config, resolver: &Resolver, claimed: &[&PathBuf]) -> Result<Affected, String> {
