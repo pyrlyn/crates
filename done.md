@@ -1,5 +1,11 @@
 # crates — completed tasks
 
+### T2. `{changed}` silently expands to empty in full mode
+
+`rust/scoped-check/src/plan.rs:87-91` sets `changed: String::new()` for `--all`, unmatched-path fallback, and error fallbacks, while `paths` is usually already known (`plan.rs:58-63`). A gate `run = "gofmt -w {changed}"` becomes `gofmt -w` (reads stdin, hangs CI); test `cli.rs:176-180` pins the trailing-empty behavior. Done means: the full quoted path list is substituted whenever paths are known, and a forced plan that still contains `{changed}` with unknown paths warns or refuses.
+
+Done: when every gate runs (`--all`, an unmatched path, the opt-in fallback after a `cargo metadata` error) `{changed}` is every changed path, shell-quoted. When there is no path to substitute (nothing changed, or the change set is unknown under `--all` or the fallback after a git error) a gate using `{changed}` is skipped with the reason `{changed} has no paths: ...`, shown by `plan`, `run` and `plan --json`. The scoped value is unchanged. Tests: `all_flag_substitutes_every_changed_path`, `all_flag_ignores_the_change_set` (now pins the skip), `unmatched_path_selects_every_gate`, `all_flag_refuses_changed_when_the_change_set_is_unknown`, `fallback_substitutes_changed_when_the_paths_are_known`, `fallback_refuses_changed_when_the_change_set_is_unknown`.
+
 ### T20.2. wasm-plugin-host: package layout
 
 Plugin packages on disk, generic over the application's manifest type and home directory. `discover` finds user plugins under `<home>/plugins/<id>/versions/<digest12>/` (following `current`, with `link` winning for a development tree) and project plugins under `<project>/.<app>/plugins/<id>/`. A user plugin shadows a project plugin of the same id. `package_digest` is SHA-256 over the package tree. `layout` stages through a temp directory, swaps `current`/`previous`, writes `link`, and `remove`s only a path that canonicalizes inside `<home>/plugins/`. The manifest parse is the application's [`Manifest`]; this crate checks the id and refuses a wasm path that leaves the package. Tree copy, directory fsync and confined delete stay local until roadmap T16 `dir-ops`.

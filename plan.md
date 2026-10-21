@@ -8,7 +8,6 @@ Cargo workspace of five small published crates shared by ketch and rtok — git-
 | --- | --- | --- | --- | --- | --- |
 | T36 | in progress | P1 | 2 | 0% | OpenAI / GPT-6 |
 | T1 | todo | P1 | 3 | 0% | |
-| T2 | todo | P1 | 2 | 0% | |
 | T3 | todo | P2 | 2 | 0% | |
 | T4 | todo | P2 | 2 | 0% | |
 | T5 | todo | P3 | 1 | 0% | |
@@ -32,10 +31,6 @@ Audit note (2026-10-07): verified defenses — git argument injection refused, P
 ### T1. Windows: POSIX quoting handed to cmd.exe in scoped-check
 
 `rust/scoped-check/src/plan.rs:139,155-157` builds `{changed}`/`{packages}` with `shlex::try_join`/`try_quote` (POSIX single quotes), but `rust/scoped-check/src/main.rs:146-149` runs commands via `cmd /C` on Windows, which does not honor them. A file named `docs/x & calc & .md` executes `calc`; plain spaces break arguments. Tests are `#![cfg(unix)]` (`rust/scoped-check/tests/cli.rs:4`), so the path is untested. Done means: Windows-appropriate quoting (or raw argument passing) with tests covering it.
-
-### T2. `{changed}` silently expands to empty in full mode
-
-`rust/scoped-check/src/plan.rs:87-91` sets `changed: String::new()` for `--all`, unmatched-path fallback, and error fallbacks, while `paths` is usually already known (`plan.rs:58-63`). A gate `run = "gofmt -w {changed}"` becomes `gofmt -w` (reads stdin, hangs CI); test `cli.rs:176-180` pins the trailing-empty behavior. Done means: the full quoted path list is substituted whenever paths are known, and a forced plan that still contains `{changed}` with unknown paths warns or refuses.
 
 ### T3. `--config` outside the repository top mixes path bases
 

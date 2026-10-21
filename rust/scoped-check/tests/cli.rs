@@ -160,9 +160,27 @@ fn lock_file_change_selects_the_whole_workspace() {
 fn all_flag_ignores_the_change_set() {
     let repo = fixture(CONFIG);
     let out = stdout_of(repo.path(), &["plan", "--all"]);
-    assert!(out.contains("gate docs [--all]: echo docs \n"), "{out}");
     assert!(
         out.contains("gate test [--all]: echo test --workspace \n"),
+        "{out}"
+    );
+    // With nothing changed `{changed}` has no paths, so its gate is refused, not run
+    // with an empty argument list.
+    assert!(
+        out.contains("skip docs: {changed} has no paths: nothing changed"),
+        "{out}"
+    );
+    assert!(!out.contains("gate docs"), "{out}");
+}
+
+#[test]
+fn all_flag_substitutes_every_changed_path() {
+    let repo = fixture(CONFIG);
+    write(repo.path(), "README.md", "# changed\n");
+    write(repo.path(), "my notes.txt", "x");
+    let out = stdout_of(repo.path(), &["plan", "--all"]);
+    assert!(
+        out.contains("gate docs [--all]: echo docs README.md 'my notes.txt'\n"),
         "{out}"
     );
 }
@@ -172,7 +190,25 @@ fn unmatched_path_selects_every_gate() {
     let repo = fixture(CONFIG);
     write(repo.path(), "blob.bin", "x");
     let out = stdout_of(repo.path(), &["plan"]);
-    assert!(out.contains("gate docs [all: unmatched blob.bin]"), "{out}");
+    assert!(
+        out.contains("gate docs [all: unmatched blob.bin]: echo docs blob.bin\n"),
+        "{out}"
+    );
+}
+
+#[test]
+fn all_flag_refuses_changed_when_the_change_set_is_unknown() {
+    let repo = fixture(&with_changed_gate());
+    let assert = tool(repo.path(), &["run", "--all", "--base", "nope"])
+        .assert()
+        .success();
+    let out = text(&assert.get_output().stdout);
+    assert!(
+        out.contains("== fmt: skipped, {changed} has no paths: the change set is unknown"),
+        "{out}"
+    );
+    assert!(out.contains("== test: echo test ran --workspace"), "{out}");
+    assert!(!out.contains("== fmt: echo"), "{out}");
 }
 
 #[test]
@@ -474,7 +510,7 @@ fn deliberate_all_decisions_are_not_errors() {
     // `--all` ignores the change set, even when it cannot be computed.
     let repo = fixture(CONFIG);
     let out = stdout_of(repo.path(), &["plan", "--all", "--base", "nope"]);
-    assert!(out.contains("gate docs [--all]"), "{out}");
+    assert!(out.contains("gate test [--all]"), "{out}");
     // An unmatched path and a manifest change stay plain decisions with exit 0.
     write(repo.path(), "blob.bin", "x");
     assert!(stdout_of(repo.path(), &["plan"]).contains("[all: unmatched blob.bin]"));
@@ -572,6 +608,47 @@ fn fallback_covers_a_cargo_metadata_failure_too() {
         "{err}"
     );
     assert!(out.contains("== test: echo test ran --workspace"), "{out}");
+}
+
+/// [`SIMPLE`] plus a gate that substitutes `{changed}`.
+fn with_changed_gate() -> String {
+    format!(
+        "{SIMPLE}\n[[gate]]\nname = \"fmt\"\npaths = [\"**/*.rs\"]\nrun = \"echo fmt {{changed}}\"\n"
+    )
+}
+
+#[test]
+fn fallback_substitutes_changed_when_the_paths_are_known() {
+    // `cargo metadata` fails after the change set is known, so `{changed}` still has paths.
+    let repo = fixture(&with_changed_gate());
+    write(repo.path(), "c/src/lib.rs", "// edit\n");
+    let (shim, _log) = cargo_shim(repo.path(), true);
+    let assert = tool(repo.path(), &["run", "--fallback-all"])
+        .env("CARGO", &shim)
+        .assert()
+        .success();
+    let out = text(&assert.get_output().stdout);
+    assert!(out.contains("== fmt: echo fmt c/src/lib.rs\n"), "{out}");
+}
+
+#[test]
+fn fallback_refuses_changed_when_the_change_set_is_unknown() {
+    let repo = fixture(&with_changed_gate());
+    let args = ["plan", "--json", "--base", "nope", "--fallback-all"];
+    let assert = tool(repo.path(), &args).assert().success();
+    let json: serde_json::Value = serde_json::from_slice(&assert.get_output().stdout).unwrap();
+    let gates: Vec<&str> = json["gates"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|g| g["name"].as_str().unwrap())
+        .collect();
+    assert_eq!(gates, ["docs", "test"]);
+    assert_eq!(json["skipped"][0]["name"], "fmt");
+    assert_eq!(
+        json["skipped"][0]["reason"],
+        "{changed} has no paths: the change set is unknown"
+    );
 }
 
 #[test]

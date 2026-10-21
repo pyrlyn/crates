@@ -42,10 +42,13 @@ Only `{identifier}` is a placeholder; `${VAR}`, `awk '{print}'` and `{a,b}` stay
 | --- | --- | --- |
 | `{packages}` | `-p a -p b` (sorted, affected packages incl. reverse dependencies) | `--workspace` |
 | `{nextest_filter}` | `-E 'package(=a) \| package(=b)'` | empty |
-| `{changed}` | the paths the gate claims, shell-quoted | empty |
+| `{changed}` | the paths the gate claims, shell-quoted | every changed path, shell-quoted |
 
 Values are POSIX shell-quoted, so avoid `{changed}` on Windows. A gate using `{packages}` or
-`{nextest_filter}` whose affected set is empty is skipped: nothing it covers changed.
+`{nextest_filter}` whose affected set is empty is skipped: nothing it covers changed. When
+every gate runs, a gate using `{changed}` is skipped if there is no path to substitute
+(nothing changed, or `--all` / the fallback could not compute the change set), so a command
+like `gofmt -w {changed}` never runs with an empty argument list.
 
 ## Commands
 
