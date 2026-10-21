@@ -22,6 +22,12 @@ The project was missing `AGENTS.md`, `done.md`, `roadmap.md`, `ideas.md`, and `t
 
 Those files are in the workspace root. `toolchain.md` lists `cargo-changed-packages`, `file-backup`, `git-changed-paths`, `path-gates`, and `scoped-check`. `rust.md` names the same five under shared crates. `file-backup` tests already live in `src/lib.rs`; the other four crates already have `tests/`.
 
+### T1. Windows: POSIX quoting handed to cmd.exe in scoped-check
+
+`rust/scoped-check/src/plan.rs:139,155-157` builds `{changed}`/`{packages}` with `shlex::try_join`/`try_quote` (POSIX single quotes), but `rust/scoped-check/src/main.rs:146-149` runs commands via `cmd /C` on Windows, which does not honor them. A file named `docs/x & calc & .md` executes `calc`; plain spaces break arguments. Tests are `#![cfg(unix)]` (`rust/scoped-check/tests/cli.rs:4`), so the path is untested. Done means: Windows-appropriate quoting (or raw argument passing) with tests covering it.
+
+`src/quote.rs` quotes substituted values for the platform shell: `shlex` for `sh`, double quotes for `cmd.exe` (trailing backslashes doubled for the MSVC argument parser). `%`, `"` and control characters have no cmd.exe escape inside quotes, so such a value is a planning error (exit 3). Windows passes `cmd /D /V:OFF /S /C "<command>"` through `raw_arg`, because std's MSVC quoting of a single argument is not what cmd.exe parses; `/V:OFF` keeps `!` literal and `/D` skips AutoRun. Unit tests cover the cmd.exe quoter on every host; `tests/quoting.rs` runs a gate on paths with spaces, `&`, `'`, `^`, `;`, `!` and parentheses under the platform shell, plus a Windows-only `%` refusal test.
+
 ### T11. atomic-replace: one atomic file write for every project
 
 Six projects (rtok, ketch, cox, swarfr, aulo, runa) carry about 18 hand-written temp-file-and-rename writes that disagree on fsync, permissions, symlinks and temp naming. New crate `atomic-replace` (std only, edition 2021, Rust 1.86 so ketch can use it): `write(path, bytes)` and `Options { durable, preserve_permissions, follow_symlinks, create_parent, mode }` with `write`/`write_with`, plus `sync_dir`. Ported from rtok `rtok-agent-sdk` `write_atomic`/`link_target` (permissions, Windows read-only bit, dangling links) and ketch `state.rs` `save_path` (fsync file and directory). Done means: the crate is in the workspace with tests, wired into CI dry-run publish, bump options, README and sonar; consumers migrate in their own tasks.

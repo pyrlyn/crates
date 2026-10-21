@@ -20,8 +20,11 @@ crates: `git-changed-paths` (change set), `path-gates` (glob rules to gates) and
   `cargo_changed_packages::affected` per gate.
 - Tests count `cargo metadata` runs with a `cargo` shim passed through `$CARGO`; new
   speed behaviour needs such a test.
-- Substituted values are shell-quoted with `shlex`; the `run` text itself is the
-  repository's own, trusted like its justfile.
+- Substituted values are quoted for the platform shell by `src/quote.rs`: `shlex` for `sh`,
+  double quotes for `cmd.exe` on Windows, which refuses `%`, `"` and control characters it
+  cannot quote. Windows runs `cmd /D /V:OFF /S /C "<command>"` through `raw_arg`, never std's
+  MSVC argument quoting. The `run` text itself is the repository's own, trusted like its
+  justfile.
 - Tests build throwaway git repos with `tempfile`; keep host git config out of them.
 
 ## Commands

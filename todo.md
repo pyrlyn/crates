@@ -1,4 +1,3 @@
-- T1. Windows: POSIX quoting handed to cmd.exe in scoped-check
 - T2. `{changed}` silently expands to empty in full mode
 - T3. `--config` outside the repository top mixes path bases
 - T4. file-backup: name-probe race and symlink-following overwrite
