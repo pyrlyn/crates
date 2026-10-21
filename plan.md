@@ -22,6 +22,19 @@ Cargo workspace of five small published crates shared by ketch and rtok — git-
 | T23 | in progress | P1 | 2 | 90% | Cursor / claude-opus-5.5 |
 | T24 | in progress | P1 | 2 | 90% | Cursor / claude-opus-5.5 |
 | T25 | in progress | P1 | 2 | 90% | Cursor / claude-opus-5.5 |
+| T50.1 | todo | P1 | 2 | 0% | |
+| T50.2 | todo | P1 | 3 | 0% | |
+| T50.3 | todo | P1 | 3 | 0% | |
+| T50.4 | todo | P1 | 2 | 0% | |
+| T50.5 | todo | P1 | 3 | 0% | |
+| T50.6 | todo | P1 | 4 | 0% | |
+| T50.7 | todo | P1 | 4 | 0% | |
+| T50.8 | todo | P1 | 3 | 0% | |
+| T50.9 | todo | P1 | 3 | 0% | |
+| T51 | todo | P1 | 3 | 0% | |
+| T52 | todo | P1 | 4 | 0% | |
+| T53 | todo | P2 | 3 | 0% | |
+| T54 | todo | P2 | 3 | 0% | |
 
 Audit note (2026-10-07): verified defenses — git argument injection refused, POSIX shell quoting correct, path traversal blocked, fail-safe direction is always "everything changed". The tasks below are what remains.
 
@@ -149,3 +162,55 @@ Left: review and merge; GitHub Actions must be enabled on this repository and `C
 The published 0.1.0 release is GPL-3.0-or-later and conflicts with downstream consumers' explicit license allowlist. Publish version 0.1.1 under MIT so applications can adopt it while preserving their license guard. Execution plan: update only the shell-completions crate manifest and license header/text; verify the crate archive includes the MIT license and normalized manifest, preserving every unrelated lockfile package; run its existing tests and formatting; run `cargo publish --dry-run -p shell-completions --locked`; commit and open a PR for managed publication. Do not publish manually. Done when the managed pipeline publishes 0.1.1 and downstream consumers resolve it.
 
 Validation: the existing crate test suite passed (4/4), `cargo clippy -p shell-completions --all-targets --locked -- -D warnings` passed, `cargo fmt --all -- --check` passed, and `cargo publish --dry-run -p shell-completions --locked --allow-dirty` packaged and compiled 0.1.1. The archive contains only `src`, `README.md`, and `LICENSE` plus Cargo metadata; its normalized manifest declares `license = "MIT"`. `Cargo.lock` changes only the shell-completions package version. The standard MIT text comes from [SPDX MIT license](https://spdx.org/licenses/MIT.txt), checked 2026-10-18.
+
+### T50.1. build-dir-kit: crate skeleton, model, errors, known dirs
+
+First step of moving swarfr's build-dir engine into a shared crate, `rust/build-dir-kit`, used by both swarfr and buildx-cli (decided by the creator; background in [research.md](research.md#buildx)). Move `src/model.rs`, `src/error.rs` and `src/known.rs` from `pyrlyn/swarfr` with their tests, behavior unchanged. Done when the crate builds in this workspace, its tests pass, and `rust.md` and `toolchain.md` list it. The T50 subtasks each stay under the 500-line limit; split one further when it is claimed if its added code would pass it.
+
+### T50.2. build-dir-kit: platform layer for Windows and the shared API
+
+Move `src/sys/mod.rs` and `src/sys/windows.rs` (file identity, block usage, clones, cargo build locks). Done when the Windows CI job passes with the moved tests.
+
+### T50.3. build-dir-kit: platform layer for Unix and macOS
+
+Move `src/sys/unix.rs` and `src/sys/macos.rs` (APFS compression, `clonefile`, hardlink groups). Filesystem work goes through `fs-kit`; helpers it lacks are added there with tests. Done when Linux and macOS CI pass with the moved tests.
+
+### T50.4. build-dir-kit: content-hash index and temp dirs
+
+Move `src/index.rs` (the `hashes-v1.bin` index) and `src/tmpdir.rs`. Done when their tests pass in the new crate.
+
+### T50.5. build-dir-kit: compress, dedupe and seed passes
+
+Move `src/compress.rs`, `src/dedupe.rs` and `src/seed.rs`. Done when the passes run from the crate and the build oracle (`Fixture::stale_units`) still reports nothing stale after each.
+
+### T50.6. build-dir-kit: planner and apply engine
+
+Move `src/engine.rs`: one planner, locks taken in sorted order, mtimes preserved, hardlink groups as one unit. Done when the engine's safety tests pass in the crate.
+
+### T50.7. build-dir-kit: session
+
+Move `src/session.rs`. Done when a lossless run over a fixture target works end to end from the crate.
+
+### T50.8. build-dir-kit: Cargo target passes
+
+Move what touches a Cargo `target/` only: `src/eco/cargo/{mod,incremental,doc,toolchains}.rs` and the Cargo part of `src/eco/mod.rs`. Cargo home (`home.rs`), Go, SwiftPM, .NET, CMake, Meson and Xcode stay in swarfr. Done when the passes' tests pass in the crate.
+
+### T50.9. build-dir-kit: evict, orphans, inventory and advise
+
+Move `src/evict.rs`, `src/orphans.rs`, `src/inventory.rs` and `src/eco/cargo/advise.rs`. Done when their tests pass in the crate and swarfr's remaining code needs nothing else from its own copy.
+
+### T51. buildx-cli: crate skeleton and `buildx build`
+
+New binary crate `rust/buildx-cli`, binary `buildx` (the `buildx` name on crates.io is a placeholder; the creator accepted the clash with `docker buildx`). `buildx build [cargo args]` runs `cargo build --message-format=json-render-diagnostics`, keeps cargo's human output, and records the build's unit hashes from `compiler-artifact` (fresh units included) and `build-script-executed` messages into a per-profile build log under `target/`. Then it runs `buildx clean` (T52). Done when two builds with different features leave two entries in the log, and the wrapper exits with cargo's exit code.
+
+### T52. buildx-cli: `buildx clean` keeps the last three builds
+
+Implemented in build-dir-kit so swarfr's roadmap R1 (unit-level prune) reuses it; `buildx clean` calls it. Per profile dir it deletes every unit outside the union of the last three recorded builds: `deps/` first, then `.fingerprint/`, `build/`, `examples/`, and `incremental/` by crate name (its hash cannot be mapped). Handles cargo's legacy layout and the new `build/<pkg>/<hash>/` layout, runs under cargo's build lock, and never touches `.cargo-lock`, `.rustc-info.json` or the uplifted copies in `target/<profile>/`. Done when, after four builds with different feature sets, only the last three builds' units remain and `cargo build` for each of them reports every unit fresh.
+
+### T53. buildx-cli: `buildx install`
+
+Installs what buildx needs: sccache plus `build.rustc-wrapper` in the user's cargo config (backed up first), shell completions through `shell-completions`, and the recipe hook: project `test` recipes that end with `dunnage run target` switch to `buildx clean`. Shows a dry-run diff and asks before writing; idempotent. Done when a second run changes nothing.
+
+### T54. Deprecate dunnage, move swarfr onto build-dir-kit
+
+swarfr stays a separate, multi-ecosystem tool; its own engine copy and Cargo target passes go, replaced by the build-dir-kit dependency, so the logic lives once. Mark the `dunnage` name deprecated in `rust.md`, project recipes and swarfr's README, pointing at `buildx` for Cargo `target/`. The swarfr side is a change in `pyrlyn/swarfr` with its own card there. Done when swarfr builds against build-dir-kit with its tests green and no project still calls `dunnage`.
