@@ -58,6 +58,12 @@ Plan:
 
 Delivered as the `write` module of `fs-kit` instead of a crate of its own (creator's call, 2026-10-12): `fs_kit::write::{atomic, Options, write_with, if_changed, sync_dir}`, ported from branch `t11-atomic-file` with its tests. Consumers migrate in their own tasks.
 
+### T49. fs-kit: copy-on-write tree clone
+
+rtok seeds a new git worktree's ignored build caches (`target/`, `node_modules/`) from a sibling checkout. Doing that by hand (`cp -c -R`) is macOS-only and leaves copied artifacts newer than the fresh checkout's sources, so cargo trusts stale outputs. Done means `fs_kit::tree::clone_tree(src, dest)` behind an opt-in `clone` feature: each file is cloned where the file system shares blocks (APFS `clonefile`, Linux `FICLONE` on btrfs/XFS/bcachefs, Windows ReFS/Dev Drive block cloning, via `reflink-copy`) and copied where it cannot, symlinks are kept, each file keeps its source mtime, and the result says how many files were cloned and how many copied. The default feature set stays std plus `dunce`, so ketch's dependency tree does not change.
+
+Delivered: `fs_kit::tree::{clone_tree, Cloned}` behind the `clone` feature, with `copy_tree`'s walk taking the per-file step as a parameter. Check: `cargo test -p fs-kit --features clone` (macOS asserts both files cloned), clippy `-D warnings` with and without the feature and for `x86_64-unknown-linux-gnu` and `x86_64-pc-windows-msvc`, `cargo +1.86 check -p fs-kit --all-targets` with and without it.
+
 ### T26. Classify Git output and external diff flags by their effects
 
 `shell-classify` rated `git diff`, `git log`, and `git show` as read-only even when `--output` wrote a file or `--ext-diff` could execute a configured helper. Those flags now raise the risk to `Exec`, while ordinary reads remain `ReadOnly`. A regression test failed before the fix and passed after it; crate tests, clippy and formatting checks passed.
