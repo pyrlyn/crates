@@ -191,14 +191,9 @@ fn append_line(file: &Path, line: &str) {
 fn default_config() -> PathBuf {
     // Outside git the current directory is the best guess; a missing config is then a
     // config error (exit 2), and with a config, planning fails with exit 3.
-    let top = Command::new("git")
-        .args(["rev-parse", "--show-toplevel"])
-        .output()
-        .ok()
-        .filter(|o| o.status.success())
-        .and_then(|o| String::from_utf8(o.stdout).ok())
-        .map(|s| PathBuf::from(s.trim_end_matches('\n')));
-    top.unwrap_or_default().join("scoped-check.toml")
+    config::toplevel(Path::new("."))
+        .unwrap_or_default()
+        .join("scoped-check.toml")
 }
 
 fn print_plan(plan: &Plan) {
