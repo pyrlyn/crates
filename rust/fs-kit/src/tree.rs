@@ -1,4 +1,5 @@
-//! Whole trees: how much a removal frees, copying one, and removing whatever is at a path.
+//! Whole trees: how much a removal frees, copying or cloning one, and removing whatever is at a
+//! path.
 
 use std::collections::HashSet;
 use std::fs;
@@ -88,12 +89,66 @@ pub type Fix<'a> = &'a mut dyn FnMut(&Path, &[u8]) -> Option<Vec<u8>>;
 /// Copy the directory `src` into `dest`, creating `dest`. A regular file keeps its mode, and
 /// no file is read back: a large bundle costs one copy, not a copy plus a read.
 pub fn copy_tree(src: &Path, dest: &Path, links: Links) -> io::Result<()> {
-    copy_dir(src, dest, links, Path::new(""), &mut None)
+    copy_dir(src, dest, links, Path::new(""), &mut None, &mut copy_file)
 }
 
 /// [`copy_tree`] with every copied file passed through `fix`.
 pub fn copy_tree_with(src: &Path, dest: &Path, links: Links, fix: Fix) -> io::Result<()> {
-    copy_dir(src, dest, links, Path::new(""), &mut Some(fix))
+    copy_dir(
+        src,
+        dest,
+        links,
+        Path::new(""),
+        &mut Some(fix),
+        &mut copy_file,
+    )
+}
+
+/// What [`clone_tree`] did with the regular files it met.
+#[cfg(feature = "clone")]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct Cloned {
+    /// Files sharing their blocks with the source: no disk is spent until one side is rewritten.
+    pub cloned: u64,
+    /// Files the file system could not clone, so they were copied in full.
+    pub copied: u64,
+}
+
+/// Copy the directory `src` into `dest`, creating `dest`, as cheaply as the file system allows:
+/// each regular file is a copy-on-write clone (APFS, btrfs, XFS, bcachefs, ReFS and Dev Drive)
+/// where the volume can make one and a full copy where it cannot. Links are kept as with
+/// [`Links::Keep`]. Every file keeps its source's modification time, so a build tool comparing
+/// its outputs with their sources sees the copies exactly as old as the originals and rebuilds
+/// what a fresh checkout changed instead of trusting outputs from another branch.
+#[cfg(feature = "clone")]
+pub fn clone_tree(src: &Path, dest: &Path) -> io::Result<Cloned> {
+    let mut done = Cloned::default();
+    let mut file = |from: &Path, to: &Path| {
+        match reflink_copy::reflink_or_copy(from, to)? {
+            None => done.cloned += 1,
+            Some(_) => done.copied += 1,
+        }
+        keep_modified(from, to)
+    };
+    copy_dir(src, dest, Links::Keep, Path::new(""), &mut None, &mut file)?;
+    Ok(done)
+}
+
+#[cfg(feature = "clone")]
+fn keep_modified(from: &Path, to: &Path) -> io::Result<()> {
+    let modified = fs::metadata(from)?.modified()?;
+    // Windows sets times only through a handle opened for writing; on Unix the owner may set
+    // them through any handle, which a read-only file needs.
+    let file = if cfg!(windows) {
+        fs::OpenOptions::new().write(true).open(to)?
+    } else {
+        fs::File::open(to)?
+    };
+    file.set_modified(modified)
+}
+
+fn copy_file(from: &Path, to: &Path) -> io::Result<()> {
+    fs::copy(from, to).map(drop)
 }
 
 fn copy_dir(
@@ -102,6 +157,7 @@ fn copy_dir(
     links: Links,
     rel: &Path,
     fix: &mut Option<Fix>,
+    file: &mut dyn FnMut(&Path, &Path) -> io::Result<()>,
 ) -> io::Result<()> {
     fs::create_dir_all(dest).map_err(|e| crate::at(dest, e))?;
     for entry in fs::read_dir(src).map_err(|e| crate::at(src, e))? {
@@ -117,10 +173,10 @@ fn copy_dir(
         }
         // A followed link to a directory is a directory to copy, not a file.
         if kind.is_dir() || (kind.is_symlink() && from.is_dir()) {
-            copy_dir(&from, &to, links, &rel, fix)?;
+            copy_dir(&from, &to, links, &rel, fix, file)?;
             continue;
         }
-        fs::copy(&from, &to).map_err(|e| crate::at(&from, e))?;
+        file(&from, &to).map_err(|e| crate::at(&from, e))?;
         if let Some(fix) = fix {
             let bytes = fs::read(&to).map_err(|e| crate::at(&to, e))?;
             if let Some(fixed) = fix(&rel, &bytes) {
@@ -238,6 +294,59 @@ mod tests {
         copy_tree(&src, &dir.join("skipped"), Links::Skip).unwrap();
         assert!(fs::symlink_metadata(dir.join("skipped/link")).is_err());
         assert_eq!(fs::read(dir.join("skipped/real/f")).unwrap(), b"f");
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[cfg(feature = "clone")]
+    #[test]
+    fn clone_tree_keeps_bytes_links_and_modification_times() {
+        let dir = tmp("clone");
+        let src = dir.join("src");
+        fs::create_dir_all(src.join("sub")).unwrap();
+        fs::write(src.join("a"), "a").unwrap();
+        fs::write(src.join("sub/b"), vec![7u8; 70_000]).unwrap();
+        let old = std::time::SystemTime::UNIX_EPOCH + std::time::Duration::from_secs(1_000_000_000);
+        for f in ["a", "sub/b"] {
+            fs::File::options()
+                .write(true)
+                .open(src.join(f))
+                .unwrap()
+                .set_modified(old)
+                .unwrap();
+        }
+        #[cfg(unix)]
+        std::os::unix::fs::symlink("sub", src.join("link")).unwrap();
+        let done = clone_tree(&src, &dir.join("dest")).unwrap();
+        // Each file is counted once, whichever way it went.
+        assert_eq!(done.cloned + done.copied, 2, "{done:?}");
+        // The temp dir of a macOS runner is on APFS, which always clones.
+        if cfg!(target_os = "macos") {
+            assert_eq!(done.cloned, 2, "{done:?}");
+        }
+        assert_eq!(fs::read(dir.join("dest/a")).unwrap(), b"a");
+        assert_eq!(fs::read(dir.join("dest/sub/b")).unwrap(), vec![7u8; 70_000]);
+        for f in ["a", "sub/b"] {
+            let modified = fs::metadata(dir.join("dest").join(f))
+                .unwrap()
+                .modified()
+                .unwrap();
+            assert_eq!(modified, old, "{f}");
+        }
+        #[cfg(unix)]
+        assert!(fs::symlink_metadata(dir.join("dest/link"))
+            .unwrap()
+            .file_type()
+            .is_symlink());
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[cfg(feature = "clone")]
+    #[test]
+    fn clone_tree_names_a_missing_source() {
+        let dir = tmp("clone-missing");
+        let e = clone_tree(&dir.join("never"), &dir.join("dest")).unwrap_err();
+        assert_eq!(e.kind(), ErrorKind::NotFound);
+        assert!(e.to_string().contains("never"), "{e}");
         fs::remove_dir_all(&dir).unwrap();
     }
 

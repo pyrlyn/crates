@@ -12,6 +12,7 @@
 | Package | Where | Source | Why here |
 | --- | --- | --- | --- |
 | dunce | local | https://gitlab.com/kornelski/dunce | Canonical paths without the Windows `\\?\` prefix |
+| reflink-copy | local (feature `clone`) | https://github.com/cargo-bins/reflink-copy | Copy-on-write file clones with a copy fallback on macOS, Linux and Windows (`tree::clone_tree`) |
 | tempfile | local (dev) | https://github.com/Stebalien/tempfile | Scratch directories in the `write` tests |
 
 ## ketch
