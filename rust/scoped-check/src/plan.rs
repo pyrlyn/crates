@@ -8,6 +8,7 @@ use path_gates::Selection;
 use serde::Serialize;
 
 use crate::config::{Config, Gate, Part};
+use crate::quote;
 
 /// A command that will run.
 #[derive(Serialize)]
@@ -154,8 +155,7 @@ fn scoped(
         let mut values = Values {
             packages: String::new(),
             filter: String::new(),
-            changed: shlex::try_join(words)
-                .map_err(|e| format!("cannot quote a changed path: {e}"))?,
+            changed: quote::join(words).map_err(|e| format!("cannot quote a changed path: {e}"))?,
         };
         if gate.needs_packages() {
             let affected = affected(cfg, resolver, &claimed)?;
@@ -170,9 +170,8 @@ fn scoped(
                 None => values.packages = "--workspace".to_owned(),
                 Some(filter) => {
                     let flags = affected.packages.iter().flat_map(|p| ["-p", p.as_str()]);
-                    values.packages = shlex::try_join(flags).map_err(|e| e.to_string())?;
-                    let quoted = shlex::try_quote(&filter).map_err(|e| e.to_string())?;
-                    values.filter = format!("-E {quoted}");
+                    values.packages = quote::join(flags)?;
+                    values.filter = format!("-E {}", quote::quote(&filter)?);
                 }
             }
         }

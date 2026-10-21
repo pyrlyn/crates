@@ -7,7 +7,6 @@ Cargo workspace of five small published crates shared by ketch and rtok — git-
 | # | Status | Priority | Complexity | Readiness | Agent |
 | --- | --- | --- | --- | --- | --- |
 | T36 | in progress | P1 | 2 | 0% | OpenAI / GPT-6 |
-| T1 | todo | P1 | 3 | 0% | |
 | T2 | todo | P1 | 2 | 0% | |
 | T3 | todo | P2 | 2 | 0% | |
 | T4 | todo | P2 | 2 | 0% | |
@@ -28,10 +27,6 @@ Cargo workspace of five small published crates shared by ketch and rtok — git-
 | T25 | in progress | P1 | 2 | 90% | Cursor / claude-opus-5.5 |
 
 Audit note (2026-10-07): verified defenses — git argument injection refused, POSIX shell quoting correct, path traversal blocked, fail-safe direction is always "everything changed". The tasks below are what remains.
-
-### T1. Windows: POSIX quoting handed to cmd.exe in scoped-check
-
-`rust/scoped-check/src/plan.rs:139,155-157` builds `{changed}`/`{packages}` with `shlex::try_join`/`try_quote` (POSIX single quotes), but `rust/scoped-check/src/main.rs:146-149` runs commands via `cmd /C` on Windows, which does not honor them. A file named `docs/x & calc & .md` executes `calc`; plain spaces break arguments. Tests are `#![cfg(unix)]` (`rust/scoped-check/tests/cli.rs:4`), so the path is untested. Done means: Windows-appropriate quoting (or raw argument passing) with tests covering it.
 
 ### T2. `{changed}` silently expands to empty in full mode
 
