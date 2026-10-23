@@ -23,6 +23,7 @@ Small, focused Rust crates shared by the creator's projects (`ketch`, `rtok`, `s
 | [`git-changed-paths`](rust/git-changed-paths) | Paths a git working tree changed relative to a base ref |
 | [`llm-catalog`](rust/llm-catalog) | Model catalog for LLM agents: context windows, efforts, capabilities and prices merged from built-in rows, host config and a user price file |
 | [`llm-http`](rust/llm-http) | HTTP plumbing for LLM provider wires: credential lookup, auth headers, error mapping, retry with backoff, SSE framing |
+| [`llm-testkit`](rust/llm-testkit) | Re-exports `llm-http`'s cassette: record and replay HTTP bodies with secrets masked |
 | [`llm-wire`](rust/llm-wire) | Provider contract and neutral request, event and tool types for LLM backends |
 | [`llm-wire-anthropic`](rust/llm-wire-anthropic) | The Anthropic Messages wire for LLM agent loops: request translation (cache breakpoints, thinking, effort), SSE stream parser, streaming client |
 | [`llm-wire-openai`](rust/llm-wire-openai) | OpenAI Chat Completions and Responses wires, also for every OpenAI-compatible endpoint |
