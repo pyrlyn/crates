@@ -67,7 +67,7 @@ defaults to `scoped-check.toml` at the git top level of the current directory.
 | 0 | Success: every selected gate passed, `plan` printed, or nothing changed |
 | the gate's code | A gate failed; the first failing gate's code, or 1 when it has none (killed by a signal). The same under `--keep-going`, which only keeps running |
 | 2 | Config or usage error (bad `scoped-check.toml`, unknown flag, no config file) |
-| 3 | Planning error: not a git repository, git missing, unknown base ref, no merge base (including a shallow clone), `cargo metadata` failed. No gate ran |
+| 3 | Planning error: no such directory, not a git repository, git missing, unknown base ref, no merge base (including a shallow clone), `cargo metadata` failed. No gate ran |
 
 A gate that itself exits 2 or 3 is indistinguishable from those codes by number alone; the
 messages on stderr tell them apart.

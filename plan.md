@@ -11,7 +11,6 @@ Cargo workspace of five small published crates shared by ketch and rtok — git-
 | T2 | todo | P1 | 2 | 0% | |
 | T3 | todo | P2 | 2 | 0% | |
 | T4 | todo | P2 | 2 | 0% | |
-| T5 | todo | P3 | 1 | 0% | |
 | T6 | todo | P2 | 2 | 0% | |
 | T7 | todo | P3 | 2 | 0% | |
 | T8 | todo | P3 | 1 | 0% | |
@@ -44,10 +43,6 @@ Audit note (2026-10-07): verified defenses — git argument injection refused, P
 ### T4. file-backup: name-probe race and symlink-following overwrite
 
 `rust/file-backup/src/lib.rs:39-45` does `while bak.exists()` then `fs::copy` — two concurrent backups can pick the same name and the second silently truncates the first (exactly what the comment claims to prevent), and a planted `<name>.bak-<ts>` dangling symlink is followed by `fs::copy`. Done means: the destination is created with `OpenOptions::create_new(true)` + `io::copy`, bumping the suffix on `AlreadyExists`.
-
-### T5. Error-quality fixes: canonicalize and NotARepository
-
-`rust/cargo-changed-packages/src/lib.rs:103` compares two `canonicalize().ok()` results — double failure passes as equality; bail when either errors. `rust/git-changed-paths/src/lib.rs:78-86` reports "not a git repository" for a nonexistent directory; distinguish the two cases.
 
 ### T6. Deduplicate git-toplevel discovery
 

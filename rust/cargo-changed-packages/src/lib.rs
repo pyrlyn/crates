@@ -35,6 +35,16 @@ pub enum Error {
         /// The workspace root cargo found.
         actual: PathBuf,
     },
+    /// The requested or the reported workspace root does not resolve to a canonical path,
+    /// so the two cannot be compared.
+    #[error("cannot resolve {path}")]
+    Canonicalize {
+        /// The path that failed to resolve.
+        path: PathBuf,
+        /// Why it failed.
+        #[source]
+        source: std::io::Error,
+    },
 }
 
 /// The workspace packages affected by a change.
@@ -140,8 +150,8 @@ impl Resolver {
     ///
     /// # Errors
     ///
-    /// Fails when `cargo metadata` cannot describe the workspace or the root is not the
-    /// workspace root.
+    /// Fails when `cargo metadata` cannot describe the workspace, the root is not the
+    /// workspace root, or either root does not resolve, so they cannot be compared.
     pub fn affected(&self, changed: &[PathBuf]) -> Result<Affected, Error> {
         let Some(relative) = relative_paths(&self.root, changed) else {
             return Ok(Affected::everything());
@@ -177,8 +187,15 @@ impl Resolver {
         }
         let (graph, status) = self.load()?;
         // std::fs::canonicalize resolves symlinks such as macOS's /tmp, which cargo also does.
+        // A path that does not resolve is an error: two failures must not compare equal.
+        let canonical = |path: &Path| {
+            path.canonicalize().map_err(|source| Error::Canonicalize {
+                path: path.to_path_buf(),
+                source,
+            })
+        };
         let actual = graph.workspace().root();
-        if self.root.canonicalize().ok().as_deref() != actual.canonicalize().ok().as_deref() {
+        if canonical(&self.root)? != canonical(actual.as_std_path())? {
             return Err(Error::NotWorkspaceRoot {
                 requested: self.root.clone(),
                 actual: actual.as_std_path().to_path_buf(),

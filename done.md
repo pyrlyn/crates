@@ -22,6 +22,12 @@ The project was missing `AGENTS.md`, `done.md`, `roadmap.md`, `ideas.md`, and `t
 
 Those files are in the workspace root. `toolchain.md` lists `cargo-changed-packages`, `file-backup`, `git-changed-paths`, `path-gates`, and `scoped-check`. `rust.md` names the same five under shared crates. `file-backup` tests already live in `src/lib.rs`; the other four crates already have `tests/`.
 
+### T5. Error-quality fixes: canonicalize and NotARepository
+
+`rust/cargo-changed-packages/src/lib.rs:103` compares two `canonicalize().ok()` results — double failure passes as equality; bail when either errors. `rust/git-changed-paths/src/lib.rs:78-86` reports "not a git repository" for a nonexistent directory; distinguish the two cases.
+
+`cargo-changed-packages` returns the new `Error::Canonicalize { path, source }` when the requested or the reported workspace root does not resolve, instead of comparing two `None`s; a cargo shim that deletes the workspace after `cargo metadata` pins it (`tests/cache.rs`, fails against the old comparison). `git-changed-paths::toplevel` (and so `changed_paths`) returns the new `Error::NoSuchDirectory { path, stderr }` when `git -C` fails and the path is not an existing directory, and keeps `NotARepository` for a directory outside a work tree; the extra stat runs only on that failure path. Tests cover a missing directory and a file path. Check: fmt, clippy `-D warnings` and `cargo test --workspace --locked` green.
+
 ### T11. atomic-replace: one atomic file write for every project
 
 Six projects (rtok, ketch, cox, swarfr, aulo, runa) carry about 18 hand-written temp-file-and-rename writes that disagree on fsync, permissions, symlinks and temp naming. New crate `atomic-replace` (std only, edition 2021, Rust 1.86 so ketch can use it): `write(path, bytes)` and `Options { durable, preserve_permissions, follow_symlinks, create_parent, mode }` with `write`/`write_with`, plus `sync_dir`. Ported from rtok `rtok-agent-sdk` `write_atomic`/`link_target` (permissions, Windows read-only bit, dangling links) and ketch `state.rs` `save_path` (fsync file and directory). Done means: the crate is in the workspace with tests, wired into CI dry-run publish, bump options, README and sonar; consumers migrate in their own tasks.

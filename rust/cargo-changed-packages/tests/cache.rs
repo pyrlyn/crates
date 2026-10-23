@@ -386,3 +386,22 @@ fn a_missing_cargo_executable_is_an_error() {
         .unwrap_err();
     assert!(matches!(err, Error::Cargo(_)), "{err:?}");
 }
+
+#[test]
+fn a_root_that_no_longer_resolves_is_an_error_not_a_match() {
+    // The shim deletes the workspace once cargo has described it, so neither the requested
+    // nor the reported root resolves; two failures must not pass as the same directory.
+    let fx = Fixture::new();
+    let vanishing = fx.dir.path().join("cargo-vanish");
+    let real = std::env::var("CARGO").unwrap_or_else(|_| "cargo".into());
+    let script = format!(
+        "'{real}' \"$@\"; status=$?\nrm -rf '{root}'\nexit $status\n",
+        root = fx.root().display(),
+    );
+    write_shim(&vanishing, &script);
+    let err = Resolver::new(&fx.root())
+        .cargo(&vanishing)
+        .affected(&[PathBuf::from("b/src/lib.rs")])
+        .unwrap_err();
+    assert!(matches!(err, Error::Canonicalize { .. }), "{err:?}");
+}

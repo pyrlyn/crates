@@ -26,7 +26,16 @@ pub enum Error {
     /// `git` was found but could not be started.
     #[error("failed to run git")]
     Spawn(#[source] io::Error),
-    /// The given directory is not inside a git work tree.
+    /// The given path does not exist or is not a directory, so git could not even start
+    /// looking for a work tree there.
+    #[error("no such directory: {path}: {stderr}")]
+    NoSuchDirectory {
+        /// Path that was given.
+        path: PathBuf,
+        /// Trimmed standard error of git.
+        stderr: String,
+    },
+    /// The given directory exists but is not inside a git work tree.
     #[error("not a git repository: {path}: {stderr}")]
     NotARepository {
         /// Directory that was inspected.
@@ -79,13 +88,19 @@ pub struct ChangedPaths {
 ///
 /// # Errors
 ///
-/// [`Error::NotARepository`] when `repo` is not inside a work tree;
+/// [`Error::NoSuchDirectory`] when `repo` is not an existing directory;
+/// [`Error::NotARepository`] when it is not inside a work tree;
 /// [`Error::GitMissing`] / [`Error::Spawn`] when git cannot be started.
 pub fn toplevel(repo: &Path) -> Result<PathBuf, Error> {
     let text = run(repo, &["rev-parse", "--show-toplevel"], |out, _| {
-        Error::NotARepository {
-            path: repo.to_path_buf(),
-            stderr: stderr_text(out),
+        // `git -C` fails the same way for a missing directory and for one outside a work
+        // tree; only the failure path pays for the extra stat.
+        let path = repo.to_path_buf();
+        let stderr = stderr_text(out);
+        if repo.is_dir() {
+            Error::NotARepository { path, stderr }
+        } else {
+            Error::NoSuchDirectory { path, stderr }
         }
     })?;
     Ok(PathBuf::from(text.trim()))
@@ -99,7 +114,7 @@ pub fn toplevel(repo: &Path) -> Result<PathBuf, Error> {
 ///
 /// # Errors
 ///
-/// See [`Error`]: git missing, `repo` not a work tree, unknown `base`, no common history,
+/// See [`Error`]: git missing, `repo` missing or not a work tree, unknown `base`, no common history,
 /// or output that is not UTF-8.
 pub fn changed_paths(repo: &Path, base: &str) -> Result<ChangedPaths, Error> {
     let top = toplevel(repo)?;

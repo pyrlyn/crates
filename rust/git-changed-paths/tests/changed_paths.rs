@@ -176,6 +176,24 @@ fn directory_outside_a_repository_is_an_error() {
 }
 
 #[test]
+fn missing_directory_is_not_reported_as_a_non_repository() {
+    let tmp = tempfile::tempdir().unwrap();
+    let missing = tmp.path().join("missing");
+    let err = changed_paths(&missing, "main").unwrap_err();
+    assert!(matches!(err, Error::NoSuchDirectory { .. }), "{err:?}");
+    assert!(err.to_string().starts_with("no such directory"), "{err}");
+}
+
+#[test]
+fn file_path_is_not_reported_as_a_non_repository() {
+    let tmp = repo();
+    let file = tmp.path().join("a.txt");
+    assert!(file.is_file());
+    let err = toplevel(&file).unwrap_err();
+    assert!(matches!(err, Error::NoSuchDirectory { .. }), "{err:?}");
+}
+
+#[test]
 fn unrelated_history_has_no_merge_base() {
     let tmp = repo();
     let dir = tmp.path();
