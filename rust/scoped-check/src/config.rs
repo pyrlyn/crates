@@ -49,6 +49,11 @@ impl Gate {
             .iter()
             .any(|p| matches!(p, Part::Packages | Part::NextestFilter))
     }
+
+    /// Whether the command substitutes `{changed}`.
+    pub fn needs_changed(&self) -> bool {
+        self.run.iter().any(|p| matches!(p, Part::Changed))
+    }
 }
 
 /// The parsed configuration.

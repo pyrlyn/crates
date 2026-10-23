@@ -68,9 +68,20 @@ pub fn build(cfg: &Config, base: &str, all: bool, fallback_all: bool, resolver: 
             plan.changed = Some(paths.len());
         }
         // `--all` ignores the change set on purpose, so its failure is not an error then.
-        Err(e) if forced.is_none() => return failed(cfg, plan, &e.to_string(), fallback_all),
+        Err(e) if forced.is_none() => {
+            let changed = Err(UNKNOWN.to_owned());
+            return failed(cfg, plan, &e.to_string(), fallback_all, &changed);
+        }
         Err(_) => {}
     }
+    // What `{changed}` becomes when every gate runs: every changed path, or why there is none.
+    let changed = if plan.changed.is_none() {
+        Err(UNKNOWN.to_owned())
+    } else if paths.is_empty() {
+        Err("nothing changed".to_owned())
+    } else {
+        quote(&paths.iter().collect::<Vec<_>>())
+    };
     if forced.is_none() {
         if paths.is_empty() {
             plan.nothing_changed = true;
@@ -87,26 +98,52 @@ pub fn build(cfg: &Config, base: &str, all: bool, fallback_all: bool, resolver: 
                     plan.skipped = skipped;
                     return plan;
                 }
-                Err(e) => return failed(cfg, plan, &e, fallback_all),
+                Err(e) => return failed(cfg, plan, &e, fallback_all, &changed),
             }
         }
     }
-    plan.gates = every_gate(cfg, &forced.unwrap_or_default());
+    (plan.gates, plan.skipped) = every_gate(cfg, &forced.unwrap_or_default(), &changed);
     plan
 }
 
-fn every_gate(cfg: &Config, why: &str) -> Vec<Step> {
-    let full = Values {
-        packages: "--workspace".to_owned(),
-        filter: String::new(),
-        changed: String::new(),
-    };
-    cfg.gates.iter().map(|g| step(g, &full, why)).collect()
+const UNKNOWN: &str = "the change set is unknown";
+
+/// Every gate with full-workspace values. A gate using `{changed}` is skipped when `changed`
+/// holds no paths: an empty argument list makes tools like `gofmt -w` read stdin and hang.
+fn every_gate(cfg: &Config, why: &str, changed: &Result<String, String>) -> Scoped {
+    let (mut steps, mut skipped) = (Vec::new(), Vec::new());
+    for gate in &cfg.gates {
+        let changed = match changed {
+            Ok(quoted) => quoted.clone(),
+            Err(e) if gate.needs_changed() => {
+                skipped.push(Skip {
+                    name: gate.name.clone(),
+                    reason: format!("{{changed}} has no paths: {e}"),
+                });
+                continue;
+            }
+            Err(_) => String::new(),
+        };
+        let full = Values {
+            packages: "--workspace".to_owned(),
+            filter: String::new(),
+            changed,
+        };
+        steps.push(step(gate, &full, why));
+    }
+    (steps, skipped)
 }
 
-fn failed(cfg: &Config, mut plan: Plan, error: &str, fallback_all: bool) -> Plan {
+fn failed(
+    cfg: &Config,
+    mut plan: Plan,
+    error: &str,
+    fallback_all: bool,
+    changed: &Result<String, String>,
+) -> Plan {
     if fallback_all {
-        plan.gates = every_gate(cfg, &format!("all: fallback after error: {error}"));
+        let why = format!("all: fallback after error: {error}");
+        (plan.gates, plan.skipped) = every_gate(cfg, &why, changed);
     }
     plan.error = Some(error.to_owned());
     plan
@@ -150,12 +187,10 @@ fn scoped(
             .iter()
             .filter(|p| cfg.rules.select([p]).gates.contains(&gate.name))
             .collect();
-        let words: Option<Vec<&str>> = claimed.iter().map(|p| p.to_str()).collect();
-        let words = words.ok_or("a changed path is not valid UTF-8")?;
         let mut values = Values {
             packages: String::new(),
             filter: String::new(),
-            changed: quote::join(words).map_err(|e| format!("cannot quote a changed path: {e}"))?,
+            changed: quote(&claimed)?,
         };
         if gate.needs_packages() {
             let affected = affected(cfg, resolver, &claimed)?;
@@ -178,6 +213,13 @@ fn scoped(
         steps.push(step(gate, &values, "scoped"));
     }
     Ok((steps, skipped))
+}
+
+/// The paths shell-quoted and joined with spaces.
+fn quote(paths: &[&PathBuf]) -> Result<String, String> {
+    let words: Option<Vec<&str>> = paths.iter().map(|p| p.to_str()).collect();
+    let words = words.ok_or("a changed path is not valid UTF-8")?;
+    quote::join(words).map_err(|e| format!("cannot quote a changed path: {e}"))
 }
 
 fn affected(cfg: &Config, resolver: &Resolver, claimed: &[&PathBuf]) -> Result<Affected, String> {
