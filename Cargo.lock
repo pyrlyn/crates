@@ -2069,6 +2069,7 @@ name = "fs-kit"
 version = "0.1.0"
 dependencies = [
  "dunce",
+ "reflink-copy",
  "tempfile",
 ]
 
@@ -4937,6 +4938,18 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 3.0.6",
+]
+
+[[package]]
+name = "reflink-copy"
+version = "0.1.30"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d9dd7ab4af0363d5ccfd2838d782a28196cf32a5cc2e4fe3c5dc83f2be588b8b"
+dependencies = [
+ "cfg-if",
+ "libc",
+ "rustix",
+ "windows",
 ]
 
 [[package]]
