@@ -306,6 +306,27 @@ deprecation release are separate PRs in their own repositories.
 cox's three WASI tests and a manifest-timeout test) pass. `Cargo.lock` keeps one wasmtime
 (49.0.2); extism adds second copies of sha2 0.10, thiserror 1 and a few of their deps.
 
+### T48 — Host functions for plugwright's own Wasm ABI (C3)
+Embedders such as rtok need their Wasm guests to call back into the host (estimate tokens,
+record a measurement) without extism. D13 now allows that by name: one pair of imports,
+`plugwright.host_call` and `plugwright.host_take`, reaches the functions the embedder registers.
+* `plugwright-abi`: `IMPORT_HOST_CALL`, `IMPORT_HOST_TAKE`, `MAX_HOST_NAME` (256), the import
+  table in the `wasm` docs. `ABI_VERSION` stays 1: older guests import a subset.
+* `plugwright-wasm`: `HostFunctions` (`with(name, Fn(&[u8]) -> Result<Vec<u8>, String>)`,
+  `invoke` catches panics), `HostFactory`, `Imports { log, host }` (replaces the `LogSink`
+  argument of `WasmModule::instantiate` and `WasmPlugin::load` / `with_module`), and
+  `HostCalls`, the engine-independent half of both imports, with `guest_bytes` /
+  `put_guest_bytes` for adapters that see memory as a slice.
+* Adapters (wasmtime, wasmi, wasmer) link the two imports to a `HostCalls` in their store.
+* `WasmLoader::with_host_functions`, `Loader::with_host_functions` and
+  `PluginManager::set_host_functions` take a factory called with the plugin id.
+* `plugwright_sdk::host::call(name, input)` on the guest side; natively it is an error.
+**Done when:** a guest built with the SDK calls registered functions on every engine, and
+unknown names, failing and panicking handlers come back as errors.
+**Result:** mock round-trip tests and `HostCalls` unit tests in `plugwright-wasm`, the SDK's
+native error, and `wasm-hello`'s new `ask` method driven through the manager on wasmtime and
+wasmi (`examples/host/tests/e2e.rs`) and on wasmer (`plugwright-wasmer/tests/e2e.rs`).
+
 ### T21 — Unload verification (C3)
 After `dlclose`: unix `dlopen(path, RTLD_NOLOAD)` (balanced by `dlclose`), Windows
 `GetModuleHandleExW(UNCHANGED_REFCOUNT)`. `Plugin::close(self: Box<Self>) -> Release`

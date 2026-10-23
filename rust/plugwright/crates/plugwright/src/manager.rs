@@ -22,7 +22,7 @@ use crate::native::{NativePlugin, Placement};
 use crate::plugin::{Plugin, PluginInfo, Release};
 use crate::relink::RelinkRequest;
 use crate::trust::TrustPolicy;
-use crate::wasm::{ModuleCache, WasmEngine, WasmPlugin};
+use crate::wasm::{HostFactory, HostFunctions, Imports, ModuleCache, WasmEngine, WasmPlugin};
 use crate::watch::{Watch, WatchOptions, Watcher};
 
 /// Manager-wide configuration.
@@ -86,6 +86,7 @@ pub struct PluginManager {
     builder: Builder,
     engines: Vec<Arc<dyn WasmEngine>>,
     modules: ModuleCache,
+    host: Option<HostFactory>,
     plugins: BTreeMap<String, Loaded>,
     lock: Lockfile,
     leaked: usize,
@@ -104,6 +105,7 @@ impl PluginManager {
             builder: Builder::new(cache, opts.build.clone()),
             opts,
             engines: builtin_engines(),
+            host: None,
             plugins: BTreeMap::new(),
             lock,
             leaked: 0,
@@ -122,6 +124,13 @@ impl PluginManager {
         self.engines.retain(|e| e.name() != engine.name());
         tracing::info!(engine = engine.name(), "wasm engine registered");
         self.engines.push(engine);
+    }
+
+    /// Host functions for Wasm plugins loaded or reloaded from now on:
+    /// `host(id)` builds the set the plugin with that id may call. Native
+    /// plugins run as host code and need none.
+    pub fn set_host_functions(&mut self, host: impl Fn(&str) -> HostFunctions + Send + Sync + 'static) {
+        self.host = Some(Arc::new(host));
     }
 
     pub fn engines(&self) -> impl Iterator<Item = &str> {
@@ -297,7 +306,16 @@ impl PluginManager {
                 let engine = self.engine(spec.engine.as_deref())?;
                 let wasm = std::fs::read(&artifact.path).map_err(io_err(&artifact.path))?;
                 let module = self.modules.compile(&engine, &wasm)?;
-                Box::new(WasmPlugin::with_module(&spec.id, engine.name(), module, spec.limits.clone(), &config, sink)?)
+                let host = self.host.as_ref().map_or_else(HostFunctions::new, |h| h(&spec.id));
+                let imports = Imports::new(sink).with_host(host);
+                Box::new(WasmPlugin::with_module(
+                    &spec.id,
+                    engine.name(),
+                    module,
+                    spec.limits.clone(),
+                    &config,
+                    imports,
+                )?)
             }
         };
         if let Some(req) = &spec.version

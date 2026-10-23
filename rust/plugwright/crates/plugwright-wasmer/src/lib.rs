@@ -40,15 +40,17 @@ use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
 use plugwright_core::logging::LogSink;
-use plugwright_wasm::{MAX_GUEST_LOG, WasmEngine, WasmError, WasmInstance, WasmLimits, WasmModule, WasmVal};
+// `wasmer::Imports` is the engine's own import table.
+use plugwright_wasm::Imports as PwImports;
+use plugwright_wasm::{HostCalls, MAX_GUEST_LOG, WasmEngine, WasmError, WasmInstance, WasmLimits, WasmModule, WasmVal};
 
 plugwright_wasm::wasm_val_bridge!(Value);
-use plugwright_abi::wasm::{EXPORT_MEMORY, IMPORT_LOG, IMPORT_MODULE};
+use plugwright_abi::wasm::{EXPORT_MEMORY, IMPORT_HOST_CALL, IMPORT_HOST_TAKE, IMPORT_LOG, IMPORT_MODULE};
 use wasmer::sys::vm::{LinearMemory, VMMemory, VMMemoryDefinition, VMTable, VMTableDefinition};
 use wasmer::sys::{BaseTunables, CompilerConfig, Cranelift, EngineBuilder, NativeEngineExt, Tunables};
 use wasmer::{
     Engine, Function, FunctionEnv, FunctionEnvMut, Imports, Instance, Memory, MemoryError, MemoryStyle, MemoryType,
-    Module, Pages, RuntimeError, Store, TableStyle, TableType, Value, WASM_PAGE_SIZE,
+    MemoryView, Module, Pages, RuntimeError, Store, TableStyle, TableType, Value, WASM_PAGE_SIZE,
 };
 use wasmer_middlewares::Metering;
 use wasmer_middlewares::metering::{MeteringPoints, get_remaining_points, set_remaining_points};
@@ -260,20 +262,22 @@ impl LinearMemory for LimitedMemory {
 
 struct Env {
     log: LogSink,
+    host: HostCalls,
     memory: Option<Memory>,
 }
 
 impl WasmModule for WrModule {
-    fn instantiate(&self, limits: &WasmLimits, log: LogSink) -> Result<Box<dyn WasmInstance>, WasmError> {
+    fn instantiate(&self, limits: &WasmLimits, imports: &PwImports) -> Result<Box<dyn WasmInstance>, WasmError> {
         let timeout = limits.timeout;
-        let (engine, module, limits) = (self.engine.clone(), self.module.clone(), limits.clone());
+        let (engine, module, limits, imports) =
+            (self.engine.clone(), self.module.clone(), limits.clone(), imports.clone());
         let timed_out = Arc::new(AtomicBool::new(false));
         let flag = timed_out.clone();
         let (tx, rx) = channel::<Job>();
         let (ready_tx, ready_rx) = sync_channel(1);
         let worker = std::thread::Builder::new()
             .name("plugwright-wasmer".into())
-            .spawn(move || match Worker::new(engine, &module, limits, log, flag) {
+            .spawn(move || match Worker::new(engine, &module, limits, imports, flag) {
                 Ok(mut w) => {
                     let _ = ready_tx.send(Ok(interrupter(&w.store)));
                     w.serve(rx);
@@ -313,7 +317,7 @@ impl Worker {
         base: Engine,
         module: &Module,
         limits: WasmLimits,
-        log: LogSink,
+        imports: PwImports,
         timed_out: Arc<AtomicBool>,
     ) -> Result<Self, WasmError> {
         let hit = Arc::new(AtomicBool::new(false));
@@ -324,7 +328,10 @@ impl Worker {
             hit: hit.clone(),
         });
         let mut store = Store::new(engine);
-        let env = FunctionEnv::new(&mut store, Env { log, memory: None });
+        let env = FunctionEnv::new(
+            &mut store,
+            Env { log: imports.log, host: HostCalls::new(imports.host), memory: None },
+        );
         let log_fn = Function::new_typed_with_env(
             &mut store,
             &env,
@@ -337,9 +344,31 @@ impl Worker {
                 }
             },
         );
-        // Only `plugwright.log` is provided; any other import fails instantiation.
+        let call_fn = Function::new_typed_with_env(
+            &mut store,
+            &env,
+            |mut ctx: FunctionEnvMut<'_, Env>, np: i32, nl: i32, ip: i32, il: i32| -> i32 {
+                let (data, store) = ctx.data_and_store_mut();
+                let Some(mem) = data.memory.clone() else { return -1 };
+                let view = mem.view(&store);
+                data.host.call(|p, l| read_view(&view, p, l), np, nl, ip, il)
+            },
+        );
+        let take_fn = Function::new_typed_with_env(
+            &mut store,
+            &env,
+            |mut ctx: FunctionEnvMut<'_, Env>, ptr: i32, len: i32| -> i32 {
+                let (data, store) = ctx.data_and_store_mut();
+                let Some(mem) = data.memory.clone() else { return -1 };
+                let view = mem.view(&store);
+                data.host.take(|p, d| view.write(u64::from(p), d).is_ok(), ptr, len)
+            },
+        );
+        // Only the `plugwright` imports are provided; any other fails instantiation.
         let mut imports = Imports::new();
         imports.define(IMPORT_MODULE, IMPORT_LOG, log_fn);
+        imports.define(IMPORT_MODULE, IMPORT_HOST_CALL, call_fn);
+        imports.define(IMPORT_MODULE, IMPORT_HOST_TAKE, take_fn);
         let instance = Instance::new(&mut store, module, &imports).map_err(|e| {
             if hit.swap(false, Ordering::Relaxed) {
                 WasmError::MemoryLimit
@@ -391,19 +420,23 @@ impl Worker {
     }
 
     fn read(&self, ptr: u32, len: u32) -> Result<Vec<u8>, WasmError> {
-        // Bounds first: `len` comes from the guest and must not size an allocation.
-        let view = self.memory.view(&self.store);
-        if u64::from(ptr) + u64::from(len) > view.data_size() {
-            return Err(WasmError::OutOfBounds);
-        }
-        let mut buf = vec![0u8; len as usize];
-        view.read(u64::from(ptr), &mut buf).map_err(|_| WasmError::OutOfBounds)?;
-        Ok(buf)
+        read_view(&self.memory.view(&self.store), ptr, len).ok_or(WasmError::OutOfBounds)
     }
 
     fn write(&self, ptr: u32, data: &[u8]) -> Result<(), WasmError> {
         self.memory.view(&self.store).write(u64::from(ptr), data).map_err(|_| WasmError::OutOfBounds)
     }
+}
+
+/// Guest memory at `ptr..ptr + len`. Bounds first: `len` comes from the guest
+/// and must not size an allocation.
+fn read_view(view: &MemoryView<'_>, ptr: u32, len: u32) -> Option<Vec<u8>> {
+    if u64::from(ptr) + u64::from(len) > view.data_size() {
+        return None;
+    }
+    let mut buf = vec![0u8; len as usize];
+    view.read(u64::from(ptr), &mut buf).ok()?;
+    Some(buf)
 }
 
 /// `Send` handle to a [`Worker`].
@@ -503,7 +536,7 @@ mod tests {
     #[test]
     fn guest_memory_access_is_bounds_checked_before_allocating() {
         let module = WasmerEngine::new().compile(ONE_PAGE).unwrap();
-        let mut inst = module.instantiate(&WasmLimits::default(), Arc::new(|_: u32, _: &str| {})).unwrap();
+        let mut inst = module.instantiate(&WasmLimits::default(), &PwImports::new(Arc::new(|_: u32, _: &str| {}))).unwrap();
         inst.write(65_532, b"tail").unwrap();
         assert_eq!(inst.read(65_532, 4).unwrap(), b"tail");
         assert_eq!(inst.read(65_536, 0).unwrap(), b"");

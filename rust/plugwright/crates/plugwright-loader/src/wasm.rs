@@ -7,7 +7,7 @@ use plugwright_build::builder::{BuildOptions, Builder, Target};
 use plugwright_build::cache::{Artifact, Cache};
 use plugwright_core::{PluginError, Result, io_err, tracing_sink};
 use plugwright_native::format::{self, Format};
-use plugwright_wasm::{ModuleCache, WasmEngine, WasmLimits, WasmPlugin};
+use plugwright_wasm::{HostFactory, HostFunctions, Imports, ModuleCache, WasmEngine, WasmLimits, WasmPlugin};
 
 use crate::{cargo_build, id_for};
 
@@ -26,6 +26,7 @@ pub struct WasmLoader {
     engine: OnceLock<Option<Arc<dyn WasmEngine>>>,
     modules: ModuleCache,
     limits: WasmLimits,
+    host: Option<HostFactory>,
 }
 
 impl WasmLoader {
@@ -44,6 +45,7 @@ impl WasmLoader {
             builder,
             engine: OnceLock::new(),
             limits: WasmLimits::default(),
+            host: None,
         }
     }
 
@@ -56,6 +58,13 @@ impl WasmLoader {
     /// Fuel, memory and time limits for plugins loaded from now on.
     pub fn with_limits(mut self, limits: WasmLimits) -> Self {
         self.limits = limits;
+        self
+    }
+
+    /// Host functions for plugins loaded from now on: `host(id)` builds the
+    /// set the plugin with that id may call. None by default.
+    pub fn with_host_functions(mut self, host: impl Fn(&str) -> HostFunctions + Send + Sync + 'static) -> Self {
+        self.host = Some(std::sync::Arc::new(host));
         self
     }
 
@@ -118,7 +127,9 @@ impl WasmLoader {
             PluginError::Unsupported("no wasm engine: enable the `wasmtime` or `wasmi` feature".into())
         })?;
         let module = self.modules.compile(engine, &wasm)?;
-        WasmPlugin::with_module(id, engine.name(), module, self.limits.clone(), config, tracing_sink(id))
+        let host = self.host.as_ref().map_or_else(HostFunctions::new, |h| h(id));
+        let imports = Imports::new(tracing_sink(id)).with_host(host);
+        WasmPlugin::with_module(id, engine.name(), module, self.limits.clone(), config, imports)
     }
 }
 
