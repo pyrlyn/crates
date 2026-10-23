@@ -4,7 +4,7 @@ mold = { version = "2.42.1", os = ["linux"] } # linker, Linux only; mise [env] b
 sccache = { version = "0.18.0", os = ["linux", "macos"] } # compiler cache; mise [env] below makes it the rustc wrapper where it is installed
 # Same pin as rust-toolchain.toml; CI installs Rust from here. rust-src makes rustc quote
 # std's source in diagnostics, so trybuild's expected stderr is the same on every machine.
-rust = { version = "1.99.0", profile = "minimal", components = "rustfmt,clippy,rust-src" }
+rust = { version = "1.99.1", profile = "minimal", components = "rustfmt,clippy,rust-src" }
 "cargo:cargo-workspaces" = "0.4.2"
 "github:jdx/jactionlint" = "2.0.2" # the pre-push hook and `mise x -- jactionlint`; the local mise registry lacks the short name
 hk = "2.5.0" # runs jactionlint as a pre-push hook (hk.pkl); `mise x -- hk install --mise`
