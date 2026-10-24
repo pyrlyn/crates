@@ -128,6 +128,12 @@ fn log_macros_format() {
     plugwright_sdk::warn!("plain");
 }
 
+#[test]
+fn host_functions_need_a_wasm_host() {
+    let err = plugwright_sdk::host::call("upper", b"x").unwrap_err();
+    assert_eq!(err, "host function `upper`: host functions are only available to Wasm plugins");
+}
+
 /// `#[plugwright(init)]` on a differently named constructor taking the raw config bytes.
 struct Raw {
     len: usize,

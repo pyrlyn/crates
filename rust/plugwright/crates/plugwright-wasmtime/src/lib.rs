@@ -8,13 +8,16 @@ use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
-use plugwright_abi::wasm::{EXPORT_MEMORY, IMPORT_LOG, IMPORT_MODULE};
+use plugwright_abi::wasm::{EXPORT_MEMORY, IMPORT_HOST_CALL, IMPORT_HOST_TAKE, IMPORT_LOG, IMPORT_MODULE};
 use wasmtime::{
     Caller, Config, Engine, Extern, Instance, Linker, Memory, Module, ResourceLimiter, Store, Trap, UpdateDeadline, Val,
 };
 
 use plugwright_core::logging::LogSink;
-use plugwright_wasm::{MAX_GUEST_LOG, WasmEngine, WasmError, WasmInstance, WasmLimits, WasmModule, WasmVal, stored};
+use plugwright_wasm::{
+    HostCalls, Imports, MAX_GUEST_LOG, WasmEngine, WasmError, WasmInstance, WasmLimits, WasmModule, WasmVal,
+    guest_bytes, put_guest_bytes, stored,
+};
 
 plugwright_wasm::wasm_val_bridge!(Val);
 
@@ -202,6 +205,7 @@ impl ResourceLimiter for Limiter {
 struct State {
     limiter: Limiter,
     log: LogSink,
+    host: HostCalls,
     /// Wall-clock end of the current call, when it has a timeout.
     deadline: Option<Instant>,
 }
@@ -219,11 +223,16 @@ fn on_epoch_deadline(deadline: Option<Instant>, now: Instant) -> UpdateDeadline 
 }
 
 impl WasmModule for WtModule {
-    fn instantiate(&self, limits: &WasmLimits, log: LogSink) -> Result<Box<dyn WasmInstance>, WasmError> {
+    fn instantiate(&self, limits: &WasmLimits, imports: &Imports) -> Result<Box<dyn WasmInstance>, WasmError> {
         self.ticker.ensure_running()?;
         let mut store = Store::new(
             &self.engine,
-            State { limiter: Limiter { max_memory: limits.max_memory_bytes, hit: false }, log, deadline: None },
+            State {
+                limiter: Limiter { max_memory: limits.max_memory_bytes, hit: false },
+                log: Arc::clone(&imports.log),
+                host: HostCalls::new(imports.host.clone()),
+                deadline: None,
+            },
         );
         store.limiter(|s| &mut s.limiter);
         store.epoch_deadline_callback(|ctx| Ok(on_epoch_deadline(ctx.data().deadline, Instant::now())));
@@ -235,6 +244,28 @@ impl WasmModule for WtModule {
                 if mem.read(&caller, ptr as u32 as usize, &mut buf).is_ok() {
                     (caller.data().log)(level as u32, &String::from_utf8_lossy(&buf));
                 }
+            })
+            .and_then(|l| {
+                l.func_wrap(
+                    IMPORT_MODULE,
+                    IMPORT_HOST_CALL,
+                    |mut caller: Caller<'_, State>, np: i32, nl: i32, ip: i32, il: i32| -> i32 {
+                        let Some(Extern::Memory(mem)) = caller.get_export(EXPORT_MEMORY) else { return -1 };
+                        let (data, state) = mem.data_and_store_mut(&mut caller);
+                        state.host.call(|p, l| guest_bytes(data, p, l), np, nl, ip, il)
+                    },
+                )
+            })
+            .and_then(|l| {
+                l.func_wrap(
+                    IMPORT_MODULE,
+                    IMPORT_HOST_TAKE,
+                    |mut caller: Caller<'_, State>, ptr: i32, len: i32| -> i32 {
+                        let Some(Extern::Memory(mem)) = caller.get_export(EXPORT_MEMORY) else { return -1 };
+                        let (data, state) = mem.data_and_store_mut(&mut caller);
+                        state.host.take(|p, d| put_guest_bytes(data, p, d), ptr, len)
+                    },
+                )
             })
             .map_err(|e| WasmError::Instantiate(e.to_string()))?;
         let mut inst = WtInstance {
@@ -360,7 +391,8 @@ mod tests {
     #[test]
     fn guest_memory_access_is_bounds_checked_before_allocating() {
         let module = WasmtimeEngine::new().unwrap().compile(ONE_PAGE).unwrap();
-        let mut inst = module.instantiate(&WasmLimits::default(), Arc::new(|_: u32, _: &str| {})).unwrap();
+        let mut inst =
+            module.instantiate(&WasmLimits::default(), &Imports::new(Arc::new(|_: u32, _: &str| {}))).unwrap();
         inst.write(65_532, b"tail").unwrap();
         assert_eq!(inst.read(65_532, 4).unwrap(), b"tail");
         assert_eq!(inst.read(65_536, 0).unwrap(), b"");
@@ -376,7 +408,8 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let engine = WasmtimeEngine::new().unwrap();
         let usable = |m: Arc<dyn WasmModule>| {
-            let mut inst = m.instantiate(&WasmLimits::default(), Arc::new(|_: u32, _: &str| {})).unwrap();
+            let mut inst =
+                m.instantiate(&WasmLimits::default(), &Imports::new(Arc::new(|_: u32, _: &str| {}))).unwrap();
             inst.write(0, b"ok").unwrap();
         };
         usable(engine.compile_cached(ONE_PAGE, "k", dir.path()).unwrap());
@@ -410,7 +443,8 @@ mod tests {
         let running = || ticker.running.lock().unwrap().is_some();
         let module = engine.compile(ONE_PAGE).unwrap();
         assert!(!running(), "compiling needs no thread");
-        let instance = module.instantiate(&WasmLimits::default(), Arc::new(|_: u32, _: &str| {})).unwrap();
+        let instance =
+            module.instantiate(&WasmLimits::default(), &Imports::new(Arc::new(|_: u32, _: &str| {}))).unwrap();
         assert!(running());
         drop((engine, module));
         assert_eq!(Arc::strong_count(&ticker), 2, "the instance keeps the ticker");

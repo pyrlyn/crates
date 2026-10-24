@@ -4,9 +4,10 @@
 //! [`Worker`] of its own: control calls before events, and a call cancelled
 //! through extism's `CancelHandle` at its deadline.
 //!
-//! plugwright's own Wasm ABI (`plugwright-wasm`) gives guests no WASI and one
-//! import (design D13). extism guests speak extism's ABI instead, may import
-//! the application's host functions, and get WASI preview 1 only when the
+//! plugwright's own Wasm ABI (`plugwright-wasm`) gives guests no WASI, a log
+//! import and the named host functions the application registers (design
+//! D13). extism guests speak extism's ABI instead, import the application's
+//! host functions extism-style, and get WASI preview 1 only when the
 //! application passes [`Wasi`] (design D27).
 
 use std::path::PathBuf;
