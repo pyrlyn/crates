@@ -66,6 +66,27 @@ pub enum Quant {
     F32,
     /// One `i8` per component plus one `f32` scale per vector (about 4x smaller).
     I8,
+    /// [`Quant::I8`] for the graph walk, plus the `f32` vector (in memory and on disk) to
+    /// rescore the best `k * rerank` candidates. About 1.25x the size of [`Quant::F32`].
+    I8Rerank,
+}
+
+impl Quant {
+    fn code(self) -> i64 {
+        match self {
+            Quant::F32 => 0,
+            Quant::I8 => 1,
+            Quant::I8Rerank => 2,
+        }
+    }
+    fn from_code(c: i64) -> Result<Self> {
+        match c {
+            0 => Ok(Quant::F32),
+            1 => Ok(Quant::I8),
+            2 => Ok(Quant::I8Rerank),
+            _ => Err(Error(format!("unknown quantization code {c}"))),
+        }
+    }
 }
 
 /// Index parameters.
@@ -79,6 +100,9 @@ pub struct Params {
     pub ef_search: usize,
     /// Vector storage.
     pub quant: Quant,
+    /// With [`Quant::I8Rerank`]: rescore the best `k * rerank` `i8` candidates with the
+    /// `f32` vectors (`0` counts as `1`). Ignored by the other modes; not stored in the file.
+    pub rerank: usize,
 }
 
 impl Default for Params {
@@ -88,6 +112,7 @@ impl Default for Params {
             ef_construction: 200,
             ef_search: 64,
             quant: Quant::F32,
+            rerank: 4,
         }
     }
 }
@@ -95,6 +120,8 @@ impl Default for Params {
 enum Vector {
     F32(Box<[f32]>),
     I8(Box<[i8]>, f32),
+    /// `i8` codes, scale, and the normalized `f32` vector for rescoring.
+    I8Rerank(Box<[i8]>, f32, Box<[f32]>),
 }
 
 struct Node {
@@ -170,32 +197,49 @@ fn normalize(v: &mut [f32]) {
     }
 }
 
+fn quantize(v: &[f32]) -> (Box<[i8]>, f32) {
+    let max = v
+        .iter()
+        .fold(0f32, |m, x| m.max(x.abs()))
+        .max(f32::MIN_POSITIVE);
+    let s = max / 127.0;
+    (v.iter().map(|x| (x / s).round() as i8).collect(), s)
+}
+
 impl Vector {
     fn encode(v: &[f32], q: Quant) -> Self {
         match q {
             Quant::F32 => Vector::F32(v.into()),
             Quant::I8 => {
-                let max = v
-                    .iter()
-                    .fold(0f32, |m, x| m.max(x.abs()))
-                    .max(f32::MIN_POSITIVE);
-                let s = max / 127.0;
-                Vector::I8(v.iter().map(|x| (x / s).round() as i8).collect(), s)
+                let (c, s) = quantize(v);
+                Vector::I8(c, s)
+            }
+            Quant::I8Rerank => {
+                let (c, s) = quantize(v);
+                Vector::I8Rerank(c, s, v.into())
             }
         }
     }
     fn decode(&self) -> Vec<f32> {
         match self {
-            Vector::F32(v) => v.to_vec(),
+            Vector::F32(v) | Vector::I8Rerank(_, _, v) => v.to_vec(),
             Vector::I8(v, s) => v.iter().map(|x| *x as f32 * s).collect(),
         }
     }
-    /// Cosine distance (`1 - dot`) to a normalized `f32` query.
+    /// Cosine distance (`1 - dot`) to a normalized `f32` query, as the graph walk sees it.
     #[inline]
     fn dist(&self, q: &[f32]) -> f32 {
         1.0 - match self {
             Vector::F32(v) => dot(q, v),
-            Vector::I8(v, s) => dot_i8(q, v) * s,
+            Vector::I8(v, s) | Vector::I8Rerank(v, s, _) => dot_i8(q, v) * s,
+        }
+    }
+    /// Distance from the most precise stored form: the `f32` copy when there is one.
+    #[inline]
+    fn exact_dist(&self, q: &[f32]) -> f32 {
+        match self {
+            Vector::I8Rerank(_, _, v) => 1.0 - dot(q, v),
+            _ => self.dist(q),
         }
     }
 }
@@ -205,6 +249,7 @@ pub struct VecDb {
     dim: usize,
     params: Params,
     ef_search: AtomicUsize,
+    rerank: AtomicUsize,
     arena: Arena,
     /// (entry node, its level); `u64::MAX` when empty.
     entry: RwLock<u64>,
@@ -245,6 +290,7 @@ impl VecDb {
             dim,
             params,
             ef_search: AtomicUsize::new(params.ef_search),
+            rerank: AtomicUsize::new(params.rerank),
             arena: Arena::new(),
             entry: RwLock::new(u64::MAX),
             dirty: Mutex::new(BTreeSet::new()),
@@ -266,6 +312,10 @@ impl VecDb {
     /// Changes the search candidate list size for later searches.
     pub fn set_ef_search(&self, ef: usize) {
         self.ef_search.store(ef, AO::Relaxed);
+    }
+    /// Changes the rerank factor ([`Params::rerank`]) for later searches.
+    pub fn set_rerank(&self, factor: usize) {
+        self.rerank.store(factor, AO::Relaxed);
     }
 
     fn load(&mut self) -> Result<()> {
@@ -290,7 +340,7 @@ impl VecDb {
         }
         self.params.m = meta[1] as usize;
         self.params.ef_construction = meta[2] as usize;
-        self.params.quant = if meta[3] == 1 { Quant::I8 } else { Quant::F32 };
+        self.params.quant = Quant::from_code(meta[3])?;
         *self.entry.get_mut() = meta[4] as u64;
         let mut st = db.prepare("SELECT data FROM vdb_page ORDER BY no")?;
         while st.step()? {
@@ -314,18 +364,27 @@ impl VecDb {
         }
         let id = u64::from_le_bytes(take(b, 8)?.try_into().unwrap_or_default());
         let levels = take(b, 1)?[0] as usize + 1;
+        let f32s = |b: &mut &[u8]| -> Result<Box<[f32]>> {
+            Ok(take(b, self.dim * 4)?
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .map(|c| f32::from_le_bytes(*c))
+                .collect())
+        };
+        let i8s = |b: &mut &[u8]| -> Result<(Box<[i8]>, f32)> {
+            let s = f32::from_le_bytes(take(b, 4)?.try_into().unwrap_or_default());
+            Ok((take(b, self.dim)?.iter().map(|x| *x as i8).collect(), s))
+        };
         let vec = match self.params.quant {
-            Quant::F32 => Vector::F32(
-                take(b, self.dim * 4)?
-                    .as_chunks::<4>()
-                    .0
-                    .iter()
-                    .map(|c| f32::from_le_bytes(*c))
-                    .collect(),
-            ),
+            Quant::F32 => Vector::F32(f32s(b)?),
             Quant::I8 => {
-                let s = f32::from_le_bytes(take(b, 4)?.try_into().unwrap_or_default());
-                Vector::I8(take(b, self.dim)?.iter().map(|x| *x as i8).collect(), s)
+                let (c, s) = i8s(b)?;
+                Vector::I8(c, s)
+            }
+            Quant::I8Rerank => {
+                let (c, s) = i8s(b)?;
+                Vector::I8Rerank(c, s, f32s(b)?)
             }
         };
         let mut links = Vec::with_capacity(levels);
@@ -350,13 +409,20 @@ impl VecDb {
     fn write_node(n: &Node, out: &mut Vec<u8>) {
         out.extend_from_slice(&n.id.to_le_bytes());
         out.push((n.links.len() - 1) as u8);
+        let f32s = |out: &mut Vec<u8>, v: &[f32]| {
+            v.iter()
+                .for_each(|x| out.extend_from_slice(&x.to_le_bytes()))
+        };
+        let i8s = |out: &mut Vec<u8>, v: &[i8], s: f32| {
+            out.extend_from_slice(&s.to_le_bytes());
+            out.extend(v.iter().map(|x| *x as u8));
+        };
         match &n.vec {
-            Vector::F32(v) => v
-                .iter()
-                .for_each(|x| out.extend_from_slice(&x.to_le_bytes())),
-            Vector::I8(v, s) => {
-                out.extend_from_slice(&s.to_le_bytes());
-                out.extend(v.iter().map(|x| *x as u8));
+            Vector::F32(v) => f32s(out, v),
+            Vector::I8(v, s) => i8s(out, v, *s),
+            Vector::I8Rerank(v, s, f) => {
+                i8s(out, v, *s);
+                f32s(out, f);
             }
         }
         for l in n.links.iter() {
@@ -396,7 +462,7 @@ impl VecDb {
                 self.dim as i64,
                 self.params.m as i64,
                 self.params.ef_construction as i64,
-                i64::from(self.params.quant == Quant::I8),
+                self.params.quant.code(),
                 *self.entry.read() as i64,
                 self.len() as i64,
             ];
@@ -595,8 +661,21 @@ impl VecDb {
         } else {
             self.greedy(&q, ep, top, 1)
         };
-        let ef = self.ef_search.load(AO::Relaxed).max(k);
+        let rerank = self.params.quant == Quant::I8Rerank;
+        let want = if rerank {
+            k.saturating_mul(self.rerank.load(AO::Relaxed).max(1))
+        } else {
+            k
+        };
+        let ef = self.ef_search.load(AO::Relaxed).max(want);
         let mut r = self.search_layer(&q, &[best], ef, 0);
+        r.truncate(want);
+        if rerank {
+            for d in &mut r {
+                d.0 = self.node(d.1).vec.exact_dist(&q);
+            }
+            r.sort();
+        }
         r.truncate(k);
         r.into_iter()
             .map(|d| (self.node(d.1).id, 1.0 - d.0))

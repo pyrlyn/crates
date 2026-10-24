@@ -12,3 +12,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Feature `simd`: NEON and runtime-detected AVX2 + FMA dot products with a scalar fallback; public `distance` module with the kernels and `backend()`.
+- `Quant::I8Rerank`: `i8` graph walk with exact `f32` rescoring of the best `k * rerank` candidates; new field `Params::rerank` (default 4) and `VecDb::set_rerank`. Files in this mode (quantization code 2) cannot be read by older builds. An unknown quantization code is now an error instead of being read as `F32`.

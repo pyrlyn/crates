@@ -10,6 +10,7 @@ parameter that changes nothing unless set.
 | candidate | decision | why |
 |---|---|---|
 | SIMD distance kernels | **chosen**, feature `simd` (off by default) | The dot product is the inner loop of insert and search. The scalar code already auto-vectorizes to 128-bit lanes without FMA. NEON with FMA and 4 accumulators, and AVX2 + FMA on x86_64 (detected at runtime; the default x86_64 target only has SSE2), are the cheapest win. It needs `unsafe` (raw-pointer loads, calling a `#[target_feature]` function), so it is opt-in and kept in one module. |
+| i8 search with f32 rerank | **chosen**, `Quant::I8Rerank` + `Params::rerank` | The benchmark shows i8 walks faster than f32 (p50 10 vs 15 ms at ef 1024) but loses recall (0.951 vs 0.963). Rescoring a few candidates with exact `f32` fixes the order where quantization swapped neighbours. A new mode, so `F32` and `I8` files and behaviour stay unchanged. |
 
 Skipped:
 
@@ -58,3 +59,41 @@ The index tests run on top of the same kernels.
 - No AVX-512 and no `i8 x i8` integer dot product: the query stays `f32` so
   quantization error stays on the stored side only.
 - No speedup figure: benchmarks were not re-run for this change.
+
+## i8 search with f32 rerank (`Quant::I8Rerank`)
+
+**How it works.** Each node keeps the `i8` codes and scale (as `Quant::I8`)
+plus its normalized `f32` vector. Insert and the graph walk use only the `i8`
+distance, so the graph is built exactly like an `I8` index. `search(q, k)`
+widens the layer-0 beam to at least `k * rerank` (still at least `ef_search`),
+keeps the best `k * rerank` candidates by `i8` distance, recomputes their
+distance with the `f32` copy, sorts again and returns the top `k`. The scores
+returned are then the exact `f32` cosine similarity. Pages store
+`scale, i8 x dim, f32 x dim` per node; `vdb_meta` quantization code `2`.
+
+**Enable.** Create the file with
+`Params { quant: Quant::I8Rerank, rerank: 4, ..Params::default() }`.
+`rerank` (default 4) is a search-time knob, not stored: pass it on every open
+or change it with `VecDb::set_rerank`. `0` counts as `1` (rescore only `k`).
+
+**Disable.** Use `Quant::I8` (no `f32` copy) or `Quant::F32`. The mode is
+fixed when the file is created, like `m`; switching means rebuilding the
+index. `set_rerank(1)` keeps the mode but stops widening the candidate list.
+
+**Test.** `cargo test -p sqlite-hnsw --test rerank`: returned scores equal the
+exact `f32` cosine (within `1e-5`), recall@10 is at least that of plain `I8`
+on the same data and graph, the factor can change at runtime (including `0`),
+and the mode and vectors survive a reopen.
+
+**Limitations.**
+
+- The `f32` copy stays in memory: about 1.25x the RAM and disk of `F32`. The
+  gain over `F32` is the faster `i8` walk, not memory. Keeping `f32` on disk
+  only would need SQLite reads during every search, through the connection
+  mutex, and is not implemented.
+- A file in this mode needs this version or newer. Older builds read code `2`
+  as `F32` and misparse the pages.
+- With a large `k * rerank` the beam grows past `ef_search`, which costs
+  latency like a larger `ef_search`.
+- No measured recall/latency numbers yet for this mode (`vecbench` accepts
+  quant `i8r`; the benchmark was not run here).

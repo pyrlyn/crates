@@ -15,6 +15,8 @@ Distance is `1 - dot` on normalized vectors (cosine); `search` returns
 `1 - distance`, the cosine similarity. With `Quant::I8` each vector is stored
 as `i8` components plus one `f32` scale (`max |x| / 127`); the query stays
 `f32`, so the dot product is `f32 x i8` with one multiply by the scale.
+`Quant::I8Rerank` also keeps the `f32` vector: the walk uses `i8`, and the best
+`k * rerank` candidates are rescored with `f32` before the top `k` is returned.
 
 ## Concurrency
 

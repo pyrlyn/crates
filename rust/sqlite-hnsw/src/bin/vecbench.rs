@@ -6,6 +6,7 @@
 //! vecbench query <engine> <dir> <db> <ef_list> <thread_list> <curve_ef> [gt]
 //! vecbench insert <engine> <dir> <db> <ef> <threads>
 //! engine: vecdb, or qdrant when built from `bench-qdrant/` (exact ground truth comes from `gen`)
+//! quant: f32, i8, or i8r (i8 walk with f32 rerank)
 
 use std::path::Path;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -226,16 +227,17 @@ mod qd {
 fn open(engine: &str, db: &Path, dim: usize, m: usize, efc: usize, quant: &str) -> Box<dyn Engine> {
     match engine {
         "vecdb" => {
-            let q = if quant == "i8" {
-                sqlite_hnsw::Quant::I8
-            } else {
-                sqlite_hnsw::Quant::F32
+            let q = match quant {
+                "i8" => sqlite_hnsw::Quant::I8,
+                "i8r" => sqlite_hnsw::Quant::I8Rerank,
+                _ => sqlite_hnsw::Quant::F32,
             };
             let p = sqlite_hnsw::Params {
                 m,
                 ef_construction: efc,
                 ef_search: 64,
                 quant: q,
+                ..sqlite_hnsw::Params::default()
             };
             Box::new(VecDbEngine(
                 sqlite_hnsw::VecDb::open(db.to_str().unwrap(), dim, p).unwrap(),

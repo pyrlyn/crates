@@ -7,7 +7,7 @@ quantization (about 4x less disk and memory than `f32`).
 ```rust,no_run
 use sqlite_hnsw::{Params, Quant, VecDb};
 
-let db = VecDb::open("vectors.db", 384, Params { m: 32, ef_construction: 400, ef_search: 1024, quant: Quant::I8 })?;
+let db = VecDb::open("vectors.db", 384, Params { m: 32, ef_construction: 400, ef_search: 1024, quant: Quant::I8, ..Params::default() })?;
 db.insert(42, &embedding)?;          // any thread, concurrently
 db.save()?;                          // writes only pages touched since the last save
 for (id, score) in db.search(&query, 10) { /* cosine similarity, best first */ }
@@ -43,6 +43,11 @@ From the recorded benchmark (100k x 384, synthetic): recall@10 >= 0.95 needs
 p50 10 ms, 58 MiB on disk, ~28 ms cold start, ~3k QPS at 16 threads.
 Clustered (embedding-like) data reaches recall 0.986 already at `ef_search = 64`
 (~1 ms). Full tables: [docs/benchmark.md](docs/benchmark.md).
+
+`Quant::I8Rerank` walks the graph with `i8` like `Quant::I8` and rescores the
+best `k * rerank` candidates (`Params::rerank`, default 4) with a kept `f32`
+copy, so scores are exact `f32` cosine. It costs about 1.25x the memory of
+`F32`. See [docs/features.md](docs/features.md).
 
 ## Test
 
