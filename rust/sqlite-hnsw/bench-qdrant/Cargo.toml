@@ -1,0 +1,28 @@
+# qdrant-edge comparison for sqlite-hnsw: the same `vecbench` driver with the qdrant engine on.
+# Not published, not a workspace member (own Cargo.lock), so qdrant's tree never reaches
+# the crates workspace. To use a qdrant-edge fork, add to this file (relative or absolute,
+# your machine only — do not commit a local path):
+#
+#   [patch.crates-io]
+#   qdrant-edge = { path = "/path/to/qdrant-edge-fork" }
+#   # or: qdrant-edge = { git = "https://github.com/<you>/qdrant", branch = "<branch>" }
+[package]
+name = "sqlite-hnsw-bench-qdrant"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[workspace]
+
+[features]
+default = ["qdrant"]
+qdrant = []
+
+[[bin]]
+name = "vecbench"
+path = "src/main.rs"
+
+[dependencies]
+sqlite-hnsw = { path = "..", features = ["bench"] }
+qdrant-edge = "=0.9.0"
+serde_json = "1"

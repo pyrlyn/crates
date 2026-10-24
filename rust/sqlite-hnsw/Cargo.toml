@@ -1,0 +1,42 @@
+[package]
+name = "sqlite-hnsw"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.99"
+description = "HNSW approximate nearest-neighbour index persisted in a single SQLite file, with optional i8 quantization and lock-free concurrent search"
+license.workspace = true
+repository = "https://github.com/pyrlyn/crates"
+readme = "README.md"
+keywords = ["hnsw", "sqlite", "vector", "ann", "embeddings"]
+categories = ["database", "algorithms"]
+# The member's plan and agent files are repository bookkeeping, not part of the published crate.
+include = ["/src", "/tests", "/docs", "/README.md"]
+
+[lints.rust]
+# src/sqlite.rs is a thin FFI binding over libsqlite3-sys; every block carries a SAFETY note.
+unsafe_code = "deny"
+missing_docs = "warn"
+missing_debug_implementations = "warn"
+# `qdrant` is a feature of bench-qdrant/, which compiles src/bin/vecbench.rs as a module.
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(feature, values("qdrant"))'] }
+
+# The qdrant-edge comparison is the separate, unpublished `bench-qdrant/` crate (own
+# Cargo.lock, excluded from the workspace) so qdrant's dependency tree stays out of here.
+[features]
+default = ["bundled"]
+# Compile SQLite into the crate. Turn off to link the system SQLite (or SQLCipher).
+bundled = ["libsqlite3-sys/bundled"]
+# Builds the `vecbench` binary (dataset generator + benchmark driver).
+bench = ["dep:serde_json"]
+
+[dependencies]
+libsqlite3-sys = "0.38.2"
+parking_lot = "0.12"
+serde_json = { version = "1", optional = true }
+
+[dev-dependencies]
+tempfile = "3.27.0"
+
+[[bin]]
+name = "vecbench"
+required-features = ["bench"]
