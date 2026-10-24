@@ -504,6 +504,20 @@ impl VecDb {
     }
 
     fn search_layer(&self, q: &[f32], eps: &[D], ef: usize, level: usize) -> Vec<D> {
+        self.search_layer_if(q, eps, ef, level, None)
+    }
+
+    /// Beam search on one layer. With `accept`, rejected nodes are still walked through
+    /// but never enter the result list (so the beam does not stop early on them).
+    fn search_layer_if(
+        &self,
+        q: &[f32],
+        eps: &[D],
+        ef: usize,
+        level: usize,
+        accept: Option<&dyn Fn(u32) -> bool>,
+    ) -> Vec<D> {
+        let ok = |i: u32| accept.is_none_or(|f| f(i));
         VISITED.with(|v| {
             let (marks, gen_) = &mut *v.borrow_mut();
             let n = self.len();
@@ -521,7 +535,9 @@ impl VecDb {
             for &e in eps {
                 marks[e.1 as usize] = g;
                 cand.push(std::cmp::Reverse(e));
-                res.push(e);
+                if ok(e.1) {
+                    res.push(e);
+                }
             }
             let mut buf = Vec::with_capacity(64);
             while let Some(std::cmp::Reverse(c)) = cand.pop() {
@@ -543,9 +559,11 @@ impl VecDb {
                     let d = self.node(nb).vec.dist(q);
                     if res.len() < ef || d < res.peek().map_or(f32::MAX, |w| w.0) {
                         cand.push(std::cmp::Reverse(D(d, nb)));
-                        res.push(D(d, nb));
-                        if res.len() > ef {
-                            res.pop();
+                        if ok(nb) {
+                            res.push(D(d, nb));
+                            if res.len() > ef {
+                                res.pop();
+                            }
                         }
                     }
                 }
@@ -688,6 +706,28 @@ impl VecDb {
 
     /// Top-`k` by cosine similarity: `(id, score)` with higher score first.
     pub fn search(&self, v: &[f32], k: usize) -> Vec<(u64, f32)> {
+        self.search_inner(v, k, None)
+    }
+
+    /// Like [`search`](Self::search), but only ids for which `filter` returns `true` are
+    /// returned. Rejected nodes are still walked through, so the graph stays connected; an
+    /// allow-list is `|id| allowed.contains(&id)`. A very selective filter makes the walk
+    /// visit much of the graph before it finds `k` matches.
+    pub fn search_filtered(
+        &self,
+        v: &[f32],
+        k: usize,
+        filter: impl Fn(u64) -> bool,
+    ) -> Vec<(u64, f32)> {
+        self.search_inner(v, k, Some(&filter))
+    }
+
+    fn search_inner(
+        &self,
+        v: &[f32],
+        k: usize,
+        filter: Option<&dyn Fn(u64) -> bool>,
+    ) -> Vec<(u64, f32)> {
         let e = *self.entry.read();
         if e == u64::MAX {
             return Vec::new();
@@ -707,7 +747,9 @@ impl VecDb {
             k
         };
         let ef = self.ef_search.load(AO::Relaxed).max(want);
-        let mut r = self.search_layer(&q, &[best], ef, 0);
+        let accept = |i: u32| filter.is_none_or(|f| f(self.node(i).id));
+        let accept: Option<&dyn Fn(u32) -> bool> = filter.is_some().then_some(&accept);
+        let mut r = self.search_layer_if(&q, &[best], ef, 0, accept);
         r.truncate(want);
         if rerank {
             for d in &mut r {

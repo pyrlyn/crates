@@ -12,6 +12,7 @@ parameter that changes nothing unless set.
 | SIMD distance kernels | **chosen**, feature `simd` (off by default) | The dot product is the inner loop of insert and search. The scalar code already auto-vectorizes to 128-bit lanes without FMA. NEON with FMA and 4 accumulators, and AVX2 + FMA on x86_64 (detected at runtime; the default x86_64 target only has SSE2), are the cheapest win. It needs `unsafe` (raw-pointer loads, calling a `#[target_feature]` function), so it is opt-in and kept in one module. |
 | i8 search with f32 rerank | **chosen**, `Quant::I8Rerank` + `Params::rerank` | The benchmark shows i8 walks faster than f32 (p50 10 vs 15 ms at ef 1024) but loses recall (0.951 vs 0.963). Rescoring a few candidates with exact `f32` fixes the order where quantization swapped neighbours. A new mode, so `F32` and `I8` files and behaviour stay unchanged. |
 | parallel build + batch insert | **chosen**, `insert_batch` + feature `parallel` (off by default) | `insert` is already thread-safe, so the rayon version is a small loop, and a bulk load no longer needs a hand-written thread pool (as `vecbench` has). The batch saves once, in one transaction. rayon is already in the workspace lock; the feature keeps it out of default builds. |
+| filtered search | **chosen**, `search_filtered(q, k, predicate)` | Post-filtering the top `k` returns too few hits. Filtering inside the beam (the hnswlib approach) is a few lines in `search_layer` and costs nothing when unused. An allow-list is the predicate `|id| set.contains(&id)`, so one API covers both. The same hook later serves tombstones. |
 
 Skipped:
 
@@ -133,3 +134,40 @@ is searchable; a length mismatch inserts nothing; an empty batch is a plain
 - Ids are not checked for duplicates, as with `insert`.
 - No measured speedup here. The old `vecbench` build with 16 threads already
   used the same concurrent `insert`.
+
+## Filtered search (`search_filtered`)
+
+**How it works.** `search_filtered(q, k, |id| ...)` runs the normal descent
+through the upper layers, then the layer-0 beam with an accept test. Every
+visited node still enters the candidate queue, so the walk can pass through
+rejected regions. Only accepted nodes enter the result list. The beam stops
+when it holds `ef` accepted results and the next candidate is farther than
+the worst of them, so it cannot stop early because of rejected nodes. With
+`Quant::I8Rerank` the rerank runs on the accepted candidates.
+
+```rust,ignore
+let allowed: HashSet<u64> = tenant_ids();
+let hits = db.search_filtered(&q, 10, |id| allowed.contains(&id));
+let even = db.search_filtered(&q, 10, |id| id % 2 == 0);
+```
+
+**Enable.** Call `search_filtered` instead of `search`. The predicate gets
+the id given to `insert` and must be cheap: it runs once per visited node.
+
+**Disable.** Call `search`. Without a filter the path is the old one plus one
+`Option` check per neighbour.
+
+**Test.** `cargo test -p sqlite-hnsw --test filter`: a 1-in-3 predicate returns
+only matching ids, sorted, with recall@10 >= 0.9 against exact filtered
+search; a 21-id allow-list out of 2000 is found (recall >= 0.9); fewer
+matches than `k` returns exactly the matches, and a reject-all filter returns
+nothing; an accept-all filter returns exactly what `search` returns.
+
+**Limitations.**
+
+- Latency grows as the filter gets more selective. With fewer than `ef`
+  matches reachable, the walk visits every reachable node: correct, but up to
+  brute-force cost. For a small allow-list it can be cheaper to score those
+  vectors directly.
+- No payload index: the predicate sees only the id. Map ids to attributes
+  yourself.
