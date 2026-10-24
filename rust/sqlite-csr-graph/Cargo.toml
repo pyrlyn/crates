@@ -1,0 +1,53 @@
+[package]
+name = "sqlite-csr-graph"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.99"
+description = "Code-symbol store in SQLite with a native reference/call graph in compact CSR segments: lock-free snapshot readers, delta writes with background merge, impact/callers/callees as table-valued functions, also as a loadable extension"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/pyrlyn/crates"
+readme = "README.md"
+keywords = ["sqlite", "graph", "csr", "code-index", "extension"]
+categories = ["database", "data-structures"]
+# The member's plan and agent files and the rtok benchmark scripts are repository bookkeeping.
+include = ["/src", "/tests", "/examples", "/README.md", "/docs"]
+
+[lib]
+# rlib for Rust hosts; cdylib is the SQLite loadable extension (`--no-default-features --features loadable`).
+crate-type = ["rlib", "cdylib"]
+
+[lints.rust]
+# The extension entry point, sqlite3_config and rusqlite's VTab traits need `unsafe`;
+# each site carries `#[allow(unsafe_code)]` and a SAFETY note.
+unsafe_code = "deny"
+missing_debug_implementations = "warn"
+
+[features]
+default = ["bundled"]
+# Statically link SQLite (rusqlite's `bundled`). Off for the loadable extension: the host owns SQLite.
+bundled = ["rusqlite/bundled"]
+# Build the cdylib as a SQLite loadable extension (exports `sqlite3_extension_init`).
+loadable = ["rusqlite/loadable_extension"]
+# Importer from rtok's index schema (`import_rtok`), its example and the equivalence test.
+rtok-import = []
+
+# rusqlite 0.40 pins libsqlite3-sys 0.38, the version the workspace already locks
+# (only one crate may link `sqlite3`).
+[dependencies]
+rusqlite = { version = "0.40", features = ["vtab", "functions"] }
+arc-swap = "1.9"
+
+[dev-dependencies]
+tempfile = "3.27.0"
+
+[[example]]
+name = "import_rtok"
+required-features = ["bundled", "rtok-import"]
+
+[[example]]
+name = "qps"
+required-features = ["bundled", "rtok-import"]
+
+[[test]]
+name = "equivalence"
+required-features = ["bundled", "rtok-import"]
