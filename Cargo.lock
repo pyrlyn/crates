@@ -3242,6 +3242,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "llm-testkit"
+version = "0.1.0"
+dependencies = [
+ "llm-http",
+]
+
+[[package]]
 name = "llm-wire"
 version = "0.1.0"
 dependencies = [

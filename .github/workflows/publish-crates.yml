@@ -15,6 +15,12 @@ name: publish-crates
 #   crates that never reached crates.io would all go out at once). CARGO_REGISTRY_TOKEN is
 #   passed as an environment variable and never written to disk or printed.
 # - workflow_dispatch: `dry-run: false` publishes for real regardless of the variable.
+#   `crates` empty (the default) still publishes every crate whose version is not on
+#   crates.io. `crates: text-sanitize` or `crates: text-sanitize,llm-testkit` is the
+#   selective path: only those packages. A name that is not a workspace member fails
+#   the step. cargo-workspaces 0.4.2 publish has no `--packages` / `-p` (`cargo ws
+#   publish --help`); other members are set `publish = false` in this checkout, not
+#   committed, so `cargo ws publish` skips them.
 #
 # No tags or releases are created here: bump.yml / release.yml stay the way to tag and release.
 # `cargo ws changed` compares against the last git tag (or --since); the existing
@@ -42,6 +48,10 @@ on:
         description: only package and list what would be published
         default: true
         type: boolean
+      crates:
+        description: "comma-separated packages, e.g. text-sanitize or text-sanitize,llm-testkit; empty publishes every unpublished crate"
+        default: ""
+        type: string
 
 permissions:
   contents: read
@@ -94,7 +104,9 @@ jobs:
           EVENT: ${{ github.event_name }}
           VARIABLE: ${{ vars.CRATES_PUBLISH }}
           DISPATCH_DRY_RUN: ${{ inputs.dry-run }}
+          CRATES: ${{ inputs.crates }}
         run: |
+          set -euo pipefail
           real=0
           if [ "$EVENT" = push ] && [ "$VARIABLE" = true ]; then real=1; fi
           if [ "$EVENT" = workflow_dispatch ] && [ "$DISPATCH_DRY_RUN" = false ]; then real=1; fi
@@ -109,5 +121,124 @@ jobs:
             # Without the dependencies on the registry a dependent crate cannot be verified.
             args+=(--dry-run --no-verify)
             echo "::notice title=publish-crates::dry run, nothing is uploaded"
+          fi
+          # 0.4.2 has no -p/--packages. Unnamed members become publish = false here.
+          if [ -n "${CRATES//[[:space:]]/}" ]; then
+            selected="$(python3 - <<'PY'
+          import json
+          import os
+          import re
+          import subprocess
+          import sys
+          from pathlib import Path
+
+          raw = os.environ["CRATES"]
+          names = [part.strip() for part in raw.split(",")]
+          if any(not part for part in names):
+              sys.exit("error: empty crate name in crates list")
+          seen = set()
+          for name in names:
+              if not re.fullmatch(r"[A-Za-z0-9_-]+", name):
+                  sys.exit(f"error: '{name}' is not a crate name")
+              if name in seen:
+                  sys.exit(f"error: duplicate crate name '{name}'")
+              seen.add(name)
+
+          def metadata():
+              out = subprocess.check_output(
+                  ["cargo", "metadata", "--no-deps", "--format-version", "1"]
+              )
+              return json.loads(out)
+
+          def members_of(meta):
+              ids = set(meta["workspace_members"])
+              found = {}
+              for pkg in meta["packages"]:
+                  if pkg["id"] not in ids:
+                      continue
+                  found.setdefault(pkg["name"], []).append(pkg)
+              return found
+
+          def public(pkg):
+              listed = pkg.get("publish")
+              return not (isinstance(listed, list) and len(listed) == 0)
+
+          def section_name(line):
+              text = line.strip()
+              if not text.startswith("[") or not text.endswith("]") or text.startswith("[["):
+                  return None
+              return text[1:-1].strip().strip('"').strip("'")
+
+          def privatize(path):
+              lines = path.read_text().splitlines(keepends=True)
+              headers = []
+              for index, line in enumerate(lines):
+                  name = section_name(line.rstrip("\r\n"))
+                  if name is not None:
+                      headers.append((index, name))
+              ranges = [index for index, name in headers if name == "package"]
+              if len(ranges) != 1:
+                  sys.exit(f"error: {path} has {len(ranges)} [package] tables")
+              which = ranges[0]
+              start = headers[which][0]
+              end = headers[which + 1][0] if which + 1 < len(headers) else len(lines)
+              key = re.compile(r"^\s*publish(?:\.workspace)?\s*=")
+              hits = []
+              body_index = start + 1
+              while body_index < end:
+                  code = lines[body_index].split("#", 1)[0]
+                  if key.match(code):
+                      stop = body_index + 1
+                      if "[" in code and "]" not in code:
+                          while stop < end and "]" not in lines[stop].split("#", 1)[0]:
+                              stop += 1
+                          if stop < end:
+                              stop += 1
+                      hits.append((body_index, stop))
+                      body_index = stop
+                      continue
+                  body_index += 1
+              if len(hits) > 1:
+                  sys.exit(f"error: {path} has more than one publish key")
+              newline = "\r\n" if lines[start].endswith("\r\n") else "\n"
+              if not hits:
+                  lines.insert(start + 1, f"publish = false{newline}")
+              else:
+                  begin, stop = hits[0]
+                  indent = re.match(r"\s*", lines[begin]).group(0)
+                  if re.fullmatch(r"\s*publish\s*=\s*false\s*", lines[begin].split("#", 1)[0]):
+                      return
+                  lines[begin:stop] = [f"{indent}publish = false{newline}"]
+              path.write_text("".join(lines))
+
+          meta = metadata()
+          members = members_of(meta)
+          known = ", ".join(sorted(members))
+          for name in names:
+              hits = members.get(name, [])
+              if len(hits) != 1:
+                  sys.exit(f"error: {name} is not a workspace member (members: {known})")
+              listed = hits[0].get("publish")
+              if isinstance(listed, list) and "crates-io" not in listed:
+                  sys.exit(
+                      f"error: {name} is not publishable to crates.io"
+                      " (publish = false or another registry)"
+                  )
+          wanted = set(names)
+          for name, hits in members.items():
+              if name in wanted or not public(hits[0]):
+                  continue
+              privatize(Path(hits[0]["manifest_path"]))
+          again = members_of(metadata())
+          still_public = sorted(name for name, hits in again.items() if public(hits[0]))
+          if still_public != sorted(wanted):
+              sys.exit(
+                  "error: refusing to publish unnamed crates; public members would be "
+                  + ", ".join(still_public)
+              )
+          print(",".join(names))
+          PY
+            )"
+            echo "::notice title=publish-crates::publishing only ${selected}"
           fi
           cargo ws publish "${args[@]}"
