@@ -197,6 +197,17 @@ fn normalize(v: &mut [f32]) {
     }
 }
 
+/// Runs `f` on every item: on the rayon pool with `parallel`, in order without it.
+#[cfg(feature = "parallel")]
+fn each<T: Send>(items: Vec<T>, f: impl Fn(T) + Send + Sync) {
+    use rayon::prelude::*;
+    items.into_par_iter().for_each(f);
+}
+#[cfg(not(feature = "parallel"))]
+fn each<T>(items: Vec<T>, f: impl Fn(T)) {
+    items.into_iter().for_each(f);
+}
+
 fn quantize(v: &[f32]) -> (Box<[i8]>, f32) {
     let max = v
         .iter()
@@ -572,18 +583,47 @@ impl VecDb {
         if v.len() != self.dim {
             return Err(Error(format!("dim {} != {}", v.len(), self.dim)));
         }
+        self.add_raw(id, v);
+        Ok(())
+    }
+
+    /// Inserts `ids.len()` vectors stored row-major in `vectors` (`ids.len() * dim` values),
+    /// then [`save`](Self::save)s everything pending in one transaction and returns the pages
+    /// written. Lengths are checked first: on a mismatch nothing is inserted. With the
+    /// `parallel` feature the inserts run on the rayon thread pool.
+    pub fn insert_batch(&self, ids: &[u64], vectors: &[f32]) -> Result<usize> {
+        if ids.len().checked_mul(self.dim) != Some(vectors.len()) {
+            return Err(Error(format!(
+                "batch of {} ids needs {} values, got {}",
+                ids.len(),
+                ids.len().saturating_mul(self.dim),
+                vectors.len()
+            )));
+        }
+        let rows: Vec<(u64, &[f32])> = ids
+            .iter()
+            .enumerate()
+            .map(|(i, &id)| (id, &vectors[i * self.dim..(i + 1) * self.dim]))
+            .collect();
+        each(rows, |(id, v)| self.add_raw(id, v));
+        self.save()
+    }
+
+    fn add_raw(&self, id: u64, v: &[f32]) {
         let mut q = v.to_vec();
         normalize(&mut q);
+        let vec = Vector::encode(&q, self.params.quant);
+        self.add(id, &q, vec);
+    }
+
+    /// Links an encoded vector into the graph; `q` is its normalized `f32` form.
+    fn add(&self, id: u64, q: &[f32], vec: Vector) {
         let level = self.random_level();
         let m0 = self.params.m * 2;
         let links = (0..=level)
             .map(|l| RwLock::new(Vec::with_capacity(if l == 0 { m0 } else { self.params.m })))
             .collect();
-        let me = self.arena.push(Node {
-            id,
-            vec: Vector::encode(&q, self.params.quant),
-            links,
-        });
+        let me = self.arena.push(Node { id, vec, links });
         self.mark(me);
         let entry = {
             let e = *self.entry.read();
@@ -591,7 +631,7 @@ impl VecDb {
                 let mut w = self.entry.write();
                 if *w == u64::MAX {
                     *w = pack(me, level);
-                    return Ok(());
+                    return;
                 }
                 *w
             } else {
@@ -600,12 +640,12 @@ impl VecDb {
         };
         let (ep, ep_level) = unpack(entry);
         let mut eps = vec![if ep_level > level {
-            self.greedy(&q, ep, ep_level, level + 1)
+            self.greedy(q, ep, ep_level, level + 1)
         } else {
-            D(self.node(ep).vec.dist(&q), ep)
+            D(self.node(ep).vec.dist(q), ep)
         }];
         for l in (0..=level.min(ep_level)).rev() {
-            let w = self.search_layer(&q, &eps, self.params.ef_construction, l);
+            let w = self.search_layer(q, &eps, self.params.ef_construction, l);
             let mmax = if l == 0 { m0 } else { self.params.m };
             let nbrs = self.select(&w, self.params.m);
             *self.node(me).links[l].write() = nbrs.clone();
@@ -620,7 +660,6 @@ impl VecDb {
                 *w = pack(me, level);
             }
         }
-        Ok(())
     }
 
     fn link(&self, from: u32, to: u32, l: usize, mmax: usize) {

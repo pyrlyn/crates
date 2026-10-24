@@ -32,10 +32,13 @@ bench = ["dep:serde_json"]
 # NEON (aarch64) and runtime-detected AVX2 + FMA (x86_64) dot products; off keeps the
 # scalar kernels and leaves `unsafe` in src/sqlite.rs only.
 simd = []
+# Runs `insert_batch` on the rayon thread pool.
+parallel = ["dep:rayon"]
 
 [dependencies]
 libsqlite3-sys = "0.38.2"
 parking_lot = "0.12"
+rayon = { version = "1.12", optional = true }
 serde_json = { version = "1", optional = true }
 
 [dev-dependencies]

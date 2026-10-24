@@ -28,6 +28,10 @@ no global lock), and 1024-node BLOB pages in one SQLite table.
 | `bundled` | on | compiles SQLite in (`libsqlite3-sys/bundled`); turn off to link the system SQLite or SQLCipher |
 | `bench` | off | builds the `vecbench` binary (dataset generator and benchmark driver) |
 | `simd` | off | NEON (aarch64) and runtime-detected AVX2 + FMA (x86_64) dot products; scalar fallback |
+| `parallel` | off | `insert_batch` inserts on the rayon thread pool |
+
+`insert_batch(&ids, &flat_vectors)` inserts many vectors and saves them in one
+transaction.
 
 Performance features, how to turn each on or off, and why some candidates
 were skipped: [docs/features.md](docs/features.md).

@@ -11,6 +11,7 @@ parameter that changes nothing unless set.
 |---|---|---|
 | SIMD distance kernels | **chosen**, feature `simd` (off by default) | The dot product is the inner loop of insert and search. The scalar code already auto-vectorizes to 128-bit lanes without FMA. NEON with FMA and 4 accumulators, and AVX2 + FMA on x86_64 (detected at runtime; the default x86_64 target only has SSE2), are the cheapest win. It needs `unsafe` (raw-pointer loads, calling a `#[target_feature]` function), so it is opt-in and kept in one module. |
 | i8 search with f32 rerank | **chosen**, `Quant::I8Rerank` + `Params::rerank` | The benchmark shows i8 walks faster than f32 (p50 10 vs 15 ms at ef 1024) but loses recall (0.951 vs 0.963). Rescoring a few candidates with exact `f32` fixes the order where quantization swapped neighbours. A new mode, so `F32` and `I8` files and behaviour stay unchanged. |
+| parallel build + batch insert | **chosen**, `insert_batch` + feature `parallel` (off by default) | `insert` is already thread-safe, so the rayon version is a small loop, and a bulk load no longer needs a hand-written thread pool (as `vecbench` has). The batch saves once, in one transaction. rayon is already in the workspace lock; the feature keeps it out of default builds. |
 
 Skipped:
 
@@ -97,3 +98,38 @@ and the mode and vectors survive a reopen.
   latency like a larger `ef_search`.
 - No measured recall/latency numbers yet for this mode (`vecbench` accepts
   quant `i8r`; the benchmark was not run here).
+
+## Batch insert and parallel build (`insert_batch`, `parallel`)
+
+**How it works.** `VecDb::insert_batch(ids, vectors)` takes `n` ids and `n * dim`
+values in row-major order. It checks the lengths first (on a mismatch it
+returns an error and inserts nothing), inserts every row, then calls `save`,
+which writes all dirty pages and the meta row in one `BEGIN IMMEDIATE ...
+COMMIT` transaction. It returns the number of pages written. With the
+`parallel` feature the rows go through `rayon`'s `into_par_iter` on the
+global pool. That works because `insert` only locks the adjacency lists it
+rewrites (see [how-it-works.md](how-it-works.md)). Without the feature the rows
+are inserted in order on the calling thread.
+
+**Enable.** Call `insert_batch` (always available). For multi-threaded
+inserts add `features = ["parallel"]`. Size the pool with
+`RAYON_NUM_THREADS` or `rayon::ThreadPoolBuilder` as usual.
+
+**Disable.** Keep using `insert` + `save`, or leave `parallel` off to insert
+the batch on the calling thread.
+
+**Test.** `cargo test -p sqlite-hnsw --features parallel --test batch` (and
+without the feature): a 3000-vector batch writes three pages, leaves nothing
+dirty, reopens with self-recall >= 95%; a batch appended to an existing index
+is searchable; a length mismatch inserts nothing; an empty batch is a plain
+`save`.
+
+**Limitations.**
+
+- With `parallel` the insert order, and so the graph, differs from run to run
+  (as with `insert` from several threads); results are equivalent, not identical.
+- The batch is one transaction on disk, not in memory: if `save` fails, the
+  vectors stay inserted in memory and are written by the next `save`.
+- Ids are not checked for duplicates, as with `insert`.
+- No measured speedup here. The old `vecbench` build with 16 threads already
+  used the same concurrent `insert`.

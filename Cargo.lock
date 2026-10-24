@@ -5996,6 +5996,7 @@ version = "0.1.0"
 dependencies = [
  "libsqlite3-sys",
  "parking_lot",
+ "rayon",
  "serde_json",
  "tempfile",
 ]
