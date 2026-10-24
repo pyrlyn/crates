@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-use rusqlite::Connection;
+use sqlite_csr_graph::Connection;
 use std::collections::BTreeSet;
 use std::path::PathBuf;
 

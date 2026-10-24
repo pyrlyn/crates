@@ -30,7 +30,7 @@ store.upsert_file(&FileSymbols {
 })?;
 let conn = store.reader()?;                                // one per reader thread, lock-free graph
 let n: i64 = conn.query_row("SELECT count(*) FROM graph_callers('run', '/repo')", [], |r| r.get(0))?;
-# Ok::<(), rusqlite::Error>(())
+# Ok::<(), sqlite_csr_graph::Error>(())
 ```
 
 - Readers never block: they load an `Arc` snapshot (base segments + delta).
@@ -45,13 +45,21 @@ let n: i64 = conn.query_row("SELECT count(*) FROM graph_callers('run', '/repo')"
 | Use | Build |
 | --- | --- |
 | Rust library, bundled SQLite (default) | `sqlite-csr-graph = "0.1"` |
-| Rust library, your own SQLite / SQLCipher | `default-features = false`, enable a `libsqlite3-sys` link feature yourself |
+| Rust library, your own SQLite / SQLCipher | `default-features = false`, choose the `libsqlite3-sys` link feature yourself |
 | SQLite loadable extension | `cargo build --release --no-default-features --features loadable --lib` |
 | rtok index importer and benchmarks | `--features rtok-import` |
 
 Load the extension: `.load target/release/libsqlite_csr_graph sqlite3_extension_init` in the
 `sqlite3` shell, `conn.load_extension(path, entrypoint="sqlite3_extension_init")` in Python,
-or `sqlite_csr_graph::register(&conn)` on any rusqlite connection to a file database.
+`sqlite_csr_graph::register(&conn)` on a [`Connection`](src/ffi.rs) to a file database, or
+`sqlite_csr_graph::register_auto_extension()` once at startup so that every connection the
+process opens afterwards has the functions, including connections opened by diesel or any
+other crate linking the same `libsqlite3-sys` (in-memory databases are skipped). See
+`tests/diesel_auto_extension.rs`.
+
+The crate depends on `libsqlite3-sys` only (no rusqlite): the version the workspace and diesel
+already link, so a diesel host adds no second SQLite wrapper. The small safe wrapper it uses
+is public as `sqlite_csr_graph::sqlite` (`Connection`, `Statement`, `Value`, `params!`).
 
 Multi-threaded hosts should call `sqlite_csr_graph::disable_sqlite_memstatus()` before the
 first connection (not in the loadable build: the host owns SQLite). SQLite's default memory
@@ -73,6 +81,13 @@ RTOK_OLD_DB=/path/to/rtok.db cargo test -p sqlite-csr-graph --release \
 ```
 
 ## Limitations
+
+- `unsafe` code: all of it is in `src/ffi.rs` (SQLite calls, the virtual-table callbacks, the
+  entry points), each block with a `SAFETY` note; the rest of the crate is `deny(unsafe_code)`.
+  Every callback SQLite makes catches panics and returns `SQLITE_ERROR` instead of unwinding
+  into C.
+- `register_auto_extension` is process-wide and not available in the loadable build (there the
+  host calls `sqlite3_extension_init`).
 
 - File databases only (the graph is shared per database path within a process).
 - Writes from another process are visible after `graph_reload()` or reopening.

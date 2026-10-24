@@ -8,7 +8,7 @@ fn main() {
     }
     let t = Instant::now();
     sqlite_csr_graph::import_rtok(a[1].as_ref(), a[2].as_ref()).expect("import failed");
-    let conn = rusqlite::Connection::open(&a[2]).unwrap();
+    let conn = sqlite_csr_graph::Connection::open(&a[2]).unwrap();
     let g = sqlite_csr_graph::store::load_graph(&conn).unwrap();
     println!("import_secs={:.3}", t.elapsed().as_secs_f64());
     println!("graph={}", g.stats());

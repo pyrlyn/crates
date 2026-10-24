@@ -17,28 +17,29 @@ include = ["/src", "/tests", "/examples", "/README.md", "/docs"]
 crate-type = ["rlib", "cdylib"]
 
 [lints.rust]
-# The extension entry point, sqlite3_config and rusqlite's VTab traits need `unsafe`;
-# each site carries `#[allow(unsafe_code)]` and a SAFETY note.
+# `unsafe` lives only in src/ffi.rs (module-level allow, a SAFETY note per block).
 unsafe_code = "deny"
 missing_debug_implementations = "warn"
 
 [features]
 default = ["bundled"]
-# Statically link SQLite (rusqlite's `bundled`). Off for the loadable extension: the host owns SQLite.
-bundled = ["rusqlite/bundled"]
+# Statically link SQLite (libsqlite3-sys `bundled`). Off for the loadable extension: the host owns SQLite.
+bundled = ["libsqlite3-sys/bundled"]
 # Build the cdylib as a SQLite loadable extension (exports `sqlite3_extension_init`).
-loadable = ["rusqlite/loadable_extension"]
+loadable = ["libsqlite3-sys/loadable_extension"]
 # Importer from rtok's index schema (`import_rtok`), its example and the equivalence test.
 rtok-import = []
 
-# rusqlite 0.40 pins libsqlite3-sys 0.38, the version the workspace already locks
-# (only one crate may link `sqlite3`).
+# libsqlite3-sys directly, at the version the workspace (and diesel) already link: only one
+# crate may link `sqlite3`, and hosts that use diesel get no second SQLite wrapper.
 [dependencies]
-rusqlite = { version = "0.40", features = ["vtab", "functions"] }
+libsqlite3-sys = "0.38.2"
 arc-swap = "1.9"
 
 [dev-dependencies]
 tempfile = "3.27.0"
+# Shows the auto-extension path a diesel host (rtok) uses.
+diesel = { version = "2.3.13", default-features = false, features = ["sqlite"] }
 
 [[example]]
 name = "import_rtok"

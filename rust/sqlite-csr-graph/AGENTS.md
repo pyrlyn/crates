@@ -20,13 +20,12 @@ switched over. How it works: `docs/design.md`.
   tests compare against that rebuild.
 - Readers never take a lock. Writers go through `Store` (one at a time); merges
   run off the write path and swap a pointer.
-- `unsafe` only at the FFI edge (extension entry point, `sqlite3_config`,
-  rusqlite's `VTab` impls), each with `#[allow(unsafe_code)]`.
+- `unsafe` only in `src/ffi.rs` (the libsqlite3-sys wrapper, vtab callbacks, entry
+  points), each block with a `SAFETY` note; every SQLite callback in `catch_unwind`.
+- No rusqlite: depend on `libsqlite3-sys` directly, at the workspace's (diesel's) version.
 - rtok-specific code (its schema, its paths) stays behind the `rtok-import`
   feature: `src/rtok.rs`, `examples/import_rtok.rs`, `examples/qps.rs`,
   `tests/equivalence.rs`, `scripts/`.
-- rusqlite stays on the line that links the workspace's `libsqlite3-sys`
-  (only one crate may link `sqlite3`).
 
 ## Commands
 

@@ -67,7 +67,7 @@ fn readers_and_writer_and_merge() {
                 let callees: Vec<String> = conn
                     .prepare_cached("SELECT callee FROM graph_callees(?1, ?2) ORDER BY callee")
                     .unwrap()
-                    .query_map(rusqlite::params![format!("f{k}"), R], |r| r.get(0))
+                    .query_map(sqlite_csr_graph::params![format!("f{k}"), R], |r| r.get(0))
                     .unwrap()
                     .map(|r| r.unwrap())
                     .collect();
@@ -78,7 +78,7 @@ fn readers_and_writer_and_merge() {
                 let c: i64 = conn
                     .query_row(
                         "SELECT count(DISTINCT scope) FROM graph_impact(?1, 64, ?2)",
-                        rusqlite::params![format!("f{k}"), R],
+                        sqlite_csr_graph::params![format!("f{k}"), R],
                         |r| r.get(0),
                     )
                     .unwrap();
@@ -108,7 +108,7 @@ fn readers_and_writer_and_merge() {
     assert_eq!(before, after, "merge changed the graph");
     assert!(store.graph.snapshot(1).unwrap().delta.ops.is_empty());
     // merged segments == rebuild from SQLite (source of truth)
-    let conn = rusqlite::Connection::open(&path).unwrap();
+    let conn = sqlite_csr_graph::Connection::open(&path).unwrap();
     assert_eq!(after, common::base_edges(&conn, 1));
     eprintln!(
         "versions written={v} reads={}",
@@ -132,7 +132,7 @@ fn delta_replay_after_reopen_and_delete() {
     let s = Store::open(&path).unwrap(); // reload: segments + replayed delta
     let snap = s.graph.snapshot(1).unwrap();
     assert_eq!(snap.delta.ops.len(), 2);
-    let conn = rusqlite::Connection::open(&path).unwrap();
+    let conn = sqlite_csr_graph::Connection::open(&path).unwrap();
     assert_eq!(common::dump(&snap), common::base_edges(&conn, 1));
     assert!(s.graph.callees(1, "f5").is_empty());
     let d = s.graph.dict.load();

@@ -1,8 +1,8 @@
 //! Importer from rtok's index schema (`symbols` + `file_rank`). Behind the `rtok-import`
 //! feature: it hardcodes rtok's table layout and is not needed to use the store.
 
+use crate::ffi::{Connection, FunctionFlags};
 use crate::store::{Result, SCHEMA, build_base, ensure_root_fts, fts_table, persist_base};
-use rusqlite::Connection;
 use std::path::Path;
 
 fn hex_or_raw(s: &str) -> Vec<u8> {
@@ -24,19 +24,14 @@ pub fn import_rtok(src: &Path, dst: &Path) -> Result<()> {
     let conn = Connection::open(dst)?;
     conn.execute_batch("PRAGMA page_size=4096; PRAGMA journal_mode=OFF; PRAGMA synchronous=OFF; PRAGMA temp_store=MEMORY; PRAGMA cache_size=-262144;")?;
     conn.execute_batch(SCHEMA)?;
-    conn.create_scalar_function(
-        "hexblob",
-        1,
-        rusqlite::functions::FunctionFlags::SQLITE_DETERMINISTIC,
-        |ctx| {
-            let s: String = ctx.get(0)?;
-            Ok(if s.is_empty() {
-                None
-            } else {
-                Some(hex_or_raw(&s))
-            })
-        },
-    )?;
+    conn.create_scalar_function("hexblob", 1, FunctionFlags::SQLITE_DETERMINISTIC, |ctx| {
+        let s: String = ctx.get(0)?;
+        Ok(if s.is_empty() {
+            None
+        } else {
+            Some(hex_or_raw(&s))
+        })
+    })?;
     conn.execute(
         "ATTACH DATABASE ?1 AS o",
         [format!("file:{}?mode=ro", src.display())],

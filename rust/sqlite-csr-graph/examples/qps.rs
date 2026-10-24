@@ -1,7 +1,7 @@
 //! Multi-thread read QPS: rtok's current layout (one Mutex<Connection>, or one WAL connection
 //! per thread) vs sqlite-csr-graph (connection per thread + shared lock-free graph).
 //! `cargo run --release --example qps -- data/old.db data/new.db`
-use rusqlite::{Connection, OpenFlags};
+use sqlite_csr_graph::sqlite::{Connection, OpenFlags};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -35,7 +35,7 @@ fn new_sql() -> [String; 5] {
 fn run_ops(
     c: &Connection,
     sqls: &[String],
-    root: &dyn rusqlite::ToSql,
+    root: &dyn sqlite_csr_graph::sqlite::ToSql,
     names: &[String],
     i: &mut usize,
 ) -> u64 {
@@ -44,7 +44,7 @@ fn run_ops(
         let n = &names[*i % names.len()];
         *i += 1;
         let mut st = c.prepare_cached(q).unwrap();
-        let mut r = st.query(rusqlite::params![root, n]).unwrap();
+        let mut r = st.query(sqlite_csr_graph::params![root, n]).unwrap();
         while r.next().unwrap().is_some() {
             rows += 1;
         }
@@ -57,7 +57,7 @@ fn bench(
     mk: &(dyn Fn() -> Connection + Sync),
     shared: Option<Arc<Mutex<Connection>>>,
     sqls: &[String],
-    root: rusqlite::types::Value,
+    root: sqlite_csr_graph::Value,
     names: &[String],
 ) -> f64 {
     let stop = AtomicBool::new(false);

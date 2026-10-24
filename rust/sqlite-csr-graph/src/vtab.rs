@@ -8,17 +8,9 @@
 //!
 //! Scalars: `graph_stats()`, `graph_merge(root)`, `graph_reload()`.
 
+use crate::ffi::{Connection, Error, FunctionFlags, TableFunction, Value};
 use crate::graph::Graph;
 use crate::store::{self, Result};
-use rusqlite::ffi;
-use rusqlite::functions::FunctionFlags;
-use rusqlite::types::Value;
-use rusqlite::vtab::{
-    Context, Filters, IndexConstraintOp, IndexInfo, Module, VTab, VTabConfig, VTabConnection,
-    VTabCursor,
-};
-use rusqlite::{Connection, Error};
-use std::borrow::Cow;
 use std::ffi::{CStr, c_int};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -31,11 +23,6 @@ pub struct Spec {
     ncols: c_int,
     nargs: c_int,
     run: fn(&Graph, &[Value]) -> Rows,
-}
-
-pub struct Aux {
-    spec: &'static Spec,
-    graph: GraphRef,
 }
 
 #[derive(Clone)]
@@ -126,129 +113,32 @@ pub static SPECS: [Spec; 4] = [
     Spec { name: c"graph_callees", schema: c"CREATE TABLE x(path TEXT, callee TEXT, name HIDDEN, root HIDDEN)", ncols: 2, nargs: 2, run: run_callees },
 ];
 
-#[repr(C)]
-pub struct Tvf {
-    base: ffi::sqlite3_vtab,
+struct Tvf {
     spec: &'static Spec,
     graph: GraphRef,
 }
 
-#[allow(unsafe_code)]
-unsafe impl<'vtab> VTab<'vtab> for Tvf {
-    type Aux = Aux;
-    type Cursor = TvfCursor<'vtab>;
-
-    fn connect(
-        db: &mut VTabConnection,
-        aux: Option<&Aux>,
-        _m: &[u8],
-        _d: &[u8],
-        _t: &[u8],
-        _a: &[&[u8]],
-    ) -> Result<(Cow<'static, CStr>, Self)> {
-        let aux = aux.ok_or_else(|| Error::ModuleError("missing aux".into()))?;
-        db.config(VTabConfig::Innocuous)?;
-        Ok((
-            Cow::Borrowed(aux.spec.schema),
-            Tvf {
-                base: ffi::sqlite3_vtab::default(),
-                spec: aux.spec,
-                graph: aux.graph.clone(),
-            },
-        ))
+impl TableFunction for Tvf {
+    fn schema(&self) -> &'static CStr {
+        self.spec.schema
     }
-
-    fn best_index(&self, info: &mut IndexInfo) -> Result<bool> {
-        let mut slot: Vec<Option<usize>> = vec![None; self.spec.nargs as usize];
-        for (i, c) in info.constraints().enumerate() {
-            let col = c.column() - self.spec.ncols;
-            if col < 0 || col >= self.spec.nargs {
-                continue;
-            }
-            if c.operator() == IndexConstraintOp::SQLITE_INDEX_CONSTRAINT_EQ {
-                if !c.is_usable() {
-                    return Ok(false);
-                }
-                slot[col as usize] = Some(i);
-            }
-        }
-        let mut mask = 0;
-        let mut n = 0;
-        for (a, s) in slot.iter().enumerate() {
-            if let Some(i) = s {
-                n += 1;
-                mask |= 1 << a;
-                let mut u = info.constraint_usage(*i);
-                u.set_argv_index(n);
-                u.set_omit(true);
-            }
-        }
-        info.set_idx_num(mask);
-        info.set_estimated_cost(if mask & 1 != 0 { 10.0 } else { 1e12 });
-        info.set_estimated_rows(100);
-        Ok(true)
+    fn ncols(&self) -> c_int {
+        self.spec.ncols
     }
-
-    fn open(&'vtab mut self) -> Result<TvfCursor<'vtab>> {
-        Ok(TvfCursor {
-            base: ffi::sqlite3_vtab_cursor::default(),
-            tab: self,
-            rows: vec![],
-            pos: 0,
-        })
+    fn nargs(&self) -> c_int {
+        self.spec.nargs
+    }
+    fn run(&self, args: &[Value]) -> Result<Rows> {
+        let g = self.graph.get()?;
+        Ok((self.spec.run)(&g, args))
     }
 }
-
-#[repr(C)]
-pub struct TvfCursor<'vtab> {
-    base: ffi::sqlite3_vtab_cursor,
-    tab: &'vtab Tvf,
-    rows: Rows,
-    pos: usize,
-}
-
-#[allow(unsafe_code)]
-unsafe impl VTabCursor for TvfCursor<'_> {
-    fn filter(&mut self, idx_num: c_int, _s: Option<&str>, args: &Filters<'_>) -> Result<()> {
-        let mut a = vec![Value::Null; self.tab.spec.nargs as usize];
-        let mut j = 0;
-        for (i, slot) in a.iter_mut().enumerate() {
-            if idx_num & (1 << i) != 0 {
-                *slot = args.get::<Value>(j)?;
-                j += 1;
-            }
-        }
-        let g = self.tab.graph.get()?;
-        self.rows = (self.tab.spec.run)(&g, &a);
-        self.pos = 0;
-        Ok(())
-    }
-    fn next(&mut self) -> Result<()> {
-        self.pos += 1;
-        Ok(())
-    }
-    fn eof(&self) -> bool {
-        self.pos >= self.rows.len()
-    }
-    fn column(&self, ctx: &mut Context, i: c_int) -> Result<()> {
-        match self.rows[self.pos].get(i as usize) {
-            Some(v) => ctx.set_result(v),
-            None => ctx.set_result(&Value::Null),
-        }
-    }
-    fn rowid(&self) -> Result<i64> {
-        Ok(self.pos as i64)
-    }
-}
-
-const MODULE: Module<'static, Tvf> = Module::eponymous_only_module();
 
 fn register_impl(conn: &Connection, graph: GraphRef) -> Result<()> {
     for spec in SPECS.iter() {
-        conn.create_module(
+        conn.create_table_function(
             spec.name,
-            &MODULE,
-            Some(Aux {
+            Box::new(Tvf {
                 spec,
                 graph: graph.clone(),
             }),
@@ -256,36 +146,31 @@ fn register_impl(conn: &Connection, graph: GraphRef) -> Result<()> {
     }
     let g1 = graph.clone();
     conn.create_scalar_function("graph_stats", 0, FunctionFlags::SQLITE_UTF8, move |_| {
-        Ok(g1
-            .get()
-            .map_err(|e| Error::UserFunctionError(Box::new(e)))?
-            .stats())
+        Ok(g1.get().map_err(|e| Error::User(e.to_string()))?.stats())
     })?;
     let path = match &graph {
         GraphRef::Lazy(p, _) => Some(p.clone()),
-        GraphRef::Shared(_) => conn.path().map(PathBuf::from),
+        GraphRef::Shared(_) => conn.path().filter(|p| !p.is_empty()).map(PathBuf::from),
     };
     let (g2, p2) = (graph.clone(), path.clone());
     conn.create_scalar_function("graph_merge", 1, FunctionFlags::SQLITE_UTF8, move |ctx| {
         let root: String = ctx.get(0)?;
-        let g = g2
-            .get()
-            .map_err(|e| Error::UserFunctionError(Box::new(e)))?;
+        let g = g2.get().map_err(|e| Error::User(e.to_string()))?;
         let Some(rid) = g.root_id(&root) else {
-            return Ok(0);
+            return Ok(0i64);
         };
         let p = p2
             .clone()
-            .ok_or_else(|| Error::UserFunctionError("in-memory database".into()))?;
-        store::merge_root(&g, &p, rid).map_err(|e| Error::UserFunctionError(Box::new(e)))?;
-        Ok(1)
+            .ok_or_else(|| Error::User("in-memory database".into()))?;
+        store::merge_root(&g, &p, rid).map_err(|e| Error::User(e.to_string()))?;
+        Ok(1i64)
     })?;
     conn.create_scalar_function("graph_reload", 0, FunctionFlags::SQLITE_UTF8, move |_| {
         let p = path
             .clone()
-            .ok_or_else(|| Error::UserFunctionError("in-memory database".into()))?;
-        store::graph_for(&p, true).map_err(|e| Error::UserFunctionError(Box::new(e)))?;
-        Ok(1)
+            .ok_or_else(|| Error::User("in-memory database".into()))?;
+        store::graph_for(&p, true).map_err(|e| Error::User(e.to_string()))?;
+        Ok(1i64)
     })?;
     Ok(())
 }
@@ -295,7 +180,7 @@ pub fn register(conn: &Connection) -> Result<()> {
     let p = conn
         .path()
         .filter(|p| !p.is_empty())
-        .ok_or_else(|| Error::ModuleError("sqlite-csr-graph needs a file database".into()))?;
+        .ok_or_else(|| Error::Module("sqlite-csr-graph needs a file database".into()))?;
     let p = PathBuf::from(p);
     let slot = store::slot_for(&p);
     register_impl(conn, GraphRef::Lazy(p, slot))
@@ -309,23 +194,5 @@ pub fn register_with(conn: &Connection, graph: Arc<Graph>) -> Result<()> {
 impl std::fmt::Debug for Spec {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Spec").finish_non_exhaustive()
-    }
-}
-
-impl std::fmt::Debug for Aux {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Aux").finish_non_exhaustive()
-    }
-}
-
-impl std::fmt::Debug for Tvf {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Tvf").finish_non_exhaustive()
-    }
-}
-
-impl std::fmt::Debug for TvfCursor<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("TvfCursor").finish_non_exhaustive()
     }
 }

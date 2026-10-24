@@ -1,15 +1,17 @@
 //! SQLite side: normalized schema (source of truth),
 //! graph load/persist, and the single-writer update API.
 
+use crate::ffi::{Connection, OpenFlags, OptionalExtension, TransactionBehavior};
 use crate::graph::{Base, Delta, Dict, FileOp, Graph, Snapshot};
+use crate::params;
 use crate::segment::{Csr, Edge, KIND_IMPORT, KIND_REF};
-use rusqlite::{Connection, OpenFlags, OptionalExtension, params};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 
-pub type Result<T> = rusqlite::Result<T>;
+/// Result of every store operation.
+pub type Result<T> = crate::ffi::Result<T>;
 
 pub const SCHEMA: &str = r#"
 CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY, value) WITHOUT ROWID;
@@ -409,7 +411,7 @@ impl Store {
     }
 
     fn intern(
-        tx: &rusqlite::Transaction,
+        tx: &Connection,
         table: &str,
         col: &str,
         v: &str,
@@ -449,7 +451,7 @@ impl Store {
     fn write_file(&self, fs: &FileSymbols, delete: bool) -> Result<()> {
         let mut conn = self.conn.lock().unwrap();
         let _w = self.graph.writer.lock().unwrap();
-        let tx = conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
+        let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
         let mut new_names = vec![];
         let generation: i64 = tx
             .query_row(

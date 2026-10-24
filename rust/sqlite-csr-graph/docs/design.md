@@ -60,3 +60,35 @@ reached at a smaller depth (4,877 such rows across the sample). `defs`, `refs`, 
 `import_rtok` (feature `rtok-import`) converts rtok's denormalized `symbols` + `file_rank`
 tables into this schema, then builds the FTS indexes and the segments and runs `ANALYZE`.
 It is the only code that knows rtok's schema.
+
+## Why libsqlite3-sys, not rusqlite
+
+The consumers (rtok, cox) talk to SQLite through diesel, which links `libsqlite3-sys`. Only one
+crate in a build may link `sqlite3`, so depending on rusqlite forced its `libsqlite3-sys` line on
+every host and pulled a second wrapper into diesel programs. The crate now depends on
+`libsqlite3-sys` 0.38 (the workspace's version) and carries its own minimal wrapper in
+`src/ffi.rs`: connections, prepared and cached statements, owned `Value`s, scalar functions,
+and the virtual-table module.
+
+The table-valued functions are one `sqlite3_module` registered per name with
+`sqlite3_create_module_v2`. `xCreate` is null, so they are eponymous-only. `xBestIndex` maps
+`=` constraints on the hidden argument columns to `argv` slots (bitmask in `idxNum`) and
+refuses a plan where such a constraint is unusable; `xFilter` runs the traversal in Rust and
+materializes the rows; `xNext`/`xEof`/`xColumn`/`xRowid` walk them.
+
+Three ways in:
+
+- `register(&conn)` / `register_with(&conn, graph)` on a wrapper connection (`Store::reader`).
+- `sqlite3_extension_init` in the loadable build (`loadable` feature, which turns on
+  `libsqlite3-sys/loadable_extension` so every SQLite call goes through the host's
+  `sqlite3_api_routines`).
+- `register_auto_extension()` (`sqlite3_auto_extension`): every later connection in the
+  process, e.g. diesel's, gets the functions.
+
+## Unsafe policy
+
+`unsafe_code = "deny"` for the crate; `src/ffi.rs` alone allows it, and each `unsafe` block or
+function says why it is sound. Callbacks from SQLite (`x*`, scalar functions, destructors,
+entry points) run inside `catch_unwind`; a panic becomes `SQLITE_ERROR` or a function error.
+Boxes handed to SQLite (`pClientData`, `pApp`, vtabs, cursors) are freed only in the matching
+SQLite destructor.
