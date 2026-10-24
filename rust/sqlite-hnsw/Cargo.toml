@@ -13,7 +13,8 @@ categories = ["database", "algorithms"]
 include = ["/src", "/tests", "/docs", "/README.md"]
 
 [lints.rust]
-# src/sqlite.rs is a thin FFI binding over libsqlite3-sys; every block carries a SAFETY note.
+# src/sqlite.rs is a thin FFI binding over libsqlite3-sys and src/simd.rs (feature `simd`) holds
+# the SIMD loads; every block carries a SAFETY note.
 unsafe_code = "deny"
 missing_docs = "warn"
 missing_debug_implementations = "warn"
@@ -28,6 +29,9 @@ default = ["bundled"]
 bundled = ["libsqlite3-sys/bundled"]
 # Builds the `vecbench` binary (dataset generator + benchmark driver).
 bench = ["dep:serde_json"]
+# NEON (aarch64) and runtime-detected AVX2 + FMA (x86_64) dot products; off keeps the
+# scalar kernels and leaves `unsafe` in src/sqlite.rs only.
+simd = []
 
 [dependencies]
 libsqlite3-sys = "0.38.2"

@@ -11,7 +11,8 @@ with the cox-only engines removed.
 
 ## Rules
 
-- `unsafe` lives only in `src/sqlite.rs` (FFI); every block keeps a SAFETY note.
+- `unsafe` lives only in `src/sqlite.rs` (FFI) and `src/simd.rs` (SIMD loads,
+  feature `simd`); every block keeps a SAFETY note.
 - `bench-qdrant/` stays outside the workspace and unpublished, so qdrant's
   tree never enters the root `Cargo.lock`. Never commit a local `[patch]` path.
 - Benchmarks are manual: do not add them to CI or `cargo test`.

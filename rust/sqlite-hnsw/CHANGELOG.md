@@ -8,3 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+### Added
+
+- Feature `simd`: NEON and runtime-detected AVX2 + FMA dot products with a scalar fallback; public `distance` module with the kernels and `backend()`.

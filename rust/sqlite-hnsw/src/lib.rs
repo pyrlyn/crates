@@ -24,9 +24,17 @@
 //! * Persistence: nodes are serialized into 1024-node BLOB pages in one SQLite
 //!   table; only pages touched since the last `save` are rewritten. Loading uses
 //!   SQLite's mmap I/O and parses pages straight into the arena.
+//! * Distance: [`distance`] holds the dot-product kernels; the `simd` feature adds NEON
+//!   (aarch64) and runtime-detected AVX2 + FMA (x86_64) versions.
 
+pub mod distance;
+#[cfg(feature = "simd")]
+#[allow(unsafe_code)]
+mod simd;
 #[allow(unsafe_code)]
 mod sqlite;
+
+use distance::{dot, dot_i8};
 
 use std::cell::RefCell;
 use std::cmp::Ordering;
@@ -153,40 +161,6 @@ impl Ord for D {
 
 thread_local! {
     static VISITED: RefCell<(Vec<u32>, u32)> = const { RefCell::new((Vec::new(), 0)) };
-}
-
-#[inline]
-fn dot(a: &[f32], b: &[f32]) -> f32 {
-    let mut acc = [0f32; 8];
-    let (ca, ra) = a.as_chunks::<8>();
-    let (cb, rb) = b.as_chunks::<8>();
-    for (x, y) in ca.iter().zip(cb) {
-        for k in 0..8 {
-            acc[k] += x[k] * y[k];
-        }
-    }
-    let mut s: f32 = acc.iter().sum();
-    for (x, y) in ra.iter().zip(rb) {
-        s += x * y;
-    }
-    s
-}
-
-#[inline]
-fn dot_i8(q: &[f32], v: &[i8]) -> f32 {
-    let mut acc = [0f32; 8];
-    let (cq, rq) = q.as_chunks::<8>();
-    let (cv, rv) = v.as_chunks::<8>();
-    for (x, y) in cq.iter().zip(cv) {
-        for k in 0..8 {
-            acc[k] += x[k] * y[k] as f32;
-        }
-    }
-    let mut s: f32 = acc.iter().sum();
-    for (x, y) in rq.iter().zip(rv) {
-        s += x * *y as f32;
-    }
-    s
 }
 
 fn normalize(v: &mut [f32]) {
