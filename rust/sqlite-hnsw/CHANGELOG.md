@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `VecDb::insert_batch`: validated batch insert saved in one transaction; feature `parallel` runs it on rayon.
 - `VecDb::search_filtered`: predicate / allow-list search applied inside the layer-0 beam.
 - `VecDb::delete` (tombstones, persisted in a new `vdb_tomb` table), `VecDb::tombstones` and `VecDb::compact` (rebuild from live vectors in one rewriting transaction).
+- `Params::for_recall(Recall, Quant)`: `m`, `ef_construction` and `ef_search` presets for recall@10 of about 0.90 or 0.95, from the recorded benchmark.
 
 ### Fixed
 

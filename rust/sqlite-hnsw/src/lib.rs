@@ -28,6 +28,7 @@
 //!   (aarch64) and runtime-detected AVX2 + FMA (x86_64) versions.
 
 pub mod distance;
+mod presets;
 #[cfg(feature = "simd")]
 #[allow(unsafe_code)]
 mod simd;
@@ -35,6 +36,7 @@ mod simd;
 mod sqlite;
 
 use distance::{dot, dot_i8};
+pub use presets::Recall;
 
 use std::cell::RefCell;
 use std::cmp::Ordering;

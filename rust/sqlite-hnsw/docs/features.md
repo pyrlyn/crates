@@ -14,6 +14,7 @@ parameter that changes nothing unless set.
 | parallel build + batch insert | **chosen**, `insert_batch` + feature `parallel` (off by default) | `insert` is already thread-safe, so the rayon version is a small loop, and a bulk load no longer needs a hand-written thread pool (as `vecbench` has). The batch saves once, in one transaction. rayon is already in the workspace lock; the feature keeps it out of default builds. |
 | filtered search | **chosen**, `search_filtered(q, k, predicate)` | Post-filtering the top `k` returns too few hits. Filtering inside the beam (the hnswlib approach) is a few lines in `search_layer` and costs nothing when unused. An allow-list is the predicate `|id| set.contains(&id)`, so one API covers both. The same hook later serves tombstones. |
 | delete via tombstones + compaction | **chosen**, `delete(&ids)`, `compact()` | The crate had no delete at all. A tombstone is one flag per node checked in the same accept hook as the filter, plus a new `vdb_tomb` table, so pages and old files stay as they are. Compaction rebuilds from the live vectors: simpler and safer than repairing links in place, at the cost of a full build. |
+| ef/M presets for recall 0.90 / 0.95 | **chosen**, `Params::for_recall(Recall, Quant)` | The recorded benchmark already maps `ef_search` to recall per mode; a constructor turns that table into code. It is a plain function that changes nothing unless called, and `Params::default()` keeps its values. |
 
 Skipped:
 
@@ -228,3 +229,48 @@ tombstones combine.
   a `delete` of the same id may survive it.
 - Older builds ignore `vdb_tomb`: they show deleted vectors again (until
   `compact`, which removes them from the pages for good).
+
+## Parameter presets (`Params::for_recall`)
+
+**How it works.** `Params::for_recall(target, quant)` returns `m = 32`,
+`ef_construction = 400`, the given `quant`, `rerank` 4 and an `ef_search`
+taken from the recorded benchmark ([benchmark.md](benchmark.md): 100k x 384,
+half uniform, half clustered, recall@10):
+
+| target | `F32` | `I8` | `I8Rerank` |
+|---|---|---|---|
+| `Recall::P90` | 768 | 768 | 768 |
+| `Recall::P95` | 1024 | 1280 | 1024 |
+
+Measured at `m = 32`: `ef_search` 512 gave 0.892 (`F32`) / 0.884 (`I8`),
+1024 gave 0.963 / 0.951, 2048 gave 0.992 / 0.980. 768 lies between the 512
+and 1024 points; 1280 gives `I8` a margin over its 0.951 at 1024. `m = 16`
+needed `ef_search` 2048 for 0.94, so the presets use `m = 32`.
+`I8Rerank` uses the `F32` values: its walk is the `I8` walk, and the rescoring
+can only move recall towards `F32`.
+
+```rust,ignore
+let db = VecDb::open("v.db", 384, Params::for_recall(Recall::P95, Quant::I8))?;
+```
+
+**Enable.** Pass `Params::for_recall(...)` to `VecDb::open` when creating the
+file. `m` and `ef_construction` are stored then; on reopen only `ef_search`
+(and `rerank`) from the preset apply.
+
+**Disable.** Build `Params` by hand or use `Params::default()` (`m = 16`,
+`ef_search = 64`), which did not change.
+
+**Test.** `cargo test -p sqlite-hnsw --test presets`: the values match the
+table above for every mode, a higher target never searches less, and an
+index built with the presets meets both targets on small data.
+
+**Limitations.**
+
+- 768 and 1280 are interpolated, not measured; nothing here re-ran the
+  benchmark.
+- The numbers come from uniform synthetic vectors, the hard case. Clustered,
+  embedding-like data reached 0.986 already at `ef_search` 64, so real
+  embeddings usually need far less. Measure your own recall and lower it with
+  `VecDb::set_ef_search`.
+- Recall also depends on the dimension and the index size; the presets are
+  sized for about 100k vectors of dimension 384.
