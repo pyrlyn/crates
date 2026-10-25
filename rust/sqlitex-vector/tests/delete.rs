@@ -2,7 +2,7 @@
 
 mod common;
 
-use sqlite_hnsw::{Params, Quant, VecDb};
+use sqlitex_vector::{Params, Quant, VecDb};
 
 const DIM: usize = 16;
 

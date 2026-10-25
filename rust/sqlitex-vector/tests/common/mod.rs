@@ -1,7 +1,7 @@
 //! Helpers shared by the integration tests.
 #![allow(dead_code)]
 
-use sqlite_hnsw::{Params, VecDb};
+use sqlitex_vector::{Params, VecDb};
 
 /// Deterministic pseudo-random vectors with components in `[-1, 1)`.
 pub fn vecs(n: usize, dim: usize, seed: u64) -> Vec<Vec<f32>> {

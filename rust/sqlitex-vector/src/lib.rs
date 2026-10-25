@@ -6,12 +6,12 @@
 //! with optional `i8` quantization.
 //!
 //! ```no_run
-//! use sqlite_hnsw::{Params, Quant, VecDb};
+//! use sqlitex_vector::{Params, Quant, VecDb};
 //! let db = VecDb::open("vectors.db", 3, Params { quant: Quant::I8, ..Params::default() })?;
 //! db.insert(1, &[0.1, 0.2, 0.3])?;
 //! db.save()?;
 //! let hits = db.search(&[0.1, 0.2, 0.3], 10);
-//! # Ok::<(), sqlite_hnsw::Error>(())
+//! # Ok::<(), sqlitex_vector::Error>(())
 //! ```
 //!
 //! * Graph: HNSW (Malkov & Yashunin) with the neighbour-selection heuristic;

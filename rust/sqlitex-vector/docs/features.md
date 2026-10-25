@@ -25,7 +25,7 @@ Skipped:
 
 ## SIMD distance kernels (`simd`)
 
-**How it works.** `sqlite_hnsw::distance` holds the two kernels every distance
+**How it works.** `sqlitex_vector::distance` holds the two kernels every distance
 goes through: `dot` (`f32` x `f32`) and `dot_i8` (`f32` query x `i8` vector,
 widened to `f32`). Without the feature they are the scalar loops (eight partial
 sums). With it:
@@ -41,12 +41,12 @@ sums). With it:
 Tails (length not a multiple of 16) run through the scalar kernel.
 `distance::backend()` reports `Scalar`, `Neon` or `Avx2`.
 
-**Enable.** `sqlite-hnsw = { version = "...", features = ["simd"] }`.
+**Enable.** `sqlitex-vector = { version = "...", features = ["simd"] }`.
 
 **Disable.** Leave the feature off (the default). Nothing else changes; only
 the summation order differs, so scores can differ in the last bits.
 
-**Test.** `cargo test -p sqlite-hnsw --features simd --test distance` checks the
+**Test.** `cargo test -p sqlitex-vector --features simd --test distance` checks the
 dispatched kernels against the scalar ones for every length 0..=133 (within
 `1e-5` of the sum of `|a_i * b_i|`), bit equality where the sum is exact
 (small integers, `i8::MIN`/`i8::MAX` extremes), mismatched lengths, and that
@@ -85,7 +85,7 @@ or change it with `VecDb::set_rerank`. `0` counts as `1` (rescore only `k`).
 fixed when the file is created, like `m`; switching means rebuilding the
 index. `set_rerank(1)` keeps the mode but stops widening the candidate list.
 
-**Test.** `cargo test -p sqlite-hnsw --test rerank`: returned scores equal the
+**Test.** `cargo test -p sqlitex-vector --test rerank`: returned scores equal the
 exact `f32` cosine (within `1e-5`), recall@10 is at least that of plain `I8`
 on the same data and graph, the factor can change at runtime (including `0`),
 and the mode and vectors survive a reopen.
@@ -126,7 +126,7 @@ inserts add `features = ["parallel"]`. Size the pool with
 **Disable.** Keep using `insert` + `save`, or leave `parallel` off to insert
 the batch on the calling thread.
 
-**Test.** `cargo test -p sqlite-hnsw --features parallel --test batch` (and
+**Test.** `cargo test -p sqlitex-vector --features parallel --test batch` (and
 without the feature): a 3000-vector batch writes three pages, leaves nothing
 dirty, reopens with self-recall >= 95%; a batch appended to an existing index
 is searchable; a length mismatch inserts nothing; an empty batch is a plain
@@ -164,7 +164,7 @@ the id given to `insert` and must be cheap: it runs once per visited node.
 **Disable.** Call `search`. Without a filter the path is the old one plus one
 `Option` check per neighbour.
 
-**Test.** `cargo test -p sqlite-hnsw --test filter`: a 1-in-3 predicate returns
+**Test.** `cargo test -p sqlitex-vector --test filter`: a 1-in-3 predicate returns
 only matching ids, sorted, with recall@10 >= 0.9 against exact filtered
 search; a 21-id allow-list out of 2000 is found (recall >= 0.9); fewer
 matches than `k` returns exactly the matches, and a reject-all filter returns
@@ -210,7 +210,7 @@ Before, a failed save lost the dirty-page list and left the transaction open.
 **Disable.** Do not call them. Files without deletes get only an empty
 `vdb_tomb` table, created on `open`.
 
-**Test.** `cargo test -p sqlite-hnsw --test delete`: deleted ids vanish from
+**Test.** `cargo test -p sqlitex-vector --test delete`: deleted ids vanish from
 search at once, and repeated or unknown ids count 0; every copy of a
 duplicate id is deleted; tombstones persist only after `save` and need no
 page rewrite; `compact` drops 2000 of 2500 vectors, leaves nothing dirty,
@@ -244,7 +244,7 @@ was saved. Inserts after a reopen continue from that graph.
 
 **Disable.** Not applicable.
 
-**Test.** `cargo test -p sqlite-hnsw --test reopen`: for `F32`, `I8` and
+**Test.** `cargo test -p sqlitex-vector --test reopen`: for `F32`, `I8` and
 `I8Rerank` (2500 nodes, three pages, `m = 8`) the hits after a reopen equal
 the hits before it, ids and scores bit for bit, and a `save` right after
 `open` writes 0 pages. An index grown over two sessions keeps self-recall
@@ -287,7 +287,7 @@ file. `m` and `ef_construction` are stored then; on reopen only `ef_search`
 **Disable.** Build `Params` by hand or use `Params::default()` (`m = 16`,
 `ef_search = 64`), which did not change.
 
-**Test.** `cargo test -p sqlite-hnsw --test presets`: the values match the
+**Test.** `cargo test -p sqlitex-vector --test presets`: the values match the
 table above for every mode, a higher target never searches less, and an
 index built with the presets meets both targets on small data.
 

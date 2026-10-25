@@ -3,7 +3,7 @@
 
 mod common;
 
-use sqlite_hnsw::{Params, Quant};
+use sqlitex_vector::{Params, Quant};
 
 const DIM: usize = 24;
 

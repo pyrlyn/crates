@@ -1,7 +1,7 @@
-# Benchmark: sqlite-hnsw vs qdrant-edge
+# Benchmark: sqlitex-vector vs qdrant-edge
 
 Results recorded once while this crate still lived in cox (as `cox-vecdb`,
-labelled `vecdb-*` below). Compared engines: `sqlite-hnsw` (f32 and i8),
+labelled `vecdb-*` below). Compared engines: `sqlitex-vector` (f32 and i8),
 `qdrant-edge` 0.9, and an exact brute-force scan over SQLite BLOBs
 (`sqlite-brute`, cox's own store; that engine was not carried over). Raw rows:
 [`bench-results.jsonl`](bench-results.jsonl). The numbers have not been re-run
@@ -129,14 +129,14 @@ since the move; the code paths measured are unchanged.
 
 Nothing here runs in CI or `cargo test`. Running the benchmark is manual.
 
-`sqlite-hnsw` alone (from the repository root):
+`sqlitex-vector` alone (from the repository root):
 
 ```sh
-cargo build --release -p sqlite-hnsw --features bench --bin vecbench
+cargo build --release -p sqlitex-vector --features bench --bin vecbench
 B=target/release/vecbench W=/tmp/vecbench            # any scratch dir, needs ~2 GB
 $B gen $W/data 100000 384 1000 10000                  # dataset + exact ground truth
-python3 rust/sqlite-hnsw/scripts/vector_bench.py $B $W vecdb-m16 vecdb-m32 vecdb-m32-i8
-python3 rust/sqlite-hnsw/scripts/vector_bench_report.py $W/results.jsonl
+python3 rust/sqlitex-vector/scripts/vector_bench.py $B $W vecdb-m16 vecdb-m32 vecdb-m32-i8
+python3 rust/sqlitex-vector/scripts/vector_bench_report.py $W/results.jsonl
 ```
 
 With qdrant-edge: build the same driver from `bench-qdrant/`, an unpublished
@@ -144,9 +144,9 @@ crate outside the workspace (own `Cargo.lock`) that compiles
 `src/bin/vecbench.rs` with the `qdrant` engine on:
 
 ```sh
-cargo build --release --manifest-path rust/sqlite-hnsw/bench-qdrant/Cargo.toml
-B=rust/sqlite-hnsw/bench-qdrant/target/release/vecbench   # or $CARGO_TARGET_DIR/release/vecbench
-python3 rust/sqlite-hnsw/scripts/vector_bench.py $B $W    # all configs, qdrant-* included
+cargo build --release --manifest-path rust/sqlitex-vector/bench-qdrant/Cargo.toml
+B=rust/sqlitex-vector/bench-qdrant/target/release/vecbench   # or $CARGO_TARGET_DIR/release/vecbench
+python3 rust/sqlitex-vector/scripts/vector_bench.py $B $W    # all configs, qdrant-* included
 ```
 
 It uses `qdrant-edge = "=0.9.0"` from crates.io. To measure a fork instead,

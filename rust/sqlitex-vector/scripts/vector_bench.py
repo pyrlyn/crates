@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Orchestrates sqlite-hnsw benchmark runs and writes results.jsonl.
+"""Orchestrates sqlitex-vector benchmark runs and writes results.jsonl.
 
 Usage: vector_bench.py <vecbench-binary> <workdir> [config ...]
 qdrant-* configs need the binary built from bench-qdrant/ (see docs/benchmark.md).

@@ -5991,17 +5991,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "sqlite-hnsw"
-version = "0.1.0"
-dependencies = [
- "libsqlite3-sys",
- "parking_lot",
- "rayon",
- "serde_json",
- "tempfile",
-]
-
-[[package]]
 name = "sqlite-wasm-rs"
 version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6009,6 +5998,17 @@ checksum = "717e14271e332de37b8f7793913d53e2f952b3d21f96efd5880aea42a3c32d18"
 dependencies = [
  "cc",
  "rsqlite-vfs",
+]
+
+[[package]]
+name = "sqlitex-vector"
+version = "0.1.0"
+dependencies = [
+ "libsqlite3-sys",
+ "parking_lot",
+ "rayon",
+ "serde_json",
+ "tempfile",
 ]
 
 [[package]]

@@ -1,6 +1,6 @@
 //! Public-API integration tests: open, insert, search, save, reopen.
 
-use sqlite_hnsw::{Params, Quant, VecDb};
+use sqlitex_vector::{Params, Quant, VecDb};
 
 fn vecs(n: usize, dim: usize, seed: u64) -> Vec<Vec<f32>> {
     let mut s = seed;

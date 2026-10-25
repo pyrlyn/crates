@@ -99,7 +99,7 @@ jobs:
           cargo test -p telemetry-setup --features otlp --locked
           cargo publish --dry-run -p gettext-catalog --locked
           cargo publish --dry-run -p sqlite-change-feed --locked
-          cargo publish --dry-run -p sqlite-hnsw --locked
+          cargo publish --dry-run -p sqlitex-vector --locked
           cargo publish --dry-run -p abi-drift --locked
           cargo publish --dry-run -p keychain-secret --locked
           # injecta needs injecta-macros on crates.io first (exact path+version dep),

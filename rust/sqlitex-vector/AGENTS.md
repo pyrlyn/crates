@@ -22,7 +22,7 @@ with the cox-only engines removed.
 ## Commands
 
 ```bash
-cargo test -p sqlite-hnsw
-cargo clippy -p sqlite-hnsw --all-targets --all-features -- -D warnings
+cargo test -p sqlitex-vector
+cargo clippy -p sqlitex-vector --all-targets --all-features -- -D warnings
 cargo clippy --manifest-path bench-qdrant/Cargo.toml --all-targets -- -D warnings
 ```

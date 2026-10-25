@@ -1,4 +1,4 @@
-# How sqlite-hnsw works
+# How sqlitex-vector works
 
 ## Graph
 

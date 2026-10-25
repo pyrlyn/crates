@@ -1,17 +1,17 @@
-# sqlite-hnsw
+# sqlitex-vector
 
 Approximate nearest-neighbour search for embeddings: an HNSW graph kept in
 memory for queries and persisted to a single SQLite file, with optional `i8`
 quantization (about 4x less disk and memory than `f32`).
 
 ```rust,no_run
-use sqlite_hnsw::{Params, Quant, VecDb};
+use sqlitex_vector::{Params, Quant, VecDb};
 
 let db = VecDb::open("vectors.db", 384, Params { m: 32, ef_construction: 400, ef_search: 1024, quant: Quant::I8, ..Params::default() })?;
 db.insert(42, &embedding)?;          // any thread, concurrently
 db.save()?;                          // writes only pages touched since the last save
 for (id, score) in db.search(&query, 10) { /* cosine similarity, best first */ }
-# Ok::<(), sqlite_hnsw::Error>(())
+# Ok::<(), sqlitex_vector::Error>(())
 ```
 
 ## How it works
@@ -61,7 +61,7 @@ copy, so scores are exact `f32` cosine. It costs about 1.25x the memory of
 ## Test
 
 ```sh
-cargo test -p sqlite-hnsw
+cargo test -p sqlitex-vector
 ```
 
 Unit tests sit in `src/lib.rs`; integration tests of the public API in `tests/`.

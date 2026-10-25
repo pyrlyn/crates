@@ -4,7 +4,7 @@ mod common;
 
 use std::collections::HashSet;
 
-use sqlite_hnsw::{Params, VecDb};
+use sqlitex_vector::{Params, VecDb};
 
 const DIM: usize = 24;
 

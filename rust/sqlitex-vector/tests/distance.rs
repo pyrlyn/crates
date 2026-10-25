@@ -2,7 +2,7 @@
 
 mod common;
 
-use sqlite_hnsw::distance::{Backend, backend, dot, dot_i8, dot_i8_scalar, dot_scalar};
+use sqlitex_vector::distance::{Backend, backend, dot, dot_i8, dot_i8_scalar, dot_scalar};
 
 /// SIMD reorders the sum and fuses multiply-add, so allow a few ulps of the magnitude.
 fn close(simd: f32, scalar: f32, magnitude: f32) -> bool {

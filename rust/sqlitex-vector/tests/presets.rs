@@ -2,7 +2,7 @@
 
 mod common;
 
-use sqlite_hnsw::{Params, Quant, Recall};
+use sqlitex_vector::{Params, Quant, Recall};
 
 const QUANTS: [Quant; 3] = [Quant::F32, Quant::I8, Quant::I8Rerank];
 

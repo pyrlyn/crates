@@ -1,4 +1,4 @@
-//! Benchmark driver for `sqlite-hnsw` (feature `bench`). Every subcommand prints one JSON
+//! Benchmark driver for `sqlitex-vector` (feature `bench`). Every subcommand prints one JSON
 //! object per line; `scripts/vector_bench.py` orchestrates the runs.
 //!
 //! vecbench gen <dir> <n> <dim> <queries> <extra>
@@ -121,7 +121,7 @@ trait Engine: Sync {
     fn persist(&self);
 }
 
-struct VecDbEngine(sqlite_hnsw::VecDb);
+struct VecDbEngine(sqlitex_vector::VecDb);
 impl Engine for VecDbEngine {
     fn insert_batch(&self, first: u64, vecs: &[f32], dim: usize, threads: usize) {
         let n = vecs.len() / dim;
@@ -228,25 +228,25 @@ fn open(engine: &str, db: &Path, dim: usize, m: usize, efc: usize, quant: &str) 
     match engine {
         "vecdb" => {
             let q = match quant {
-                "i8" => sqlite_hnsw::Quant::I8,
-                "i8r" => sqlite_hnsw::Quant::I8Rerank,
-                _ => sqlite_hnsw::Quant::F32,
+                "i8" => sqlitex_vector::Quant::I8,
+                "i8r" => sqlitex_vector::Quant::I8Rerank,
+                _ => sqlitex_vector::Quant::F32,
             };
-            let p = sqlite_hnsw::Params {
+            let p = sqlitex_vector::Params {
                 m,
                 ef_construction: efc,
                 ef_search: 64,
                 quant: q,
-                ..sqlite_hnsw::Params::default()
+                ..sqlitex_vector::Params::default()
             };
             Box::new(VecDbEngine(
-                sqlite_hnsw::VecDb::open(db.to_str().unwrap(), dim, p).unwrap(),
+                sqlitex_vector::VecDb::open(db.to_str().unwrap(), dim, p).unwrap(),
             ))
         }
         #[cfg(feature = "qdrant")]
         "qdrant" => Box::new(qd::open(db, dim, m, efc)),
         #[cfg(not(feature = "qdrant"))]
-        "qdrant" => panic!("qdrant engine: build vecbench from rust/sqlite-hnsw/bench-qdrant"),
+        "qdrant" => panic!("qdrant engine: build vecbench from rust/sqlitex-vector/bench-qdrant"),
         e => panic!("unknown engine {e}"),
     }
 }
