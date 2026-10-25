@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `VecDb::delete` (tombstones, persisted in a new `vdb_tomb` table), `VecDb::tombstones` and `VecDb::compact` (rebuild from live vectors in one rewriting transaction).
 - `Params::for_recall(Recall, Quant)`: `m`, `ef_construction` and `ef_search` presets for recall@10 of about 0.90 or 0.95, from the recorded benchmark.
 
+- Tests that a reopen returns bit-identical hits in every quantization mode; the entry point and node levels were already persisted (`vdb_meta` key 4, per-node level count).
+
 ### Fixed
 
 - `insert_batch` with `parallel` inserts the first page serially; a parallel start on a near-empty graph linked poorly.

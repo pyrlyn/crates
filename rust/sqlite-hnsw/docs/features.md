@@ -14,6 +14,7 @@ parameter that changes nothing unless set.
 | parallel build + batch insert | **chosen**, `insert_batch` + feature `parallel` (off by default) | `insert` is already thread-safe, so the rayon version is a small loop, and a bulk load no longer needs a hand-written thread pool (as `vecbench` has). The batch saves once, in one transaction. rayon is already in the workspace lock; the feature keeps it out of default builds. |
 | filtered search | **chosen**, `search_filtered(q, k, predicate)` | Post-filtering the top `k` returns too few hits. Filtering inside the beam (the hnswlib approach) is a few lines in `search_layer` and costs nothing when unused. An allow-list is the predicate `|id| set.contains(&id)`, so one API covers both. The same hook later serves tombstones. |
 | delete via tombstones + compaction | **chosen**, `delete(&ids)`, `compact()` | The crate had no delete at all. A tombstone is one flag per node checked in the same accept hook as the filter, plus a new `vdb_tomb` table, so pages and old files stay as they are. Compaction rebuilds from the live vectors: simpler and safer than repairing links in place, at the cost of a full build. |
+| persisted entry point / levels | **already present**, now tested | The format stored them from the start: `vdb_meta` key 4 holds the entry node and its level packed into one integer, and every node record in a page starts with its level count followed by one link list per level. `open` restores both, so there is no rebuild or re-descent on load. Only a test that pins this down was missing. |
 | ef/M presets for recall 0.90 / 0.95 | **chosen**, `Params::for_recall(Recall, Quant)` | The recorded benchmark already maps `ef_search` to recall per mode; a constructor turns that table into code. It is a plain function that changes nothing unless called, and `Params::default()` keeps its values. |
 
 Skipped:
@@ -229,6 +230,32 @@ tombstones combine.
   a `delete` of the same id may survive it.
 - Older builds ignore `vdb_tomb`: they show deleted vectors again (until
   `compact`, which removes them from the pages for good).
+
+## Persisted entry point and levels
+
+**How it works.** Nothing new: `save` writes the entry point (node index and
+top level, packed as `node << 8 | level`) to `vdb_meta` key 4. Each node
+record in a `vdb_page` BLOB stores its level count and the link list of every
+level. `open` parses the pages straight into the arena and sets the entry
+point from the meta row, so a reopened index walks exactly the graph that
+was saved. Inserts after a reopen continue from that graph.
+
+**Enable.** Always on; it is part of the file format.
+
+**Disable.** Not applicable.
+
+**Test.** `cargo test -p sqlite-hnsw --test reopen`: for `F32`, `I8` and
+`I8Rerank` (2500 nodes, three pages, `m = 8`) the hits after a reopen equal
+the hits before it, ids and scores bit for bit, and a `save` right after
+`open` writes 0 pages. An index grown over two sessions keeps self-recall
+>= 98%.
+
+**Limitations.**
+
+- The level generator's state is not stored: every `open` restarts it from
+  the same fixed seed, so each session repeats the same level sequence. The
+  levels still follow the HNSW distribution, but two sessions do not
+  reproduce one uninterrupted run.
 
 ## Parameter presets (`Params::for_recall`)
 
