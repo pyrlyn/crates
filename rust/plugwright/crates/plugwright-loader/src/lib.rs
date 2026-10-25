@@ -41,7 +41,7 @@ mod wasm;
 pub use native::NativeLoader;
 pub use plugwright_native::NativePlugin;
 #[cfg(feature = "wasm")]
-pub use plugwright_wasm::{WasmEngine, WasmLimits, WasmPlugin};
+pub use plugwright_wasm::{HostFunctions, WasmEngine, WasmLimits, WasmPlugin};
 #[cfg(feature = "wasmi")]
 pub use plugwright_wasmi::WasmiEngine;
 #[cfg(feature = "wasmtime")]
@@ -83,6 +83,13 @@ impl Loader {
     #[cfg(feature = "wasm")]
     pub fn with_limits(mut self, limits: WasmLimits) -> Self {
         self.wasm = self.wasm.with_limits(limits);
+        self
+    }
+
+    /// Host functions for Wasm plugins (see [`WasmLoader::with_host_functions`]).
+    #[cfg(feature = "wasm")]
+    pub fn with_host_functions(mut self, host: impl Fn(&str) -> HostFunctions + Send + Sync + 'static) -> Self {
+        self.wasm = self.wasm.with_host_functions(host);
         self
     }
 

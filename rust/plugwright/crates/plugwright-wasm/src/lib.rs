@@ -214,9 +214,162 @@ fn engine_dir(name: &str) -> String {
 
 /// A compiled module that can be instantiated many times.
 pub trait WasmModule: Send + Sync {
-    /// Instantiate with the single host import `plugwright.log` wired to `log`.
-    /// Any other import must make instantiation fail (deny by default).
-    fn instantiate(&self, limits: &WasmLimits, log: LogSink) -> Result<Box<dyn WasmInstance>, WasmError>;
+    /// Instantiate with the `plugwright` imports: `log` wired to
+    /// `imports.log`, `host_call`/`host_take` to a [`HostCalls`] over
+    /// `imports.host`. Any other import must make instantiation fail (deny by
+    /// default).
+    fn instantiate(&self, limits: &WasmLimits, imports: &Imports) -> Result<Box<dyn WasmInstance>, WasmError>;
+}
+
+/// What a guest may call on its host.
+#[derive(Clone)]
+pub struct Imports {
+    pub log: LogSink,
+    pub host: HostFunctions,
+}
+
+impl Imports {
+    /// Logging only; no host functions.
+    pub fn new(log: LogSink) -> Self {
+        Imports { log, host: HostFunctions::new() }
+    }
+
+    pub fn with_host(mut self, host: HostFunctions) -> Self {
+        self.host = host;
+        self
+    }
+}
+
+/// A host function: input bytes in, output bytes or an error message out.
+pub type HostFn = Arc<dyn Fn(&[u8]) -> std::result::Result<Vec<u8>, String> + Send + Sync>;
+
+/// The host functions for the plugin with this id, so an embedder can grant
+/// each plugin its own (or bind the id into them).
+pub type HostFactory = Arc<dyn Fn(&str) -> HostFunctions + Send + Sync>;
+
+/// Named functions a guest may call through `plugwright.host_call`. Empty by
+/// default: every call then gets an "unknown host function" error.
+///
+/// A handler runs on the host, outside the guest's fuel and wall-clock
+/// limits, so it must return quickly.
+#[derive(Clone, Default)]
+pub struct HostFunctions {
+    fns: HashMap<String, HostFn>,
+}
+
+impl HostFunctions {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Add (or replace) the function `name`.
+    pub fn with(
+        mut self,
+        name: impl Into<String>,
+        f: impl Fn(&[u8]) -> std::result::Result<Vec<u8>, String> + Send + Sync + 'static,
+    ) -> Self {
+        self.fns.insert(name.into(), Arc::new(f));
+        self
+    }
+
+    pub fn names(&self) -> impl Iterator<Item = &str> {
+        self.fns.keys().map(String::as_str)
+    }
+
+    /// Run `name` on `input`. The result is the wire form: [`STATUS_OK`] and
+    /// the output, or [`STATUS_ERROR`] and the message. A panicking handler is
+    /// an error, never an unwind into the engine.
+    pub fn invoke(&self, name: &str, input: &[u8]) -> Vec<u8> {
+        let res = match self.fns.get(name) {
+            Some(f) => std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| f(input)))
+                .unwrap_or_else(|_| Err(format!("host function `{name}` panicked"))),
+            None => Err(format!("unknown host function `{name}`")),
+        };
+        match res {
+            Ok(out) => status_buf(STATUS_OK, &out),
+            Err(msg) => status_buf(STATUS_ERROR, msg.as_bytes()),
+        }
+    }
+}
+
+impl std::fmt::Debug for HostFunctions {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut names: Vec<_> = self.names().collect();
+        names.sort_unstable();
+        f.debug_struct("HostFunctions").field("names", &names).finish()
+    }
+}
+
+/// The `host_call`/`host_take` imports of one instance, minus memory access,
+/// which each adapter supplies. Keep one in the store.
+pub struct HostCalls {
+    host: HostFunctions,
+    /// The last `host_call` result, until `host_take` collects it.
+    pending: Option<Vec<u8>>,
+}
+
+impl HostCalls {
+    pub fn new(host: HostFunctions) -> Self {
+        HostCalls { host, pending: None }
+    }
+
+    /// `host_call(name_ptr, name_len, in_ptr, in_len) -> i32`. `read(ptr, len)`
+    /// returns guest memory, or `None` when the range is outside it; it must
+    /// check bounds before allocating, since both lengths come from the guest.
+    pub fn call(
+        &mut self,
+        read: impl Fn(u32, u32) -> Option<Vec<u8>>,
+        name_ptr: i32,
+        name_len: i32,
+        in_ptr: i32,
+        in_len: i32,
+    ) -> i32 {
+        self.pending = None;
+        let name = (name_len as u32 <= abi::MAX_HOST_NAME).then(|| read(name_ptr as u32, name_len as u32)).flatten();
+        let (Some(name), Some(input)) = (name, read(in_ptr as u32, in_len as u32)) else { return -1 };
+        let mut out = self.host.invoke(&String::from_utf8_lossy(&name), &input);
+        if i32::try_from(out.len()).is_err() {
+            out = status_buf(STATUS_ERROR, b"host function result larger than 2 GiB");
+        }
+        let len = out.len() as i32;
+        self.pending = Some(out);
+        len
+    }
+
+    /// `host_take(ptr, len) -> i32`: hand the pending result to
+    /// `write(ptr, bytes)` (false when out of bounds) if it is `len` bytes
+    /// long. A result is handed out once.
+    pub fn take(&mut self, write: impl FnOnce(u32, &[u8]) -> bool, ptr: i32, len: i32) -> i32 {
+        match self.pending.take_if(|p| p.len() == len as u32 as usize) {
+            Some(out) if write(ptr as u32, &out) => 0,
+            _ => -1,
+        }
+    }
+}
+
+fn status_buf(status: u32, payload: &[u8]) -> Vec<u8> {
+    let mut buf = Vec::with_capacity(payload.len() + 1);
+    buf.push(status as u8);
+    buf.extend_from_slice(payload);
+    buf
+}
+
+/// `read` for [`HostCalls::call`] over a memory slice: bounds first.
+pub fn guest_bytes(mem: &[u8], ptr: u32, len: u32) -> Option<Vec<u8>> {
+    let ptr = ptr as usize;
+    ptr.checked_add(len as usize).and_then(|end| mem.get(ptr..end)).map(<[u8]>::to_vec)
+}
+
+/// `write` for [`HostCalls::take`] over a memory slice.
+pub fn put_guest_bytes(mem: &mut [u8], ptr: u32, data: &[u8]) -> bool {
+    let ptr = ptr as usize;
+    match ptr.checked_add(data.len()).and_then(|end| mem.get_mut(ptr..end)) {
+        Some(dst) => {
+            dst.copy_from_slice(data);
+            true
+        }
+        None => false,
+    }
 }
 
 /// A live instance. All methods are primitive; the ABI lives in [`WasmPlugin`].
@@ -239,7 +392,7 @@ pub struct WasmPlugin {
     id: String,
     module: Arc<dyn WasmModule>,
     limits: WasmLimits,
-    log: LogSink,
+    imports: Imports,
     config: Vec<u8>,
     instance: Option<Box<dyn WasmInstance>>,
     info: PluginInfo,
@@ -252,11 +405,11 @@ impl WasmPlugin {
         wasm: &[u8],
         limits: WasmLimits,
         config: &[u8],
-        log: LogSink,
+        imports: Imports,
     ) -> Result<Self> {
         let started = Instant::now();
         let module = engine.compile(wasm)?;
-        Self::from_module(id, engine.name(), module, limits, config, log, started)
+        Self::from_module(id, engine.name(), module, limits, config, imports, started)
     }
 
     /// Load from a module compiled earlier (see [`ModuleCache`]).
@@ -266,9 +419,9 @@ impl WasmPlugin {
         module: Arc<dyn WasmModule>,
         limits: WasmLimits,
         config: &[u8],
-        log: LogSink,
+        imports: Imports,
     ) -> Result<Self> {
-        Self::from_module(id, engine, module, limits, config, log, Instant::now())
+        Self::from_module(id, engine, module, limits, config, imports, Instant::now())
     }
 
     fn from_module(
@@ -277,14 +430,14 @@ impl WasmPlugin {
         module: Arc<dyn WasmModule>,
         limits: WasmLimits,
         config: &[u8],
-        log: LogSink,
+        imports: Imports,
         started: Instant,
     ) -> Result<Self> {
         let mut this = WasmPlugin {
             id: id.to_owned(),
             module,
             limits,
-            log,
+            imports,
             config: config.to_vec(),
             instance: None,
             info: PluginInfo {
@@ -306,7 +459,7 @@ impl WasmPlugin {
 
     /// Instantiate, verify ABI + metadata and run `pw_init`.
     fn boot(&mut self) -> Result<()> {
-        let mut inst = self.module.instantiate(&self.limits, Arc::clone(&self.log))?;
+        let mut inst = self.module.instantiate(&self.limits, &self.imports)?;
         inst.begin_call()?;
         match inst.call(abi::EXPORT_ABI_VERSION, &[])? {
             Some(WasmVal::I32(v)) if v as u32 == ABI_VERSION => {}
@@ -467,7 +620,7 @@ mod module_cache {
     struct Compiled;
 
     impl WasmModule for Compiled {
-        fn instantiate(&self, _: &WasmLimits, _: LogSink) -> Result<Box<dyn WasmInstance>, WasmError> {
+        fn instantiate(&self, _: &WasmLimits, _: &Imports) -> Result<Box<dyn WasmInstance>, WasmError> {
             Err(WasmError::Instantiate("not a real module".into()))
         }
     }
@@ -595,6 +748,7 @@ mod tests {
         begin_call: Option<WasmError>,
         compile: Option<WasmError>,
         instantiate: Option<WasmError>,
+        host: HostFunctions,
     }
 
     impl Default for Script {
@@ -613,6 +767,7 @@ mod tests {
                 begin_call: None,
                 compile: None,
                 instantiate: None,
+                host: HostFunctions::new(),
             }
         }
     }
@@ -647,8 +802,12 @@ mod tests {
             self.load_with(WasmLimits::default(), b"cfg")
         }
 
+        fn imports(&self) -> Imports {
+            Imports::new(Arc::new(|_, _| {})).with_host(self.script().host)
+        }
+
         fn load_with(&self, limits: WasmLimits, config: &[u8]) -> Result<WasmPlugin> {
-            WasmPlugin::load("demo-id", self, b"\0asm", limits, config, Arc::new(|_, _| {}))
+            WasmPlugin::load("demo-id", self, b"\0asm", limits, config, self.imports())
         }
 
         fn script(&self) -> Script {
@@ -679,12 +838,13 @@ mod tests {
     }
 
     impl WasmModule for Mock {
-        fn instantiate(&self, _limits: &WasmLimits, _log: LogSink) -> Result<Box<dyn WasmInstance>, WasmError> {
+        fn instantiate(&self, _limits: &WasmLimits, imports: &Imports) -> Result<Box<dyn WasmInstance>, WasmError> {
             if let Some(e) = self.script().instantiate {
                 return Err(e);
             }
             self.trace().instances += 1;
-            Ok(Box::new(Guest { mock: self.clone(), mem: vec![0; MEM], next: 8, calls: 0 }))
+            let host = HostCalls::new(imports.host.clone());
+            Ok(Box::new(Guest { mock: self.clone(), mem: vec![0; MEM], next: 8, calls: 0, host }))
         }
     }
 
@@ -694,6 +854,7 @@ mod tests {
         mem: Vec<u8>,
         next: u32,
         calls: u32,
+        host: HostCalls,
     }
 
     fn i32_args(func: &str, args: &[WasmVal]) -> Vec<u32> {
@@ -719,6 +880,28 @@ mod tests {
             self.next += len.max(1);
             assert!(self.next as usize <= MEM, "mock guest ran out of memory");
             ptr
+        }
+
+        /// What the SDK's `host::call` does: name and input in guest memory,
+        /// `host_call`, allocate, `host_take`. The host's status-prefixed
+        /// result is returned as this call's result.
+        fn host_call(&mut self, name: &str, in_ptr: u32, in_len: u32) -> Result<Option<WasmVal>, WasmError> {
+            let name_ptr = self.alloc(name.len() as u32);
+            self.mem[name_ptr as usize..][..name.len()].copy_from_slice(name.as_bytes());
+            let mem = &self.mem;
+            let len = self.host.call(
+                |p, l| guest_bytes(mem, p, l),
+                name_ptr as i32,
+                name.len() as i32,
+                in_ptr as i32,
+                in_len as i32,
+            );
+            assert!(len > 0, "host_call failed: {len}");
+            let out = self.alloc(len as u32);
+            let mem = &mut self.mem;
+            assert_eq!(self.host.take(|p, d| put_guest_bytes(mem, p, d), out as i32, len), 0);
+            self.mock.trace().returned.push((out, len as u32));
+            Ok(Some(WasmVal::I64(pack(out, len as u32))))
         }
 
         fn reply(&mut self, reply: Reply) -> Result<Option<WasmVal>, WasmError> {
@@ -774,6 +957,9 @@ mod tests {
                 abi::EXPORT_CALL => {
                     let method = String::from_utf8(self.read(a[0], a[1])?).expect("host sends UTF-8 method names");
                     let input = self.read(a[2], a[3])?;
+                    if let Some(name) = method.strip_prefix("host:") {
+                        return self.host_call(name, a[2], a[3]);
+                    }
                     self.calls += 1;
                     let reply = (script.call)(&method, &input, self.calls);
                     self.mock.trace().calls.push((method, input));
@@ -823,6 +1009,38 @@ mod tests {
 
     fn call_ok(p: &mut WasmPlugin, method: &str, input: &[u8]) -> Vec<u8> {
         p.call(method, input).unwrap_or_else(|e| panic!("`{method}` failed: {e}"))
+    }
+
+    // --- host functions ---------------------------------------------------
+
+    #[test]
+    fn guests_call_host_functions_by_name() {
+        let host = HostFunctions::new()
+            .with("upper", |i: &[u8]| Ok(i.to_ascii_uppercase()))
+            .with("refuse", |_: &[u8]| Err("not today".into()))
+            .with("boom", |_: &[u8]| panic!("handler bug"));
+        let mock = with(|s| s.host = host);
+        let mut p = mock.load().unwrap();
+        assert_eq!(call_ok(&mut p, "host:upper", b"abc"), b"ABC");
+        assert_eq!(call_ok(&mut p, "host:upper", b""), b"");
+        let msg = |r: Result<Vec<u8>>| match r {
+            Err(PluginError::Call { message, .. }) => message,
+            other => panic!("{other:?}"),
+        };
+        assert_eq!(msg(p.call("host:refuse", b"x")), "not today");
+        assert_eq!(msg(p.call("host:boom", b"x")), "host function `boom` panicked");
+        assert_eq!(msg(p.call("host:nope", b"x")), "unknown host function `nope`");
+        assert_eq!(call_ok(&mut p, "host:upper", b"still"), b"STILL", "a panicking handler harms nothing");
+        assert_eq!(mock.trace().instances, 1);
+    }
+
+    #[test]
+    fn without_host_functions_every_call_is_unknown() {
+        let mut p = Mock::default().load().unwrap();
+        match p.call("host:upper", b"x") {
+            Err(PluginError::Call { message, .. }) => assert_eq!(message, "unknown host function `upper`"),
+            other => panic!("{other:?}"),
+        }
     }
 
     // --- happy path -------------------------------------------------------
@@ -1310,5 +1528,89 @@ mod tests {
     #[test]
     fn bridge_rejects_unsupported_result_types() {
         assert_eq!(from_engine_result("f", &[V::F32(1.5)]), Err(abi_err("`f` returned unsupported value F32(1.5)")));
+    }
+}
+
+#[cfg(test)]
+mod host_calls {
+    use super::*;
+
+    fn echo() -> HostCalls {
+        HostCalls::new(HostFunctions::new().with("echo", |i: &[u8]| Ok(i.to_vec())))
+    }
+
+    /// Guest memory: the name `echo` at 0, the input `hi` at 4.
+    const MEM: &[u8] = b"echohi";
+
+    fn call(h: &mut HostCalls, args: [i32; 4]) -> i32 {
+        h.call(|p, l| guest_bytes(MEM, p, l), args[0], args[1], args[2], args[3])
+    }
+
+    #[test]
+    fn a_result_is_taken_once_at_its_exact_length() {
+        let mut h = echo();
+        assert_eq!(call(&mut h, [0, 4, 4, 2]), 3, "status byte + `hi`");
+        let mut out = [0u8; 8];
+        assert_eq!(h.take(|p, d| put_guest_bytes(&mut out, p, d), 0, 2), -1, "wrong length");
+        assert_eq!(h.take(|p, d| put_guest_bytes(&mut out, p, d), 5, 3), 0);
+        assert_eq!(out[5..], [STATUS_OK as u8, b'h', b'i']);
+        assert_eq!(h.take(|p, d| put_guest_bytes(&mut out, p, d), 5, 3), -1, "already taken");
+    }
+
+    #[test]
+    fn unreadable_names_and_inputs_are_refused_without_running_anything() {
+        let mut h = echo();
+        for args in [[0, 4, 4, 3], [5, 4, 0, 0], [-1, 1, 0, 0], [0, 4, -1, 2], [0, -1, 0, 0]] {
+            assert_eq!(call(&mut h, args), -1, "{args:?}");
+            assert_eq!(h.take(|_, _| true, 0, 0), -1, "nothing pending after {args:?}");
+        }
+        let long = vec![b'x'; abi::MAX_HOST_NAME as usize + 1];
+        let read = |p: u32, l: u32| guest_bytes(&long, p, l);
+        assert_eq!(h.call(read, 0, long.len() as i32, 0, 0), -1, "name over the limit");
+    }
+
+    #[test]
+    fn a_new_call_drops_the_untaken_result_and_a_failed_write_loses_it() {
+        let mut h = echo();
+        assert_eq!(call(&mut h, [0, 4, 4, 2]), 3);
+        assert_eq!(call(&mut h, [0, 4, 4, 0]), 1);
+        assert_eq!(h.take(|_, _| true, 0, 3), -1, "the first result is gone");
+        assert_eq!(h.take(|_, _| false, 0, 1), -1, "out of bounds");
+        assert_eq!(h.take(|_, _| true, 0, 1), -1);
+    }
+
+    #[test]
+    fn errors_come_back_status_prefixed() {
+        let mut h = echo();
+        let len = h.call(|p, l| guest_bytes(b"nope", p, l), 0, 4, 0, 0);
+        let mut got = Vec::new();
+        let keep = |_, d: &[u8]| {
+            got = d.to_vec();
+            true
+        };
+        assert_eq!(h.take(keep, 0, len), 0);
+        assert_eq!(got[0] as u32, STATUS_ERROR);
+        assert_eq!(&got[1..], b"unknown host function `nope`");
+    }
+
+    #[test]
+    fn guest_byte_helpers_check_bounds() {
+        let mut mem = [0u8; 4];
+        assert_eq!(guest_bytes(&mem, 4, 0), Some(vec![]));
+        assert_eq!(guest_bytes(&mem, 2, 3), None);
+        assert_eq!(guest_bytes(&mem, u32::MAX, 2), None);
+        assert!(put_guest_bytes(&mut mem, 2, b"ab"));
+        assert_eq!(mem, [0, 0, b'a', b'b']);
+        assert!(!put_guest_bytes(&mut mem, 3, b"ab"));
+        assert!(!put_guest_bytes(&mut mem, u32::MAX, b"a"));
+    }
+
+    #[test]
+    fn host_functions_list_their_names() {
+        let h = HostFunctions::new().with("b", |_: &[u8]| Ok(vec![])).with("a", |_: &[u8]| Ok(vec![]));
+        assert_eq!(format!("{h:?}"), r#"HostFunctions { names: ["a", "b"] }"#);
+        assert_eq!(format!("{:?}", HostFunctions::default()), "HostFunctions { names: [] }");
+        let replaced = h.with("a", |_: &[u8]| Ok(b"new".to_vec()));
+        assert_eq!(replaced.invoke("a", b""), [STATUS_OK as u8, b'n', b'e', b'w']);
     }
 }

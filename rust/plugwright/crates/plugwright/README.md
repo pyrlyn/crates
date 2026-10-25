@@ -157,6 +157,34 @@ errors. The `macros` feature (default) pulls in `serde_json`, about 85 KB in a r
 module; with `default-features = false` implement `plugwright_sdk::Plugin` by hand and call
 `export_plugin!(Type)`.
 
+## Host functions
+
+A Wasm guest can call functions its host registers by name, and nothing else. The host builds
+the set per plugin id, so a handler can know which plugin called it:
+
+```rust,no_run
+use plugwright::{HostFunctions, ManagerOptions, PluginManager};
+
+fn manager() -> plugwright::Result<PluginManager> {
+    let mut mgr = PluginManager::new(ManagerOptions::new("."))?;
+    mgr.set_host_functions(|id| {
+        let id = id.to_owned();
+        HostFunctions::new()
+            .with("upper", |input: &[u8]| Ok(input.to_ascii_uppercase()))
+            .with("whoami", move |_: &[u8]| Ok(id.clone().into_bytes()))
+    });
+    Ok(mgr)
+}
+```
+
+```rust,ignore
+let out: Vec<u8> = plugwright_sdk::host::call("upper", b"abc")?; // Err: the host's message
+```
+
+`WasmLoader::with_host_functions` does the same without a manager. An unknown name, an `Err` or
+a panic in the handler comes back to the guest as an `Err`. Handlers run on the host, outside
+the guest's fuel and timeout, so keep them quick. Native plugins are host code and get none.
+
 ## Typed calls
 
 ```rust,ignore
@@ -277,7 +305,7 @@ and the trust policy of every source.
 | native plugin reaching out | runner sandboxes itself before `dlopen`: no writes, network or new processes, reads allow-listed (macOS Seatbelt; Linux `no_new_privs` + Landlock + seccomp) | Windows: low integrity + job object only, reads and network stay open; Linux without Landlock: file access open (reported, `require = true` makes it an error) |
 | native panic | SDK wraps every entry in `catch_unwind`; builder forces `panic = "unwind"`; Cranelift never used in-process | plugins not built with the SDK |
 | ABI confusion | `abi_version` read first, `struct_size`, every slot checked, unknown status → error | — |
-| Wasm escape / DoS | no WASI, one import (`log`), bounds-checked reads, fuel, memory cap, wall-clock timeout (wasmtime epochs, wasmi fuel slices, wasmer host interrupt), trapped instances discarded | engine bugs; wasmer on non-unix abandons a hung worker thread |
+| Wasm escape / DoS | no WASI, fixed imports (`log`, `host_call`, `host_take`), host functions only by name and as registered, bounds-checked reads, fuel, memory cap, wall-clock timeout (wasmtime epochs, wasmi fuel slices, wasmer host interrupt), trapped instances discarded | engine bugs; wasmer on non-unix abandons a hung worker thread |
 | git URL tricks | scheme allowlist, `protocol.ext.allow=never`, no hooks, no prompts, no submodules | — |
 | wrong file handed in | format detected from magic bytes; kind, architecture and image type checked before loading | — |
 

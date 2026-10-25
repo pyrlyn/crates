@@ -57,7 +57,7 @@ impl Watch {
         Ok(Some(Watch { id: id.to_owned(), root, recursive, ignore }))
     }
 
-    fn matches(&self, path: &Path) -> bool {
+    fn matches(&self, path: &Path, kind: &EventKind) -> bool {
         if self.ignore.iter().any(|i| path.starts_with(i)) {
             return false;
         }
@@ -65,6 +65,12 @@ impl Watch {
             return path == self.root;
         }
         let Ok(rel) = path.strip_prefix(&self.root) else { return false };
+        // An event on the crate directory itself (its own metadata, or on
+        // macOS a late FSEvents record of its creation) changes no file in
+        // it; the files report their own events. Only its removal counts.
+        if rel.as_os_str().is_empty() {
+            return matches!(kind, EventKind::Remove(_));
+        }
         !rel.components().any(|c| matches!(c, Component::Normal(n) if n == "target" || n == ".git"))
     }
 
@@ -113,7 +119,7 @@ impl Watcher {
                 let ids: BTreeSet<String> = event
                     .paths
                     .iter()
-                    .flat_map(|p| watches.iter().filter(|w| w.matches(p)).map(|w| w.id.clone()))
+                    .flat_map(|p| watches.iter().filter(|w| w.matches(p, &event.kind)).map(|w| w.id.clone()))
                     .collect();
                 if !ids.is_empty() {
                     tracing::debug!(?ids, kind = ?event.kind, "plugin files changed");
@@ -259,8 +265,11 @@ mod tests {
         let file = dir.path().join("p.wasm");
         let w = watch("p", Source::Artifact(file.clone()), &file, &[]);
         assert_eq!(w.dir(), root, "watched through its directory");
-        assert!(w.matches(&root.join("p.wasm")));
-        assert!(!w.matches(&root.join("p.wasm.tmp")) && !w.matches(&root.join("other.wasm")));
+        assert!(w.matches(&root.join("p.wasm"), &EventKind::Any));
+        assert!(
+            !w.matches(&root.join("p.wasm.tmp"), &EventKind::Any)
+                && !w.matches(&root.join("other.wasm"), &EventKind::Any)
+        );
     }
 
     #[test]
@@ -271,11 +280,17 @@ mod tests {
         std::fs::create_dir(&cache).unwrap();
         let w = watch("c", Source::Path("c".into()), dir.path(), std::slice::from_ref(&cache));
         assert_eq!(w.dir(), root);
-        assert!(w.matches(&root.join("src/lib.rs")) && w.matches(&root.join("Cargo.toml")));
+        assert!(
+            w.matches(&root.join("src/lib.rs"), &EventKind::Any)
+                && w.matches(&root.join("Cargo.toml"), &EventKind::Any)
+        );
         for skipped in ["target/debug/libc.so", "sub/target/x", ".git/index", ".plugwright/artifacts/k"] {
-            assert!(!w.matches(&root.join(skipped)), "{skipped}");
+            assert!(!w.matches(&root.join(skipped), &EventKind::Any), "{skipped}");
         }
-        assert!(!w.matches(&root.with_file_name("elsewhere.rs")));
+        assert!(!w.matches(&root.with_file_name("elsewhere.rs"), &EventKind::Any));
+        use notify::event::{ModifyKind, RemoveKind};
+        assert!(!w.matches(&root, &EventKind::Modify(ModifyKind::Any)), "the directory's own events are no change");
+        assert!(w.matches(&root, &EventKind::Remove(RemoveKind::Folder)), "removing it is");
     }
 
     #[test]
