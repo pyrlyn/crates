@@ -158,6 +158,159 @@ step that runs the feature powerset for `sqlitex-compress` (test + clippy
 - No format version beyond the tag; changing a codec's payload layout requires
   a new tag.
 
+## Scalar mode (proposed, feature `scalar`)
+
+Status: plan only. **Scope change:** the non-goals above exclude SQL functions;
+two of the interception options below need them. Whether to lift that non-goal
+is an open question (see the end of this section).
+
+A second, independent mode: compress TEXT and numeric values at insert time and
+store them as tagged BLOBs, so callers keep writing ordinary strings/numbers.
+Behind its own feature `scalar`, off by default, independent of the blob mode
+(see "Modes, features and the zero state" for the flag layout).
+
+### Intercepting inserts
+
+| Option | How | Pros | Cons |
+|---|---|---|---|
+| A. Rust encode API | `scalar::encode(&Value) -> Vec<u8>` / `decode(&[u8]) -> Value`, plus an optional insert wrapper over the host's statement API | no SQL surface, no new deps, works with any driver, testable in isolation | every writer/reader must go through Rust; raw SQL clients see BLOBs |
+| B. App-defined function + `BEFORE INSERT` trigger | register `sqlitex_compress(value, alg)`; trigger rewrites `NEW.col` | transparent for SQL writers | SQLite `BEFORE` triggers cannot modify `NEW`; needs an `AFTER INSERT ... UPDATE` (double write) — awkward and slow |
+| C. View + `INSTEAD OF` triggers | users write to `v_logs`; triggers call `sqlitex_compress()` into the base table; the view selects `sqlitex_decompress(col)` | transparent reads and writes in SQL | needs SQL functions; views hide indexes; more schema to migrate |
+| D. Virtual table | `CREATE VIRTUAL TABLE logs USING sqlitex_compress(...)` | full control of storage and reads | largest implementation and `unsafe`/FFI surface, conflicts with `unsafe_code = "forbid"` |
+
+**Recommendation:** ship A first (pure Rust, fits the current non-goals). C is the
+follow-up if SQL-level transparency is required; it depends on the open question
+about SQL functions. B and D are not planned.
+
+### Stored format
+
+The column holds a BLOB: `[algorithm tag][type tag][payload]`.
+
+- Algorithm tag: same values as the blob mode (`0x01` brotli, `0x02` zstd,
+  `0x03` lz4), plus **`0x00` = passthrough** (stored uncompressed).
+- Type tag restores the SQLite type on decode: `0x01` TEXT (UTF-8), `0x02`
+  INTEGER (i64 LE), `0x03` REAL (f64 LE), `0x04` BLOB. NULL is never encoded,
+  it stays NULL.
+- Minimum-size threshold (default 64 bytes, configurable): values below it, or
+  values that do not shrink, are stored with tag `0x00`. Header cost is then
+  2 bytes, never a compressed frame.
+- Numbers are almost never worth compressing (8 bytes); they go through
+  passthrough unless explicitly forced. Supporting them is about one uniform
+  column format, not about saving space.
+
+### Tradeoffs
+
+- Every read decodes (and usually decompresses) the value.
+- Lost on encoded columns: indexes that mean anything, range queries,
+  `LIKE`/`GLOB`, `ORDER BY`, `GROUP BY` on content, type affinity, `typeof()`
+  returning the logical type, and FTS.
+- Small values grow by the 2-byte header (passthrough) or by a codec frame
+  (prevented by the threshold).
+- Raw SQL tools (sqlite3 CLI, DB browsers) show opaque BLOBs.
+
+**Use it for:** large TEXT that is written once and read rarely — logs, JSON
+event payloads, rendered documents, audit trails.
+**Don't use it for:** keys, foreign keys, numbers, anything in `WHERE`/`ORDER BY`,
+short strings, columns that need FTS.
+
+### Difference from the blob mode
+
+| | blob mode | scalar mode |
+|---|---|---|
+| Input | `&[u8]` the caller already treats as a BLOB | TEXT/INTEGER/REAL/BLOB values |
+| Header | 1 byte (algorithm) | 2 bytes (algorithm + type) |
+| Passthrough | no (always compressed) | yes, tag `0x00` below threshold |
+| Restores type | n/a | yes |
+| Feature | `blob` | `scalar` |
+
+The two formats are distinct; a scalar value is not a valid blob-mode payload
+(tag `0x00` and the type byte), and decoders return `UnknownTag` /
+`TagMismatch`-style errors rather than guessing.
+
+### Tests
+
+- Round-trip of TEXT (ASCII, multibyte UTF-8, empty), INTEGER (0, ±1,
+  `i64::MIN/MAX`), REAL (0.0, -0.0, NaN bits, ±inf), BLOB for every enabled
+  algorithm.
+- Threshold: 63/64/65 bytes; incompressible values fall back to passthrough.
+- Type tag errors: unknown type tag, truncated payload, invalid UTF-8 → errors,
+  no panics.
+- Scalar payload rejected by blob-mode decode and vice versa.
+- `scalar` with no algorithm: everything is passthrough (see below).
+
+Feature matrix: 3 algorithms × 2 modes = 2⁵ = 32 combinations. CI runs all of
+them for `cargo test` + `cargo clippy -D warnings` (cheap: one crate). If that
+gets slow, CI runs the 16 combinations with `blob` on plus the zero state and
+`scalar`-only with each algorithm.
+
+### Open questions (scalar)
+
+- Lift the "no SQL functions" non-goal for option C (likely behind a separate
+  `sql` feature with `rusqlite`)?
+- Default threshold value; per-column configuration?
+- Should numbers be accepted at all, or rejected with an error?
+
+## Modes, features and the zero state (proposed)
+
+### Flags
+
+- Algorithm features: `brotli`, `zstd`, `lz4`.
+- Mode features: `blob` (current API: `Compressor`, `decompress`) and `scalar`.
+- `default = []`: everything off.
+- Today the blob API is always compiled; moving it behind `blob` is a breaking
+  change for 0.x and lands together with `scalar`.
+
+### Zero state (no features)
+
+The crate (and the SQLite extension, once SQL registration exists) still builds
+and loads, but is a no-op:
+
+- Registered: only a status function, e.g. `sqlitex_compress_version()` returning
+  the crate version and the enabled features (`"0.1.0;features="`). In the Rust
+  API: `sqlitex_compress::enabled_features() -> &'static [&'static str]`.
+- No compress/decompress functions, no triggers, no virtual tables are
+  registered; writes and reads pass through untouched (the extension never sees
+  the data).
+- Decoding an existing tagged value in the zero state returns
+  `AlgorithmDisabled` / `ModeDisabled`, never corrupts or silently returns bytes.
+
+### Mode without an algorithm
+
+Options: `compile_error!` when `blob` or `scalar` is on without any algorithm,
+or a runtime passthrough.
+
+**Recommendation: runtime passthrough, no compile error.** Cargo features are
+additive and unified across the dependency graph, so a `compile_error!` would
+break a build where one crate enables `scalar` and another picks the
+algorithm. Behaviour:
+
+- `scalar` without algorithms: every value is stored with tag `0x00`
+  (passthrough) and decodes normally.
+- `blob` without algorithms: there are no `Compressor` implementations; the
+  free `decompress` returns `AlgorithmDisabled` (today's behaviour).
+- A `cfg`-gated warning in the docs and `enabled_features()` make the state
+  visible.
+
+### Size and dependency guarantees
+
+- No features: no codec crates in the normal dependency tree (CI's
+  `cargo tree` check already enforces `brotli`, `zstd`, `lz4_flex`; extend it to
+  any future `sql`/`rusqlite` dependency).
+- No features: only `std`; the compiled crate adds only the status function and
+  error types (target: a few KB in a release cdylib; measured in CI by
+  comparing the `.rlib`/cdylib size against a recorded baseline, warning only).
+- Each algorithm feature adds exactly one codec crate.
+
+### Zero-state test
+
+- `tests/zero.rs`, compiled only with `cfg(not(any(feature = "brotli",
+  feature = "zstd", feature = "lz4", feature = "blob", feature = "scalar")))`:
+  `enabled_features()` is empty, the version string reports no features,
+  decoding any tag returns the disabled error, and (once SQL registration
+  exists) opening an in-memory DB with the extension and inserting/selecting
+  TEXT, INTEGER, REAL and BLOB returns the values unchanged.
+- CI: the `cargo tree` check for the no-feature build, plus the size baseline.
+
 ## Future work
 
 - SQL functions behind a `rusqlite` feature (`compress(blob, 'zstd')`,
