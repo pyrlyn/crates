@@ -12,13 +12,13 @@ Plugin packages on disk, generic over the application's manifest type and home d
 
 ### T20.1. wasm-plugin-host: engine and worker
 
-First slice of the shared WASM plugin host that cox and scull both build on (creator, 2026-10-07: extract the shared crate, `MIT OR Apache-2.0`). New crate `wasm-plugin-host`: `PluginHost` loads a module with extism (no WASI, no cache, a memory cap and a per-call deadline clamped to host maxima), runs it on a worker thread of its own with a control lane served before an event lane, cancels a call at its deadline through a watchdog, and maps extism failures to a typed `PluginError`. Host functions come from a `HostEnv` trait the application implements; the required export, thread names and limit defaults are options, so nothing names cox. Ported from cox `crates/cox-plugin/src/host.rs` and `error.rs` with no behaviour change. Done when the crate is in the workspace with the ported tests, registered for CI dry-run publish, bump, README and sonar.
+First slice of the shared WASM plugin host that the coding agent and scull both build on (creator, 2026-10-07: extract the shared crate, `MIT OR Apache-2.0`). New crate `wasm-plugin-host`: `PluginHost` loads a module with extism (no WASI, no cache, a memory cap and a per-call deadline clamped to host maxima), runs it on a worker thread of its own with a control lane served before an event lane, cancels a call at its deadline through a watchdog, and maps extism failures to a typed `PluginError`. Host functions come from a `HostEnv` trait the application implements; the required export, thread names and limit defaults are options, so nothing names the coding agent. Ported from the coding agent `crates/agent-plugin/src/host.rs` and `error.rs` with no behaviour change. Done when the crate is in the workspace with the ported tests, registered for CI dry-run publish, bump, README and sonar.
 
 Merged in pyrlyn/crates-packages#33 (`77ba2b1`): 10 tests, clippy, fmt, publish dry-run and `cargo +1.98 check` green. `rust.md` lists the crate (listepo/workspace#5, `0af0a5c`).
 
 ### T12. file-backup: subfolder target and keep-N pruning
 
-rtok's agent SDK keeps its own copy of the folder mode (`BACKUP_DIR`, `backup`, `prune_backups`, `stale_backups` in `rtok-agent-sdk/src/lib.rs`) so it cannot depend on `file-backup`. Done means: `file-backup` offers that mode beside the existing sibling mode, with the same semantics and tests ported, so rtok can later swap its copy for the crate.
+The token CLI's agent SDK keeps its own copy of the folder mode (`BACKUP_DIR`, `backup`, `prune_backups`, `stale_backups` in `tokcli-agent-sdk/src/lib.rs`) so it cannot depend on `file-backup`. Done means: `file-backup` offers that mode beside the existing sibling mode, with the same semantics and tests ported, so the token CLI can later swap its copy for the crate.
 
 `Folder { name, keep }` with `backup`, `backup_at`, `prune` and `stale`, plus `DEFAULT_FOLDER = "_backup"`; `backup`/`backup_at` beside the file are unchanged. Both modes share one `create_new` copy loop and one byte-equality dedup check (symlinks and hard links to the source are not backups). A folder name that is not one plain path component is `InvalidInput`. Check: fmt, clippy `-D warnings` and `cargo test --workspace --locked` green (105 tests, 20 in `file-backup`).
 
@@ -48,7 +48,7 @@ Those files are in the workspace root. `toolchain.md` lists `cargo-changed-packa
 
 ### T11. atomic-replace: one atomic file write for every project
 
-Six projects (rtok, ketch, cox, swarfr, aulo, runa) carry about 18 hand-written temp-file-and-rename writes that disagree on fsync, permissions, symlinks and temp naming. New crate `atomic-replace` (std only, edition 2021, Rust 1.86 so ketch can use it): `write(path, bytes)` and `Options { durable, preserve_permissions, follow_symlinks, create_parent, mode }` with `write`/`write_with`, plus `sync_dir`. Ported from rtok `rtok-agent-sdk` `write_atomic`/`link_target` (permissions, Windows read-only bit, dangling links) and ketch `state.rs` `save_path` (fsync file and directory). Done means: the crate is in the workspace with tests, wired into CI dry-run publish, bump options, README and sonar; consumers migrate in their own tasks.
+Six projects (the token CLI, the package manager, the coding agent, swarfr, aulo, runa) carry about 18 hand-written temp-file-and-rename writes that disagree on fsync, permissions, symlinks and temp naming. New crate `atomic-replace` (std only, edition 2021, Rust 1.86 so the package manager can use it): `write(path, bytes)` and `Options { durable, preserve_permissions, follow_symlinks, create_parent, mode }` with `write`/`write_with`, plus `sync_dir`. Ported from the token CLI `tokcli-agent-sdk` `write_atomic`/`link_target` (permissions, Windows read-only bit, dangling links) and the package manager `state.rs` `save_path` (fsync file and directory). Done means: the crate is in the workspace with tests, wired into CI dry-run publish, bump options, README and sonar; consumers migrate in their own tasks.
 
 Plan:
 1. `atomic-replace/` with Cargo.toml, src/lib.rs, AGENTS.md, README.md, plan/todo/done/roadmap/ideas/toolchain.md, justfile (copy of change-preview's layout).
@@ -60,7 +60,7 @@ Delivered as the `write` module of `fs-kit` instead of a crate of its own (creat
 
 ### T49. fs-kit: copy-on-write tree clone
 
-rtok seeds a new git worktree's ignored build caches (`target/`, `node_modules/`) from a sibling checkout. Doing that by hand (`cp -c -R`) is macOS-only and leaves copied artifacts newer than the fresh checkout's sources, so cargo trusts stale outputs. Done means `fs_kit::tree::clone_tree(src, dest)` behind an opt-in `clone` feature: each file is cloned where the file system shares blocks (APFS `clonefile`, Linux `FICLONE` on btrfs/XFS/bcachefs, Windows ReFS/Dev Drive block cloning, via `reflink-copy`) and copied where it cannot, symlinks are kept, each file keeps its source mtime, and the result says how many files were cloned and how many copied. The default feature set stays std plus `dunce`, so ketch's dependency tree does not change.
+The token CLI seeds a new git worktree's ignored build caches (`target/`, `node_modules/`) from a sibling checkout. Doing that by hand (`cp -c -R`) is macOS-only and leaves copied artifacts newer than the fresh checkout's sources, so cargo trusts stale outputs. Done means `fs_kit::tree::clone_tree(src, dest)` behind an opt-in `clone` feature: each file is cloned where the file system shares blocks (APFS `clonefile`, Linux `FICLONE` on btrfs/XFS/bcachefs, Windows ReFS/Dev Drive block cloning, via `reflink-copy`) and copied where it cannot, symlinks are kept, each file keeps its source mtime, and the result says how many files were cloned and how many copied. The default feature set stays std plus `dunce`, so the package manager's dependency tree does not change.
 
 Delivered: `fs_kit::tree::{clone_tree, Cloned}` behind the `clone` feature, with `copy_tree`'s walk taking the per-file step as a parameter. Check: `cargo test -p fs-kit --features clone` (macOS asserts both files cloned), clippy `-D warnings` with and without the feature and for `x86_64-unknown-linux-gnu` and `x86_64-pc-windows-msvc`, `cargo +1.86 check -p fs-kit --all-targets` with and without it.
 
@@ -83,7 +83,7 @@ The `single_thread_is_not_sync` trybuild diagnostic depended on whether standard
 
 ### T20.4. wasm-plugin-host: synchronize patched Extism and Wasmtime
 
-Updated the shared WASM host and cox to Extism 1.41.0 / Wasmtime 49, removing the four now-fixed Wasmtime advisory ignores. The host API remains unchanged. Verified focused and workspace tests, clippy, fmt, and CI on pyrlyn/crates#74; no crate was manually published.
+Updated the shared WASM host and the coding agent to Extism 1.41.0 / Wasmtime 49, removing the four now-fixed Wasmtime advisory ignores. The host API remains unchanged. Verified focused and workspace tests, clippy, fmt, and CI on pyrlyn/crates#74; no crate was manually published.
 
 ### T20.6. wasm-plugin-host and plugwright-extism: Pulley interpreter feature
 
@@ -109,13 +109,13 @@ Validation under mise: `cargo test -p speech-capture --locked` (28 tests), the s
 
 ### T30. Extract reusable shell completion generation
 
-Use the local `shell-completions` crate in `packages/crates/rust`. Preserve rtok scripts and ketch package-name completion and installation behavior. Add `cox completions <shell>` without loading configuration, credentials, telemetry or a session.
+Use the local `shell-completions` crate in `packages/crates/rust`. Preserve the token CLI scripts and the package manager package-name completion and installation behavior. Add `agent completions <shell>` without loading configuration, credentials, telemetry or a session.
 
-Execution plan: establish existing completion tests; extract the clap generator and Clink implementation with regression tests into the shared crate; connect consumers through local Cargo paths; update dependency inventories; run focused tests, formatting and clippy. Application-specific installation policies and ketch dynamic package lookup stay with their owners. Done when generation has one owner and the three CLI surfaces pass their checks.
+Execution plan: establish existing completion tests; extract the clap generator and Clink implementation with regression tests into the shared crate; connect consumers through local Cargo paths; update dependency inventories; run focused tests, formatting and clippy. Application-specific installation policies and the package manager dynamic package lookup stay with their owners. Done when generation has one owner and the three CLI surfaces pass their checks.
 
 Validation: Four generator tests passed, including upstream byte parity for five shells, Clink aliases/hidden values/escaping and writer errors. Formatting and all-target clippy passed. Consumer checks verified all 11 existing application scripts byte for byte. Existing dependency versions and unrelated lockfile edges were preserved.
 
-Reused `clap_complete` and the existing rtok Clink generator. No replacement library or custom generator was introduced. Local path dependencies resolve in the standard apps/packages layout.
+Reused `clap_complete` and the existing token CLI Clink generator. No replacement library or custom generator was introduced. Local path dependencies resolve in the standard apps/packages layout.
 
 ### T34. Integrate remaining local build settings
 
@@ -131,7 +131,7 @@ Workflow lint and diff checks pass locally. The existing pull-request publish jo
 
 ### T37. Move plugwright under rust/ and onto the release path
 
-plugwright lived in its own workspace at `plugwright/`, which bump.yml, release.yml and release-crate.sh never see, so none of its crates could reach crates.io and rtok's CI could not depend on it. Moved it to `rust/plugwright/` and made its 18 publishable crates and 4 examples members of the root workspace: one `Cargo.lock`, the root toolchain (1.99.0), the root `[workspace.dependencies]`. Each crate's metadata is explicit, because inheriting the root's GPL license would have changed plugwright's MIT OR Apache-2.0. Each crate has a release-plz `CHANGELOG.md`, and the README lists the release order. `plugwright-wasmer` stays outside the workspace (wasmer 7.5 and wasmtime 49 pin incompatible cranelift versions) and is `publish = false`. The separate `plugwright` CI job folded into the root `rust` job on all four targets; the wasm32 target is added there and in release.yml's gate.
+plugwright lived in its own workspace at `plugwright/`, which bump.yml, release.yml and release-crate.sh never see, so none of its crates could reach crates.io and the token CLI's CI could not depend on it. Moved it to `rust/plugwright/` and made its 18 publishable crates and 4 examples members of the root workspace: one `Cargo.lock`, the root toolchain (1.99.0), the root `[workspace.dependencies]`. Each crate's metadata is explicit, because inheriting the root's GPL license would have changed plugwright's MIT OR Apache-2.0. Each crate has a release-plz `CHANGELOG.md`, and the README lists the release order. `plugwright-wasmer` stays outside the workspace (wasmer 7.5 and wasmtime 49 pin incompatible cranelift versions) and is `publish = false`. The separate `plugwright` CI job folded into the root `rust` job on all four targets; the wasm32 target is added there and in release.yml's gate.
 
 Validation: workspace fmt, all-target clippy -D warnings and `cargo test --workspace --locked` pass on 1.99.0, as do the loader's native-only clippy, the SDK's wasm32 clippy, the bench smoke run and publish dry-runs for the first release step. The one test that failed on 1.99 asserted std's `TryFromIntError` wording, which changed in that release; it now compares against the error's own `Display`, which fails on 1.99 before the change and passes after it. The 19 crate names returned 404 from the crates.io API on 2026-10-19. Nothing is published here: the first release is a `Bump and release` run per crate.
 

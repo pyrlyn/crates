@@ -1,1 +1,1 @@
-- T2. Adopt llm-http in cox (needs publication)
+- T2. Adopt llm-http in the coding agent (needs publication)

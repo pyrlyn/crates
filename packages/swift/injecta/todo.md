@@ -1,4 +1,4 @@
-- T2. Try Injecta on Cox's app-wide services
+- T2. Try Injecta on the coding agent's app-wide services
 - T5. Async inputs helper
 - T7. Linux support
 - T8. swift-syntax prebuilt in clean builds

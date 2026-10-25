@@ -4,8 +4,8 @@
 | --- | --- | --- | --- |
 | rustc | mise | Build | https://github.com/rust-lang/rust |
 | just | mise | Test recipe | https://github.com/casey/just |
-| ketch | see its README | Installs swarfr | https://github.com/pyrlyn/ketch |
-| swarfr | ketch | Lossless cleanup of target/ after tests | https://github.com/listepo/swarfr |
+| the package manager | see its README | Installs swarfr | https://github.com/pyrlyn |
+| swarfr | the package manager | Lossless cleanup of target/ after tests | https://github.com/listepo/swarfr |
 | bwrap | system package | Linux backend at run time (not needed to build) | https://github.com/containers/bubblewrap |
 | sandbox-exec | macOS | Seatbelt backend at run time | https://developer.apple.com/documentation/security/app_sandbox |
 
@@ -19,7 +19,7 @@
 | nix | local (Linux only) | https://github.com/nix-rust/nix | `libc` re-export for the syscall numbers and errno |
 | tempfile | local | https://github.com/Stebalien/tempfile | Test fixtures |
 
-## ketch
+## The package manager
 
 | Package | Where | Source | Why here |
 | --- | --- | --- | --- |

@@ -6,7 +6,7 @@ conflicts with this file, ask the creator.
 ## What this crate is
 
 Copy of a file to `<name>.bak-<unix-seconds>`, beside it or in a pruned subfolder. Shared so
-ketch and rtok do not each invent a backup naming scheme.
+The package manager and the token CLI do not each invent a backup naming scheme.
 
 ## Commands
 

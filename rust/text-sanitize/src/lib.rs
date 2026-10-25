@@ -8,7 +8,7 @@
 //! on the terminal instead of being shown by it: an escape sequence moves the cursor, sets the
 //! title or writes the clipboard, a bidi override reorders what the reader sees, a zero-width
 //! run hides text. [`clean`] removes them; one [`Options`] value says how much, so the callers
-//! that need different output (cox, ketch, rtok) share one scanner instead of three.
+//! that need different output (the coding agent, the package manager, the token CLI) share one scanner instead of three.
 //!
 //! Presets, one per caller:
 //!
@@ -85,7 +85,7 @@ pub struct Options {
 }
 
 impl Options {
-    /// Text bound for a terminal: cox's guard on everything a model, tool or server wrote.
+    /// Text bound for a terminal: the coding agent's guard on everything a model, tool or server wrote.
     pub const TERMINAL: Self = Self {
         marks: false,
         escapes: Escapes::Sequences,
@@ -93,7 +93,7 @@ impl Options {
         invisibles: Invisibles::ZeroWidthRuns,
         bidi: true,
     };
-    /// Prose from a client app (ketch's changelogs, status lines and tables): drop every
+    /// Prose from a client app (the package manager's changelogs, status lines and tables): drop every
     /// control and invisible character where the text enters, keep what is left.
     pub const PROSE: Self = Self {
         marks: false,
@@ -102,7 +102,7 @@ impl Options {
         invisibles: Invisibles::All,
         bidi: true,
     };
-    /// A record the model reads back (rtok's saved bodies and tool results): escapes, control
+    /// A record the model reads back (the token CLI's saved bodies and tool results): escapes, control
     /// and zero-width characters go, `\r` and bidi characters stay so edits still match.
     pub const RECORD: Self = Self {
         marks: false,

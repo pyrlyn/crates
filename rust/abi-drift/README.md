@@ -25,6 +25,6 @@ CRLF files does not count as drift. A missing committed file reads as empty.
 The `cbindgen` and `csbindgen` features are both on by default; turn off the
 one you do not use.
 
-Extracted from scull's `scull-ffi` and ketch's `ketch-capi` drift tests.
+Extracted from scull's `scull-ffi` and the package manager's `pkgmgr-capi` drift tests.
 
 Licensed under either of MIT or Apache-2.0 at your option.

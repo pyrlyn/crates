@@ -7,7 +7,7 @@
 //! File edits read as the unified diff `git diff` prints, or as `git diff --stat` lines; a
 //! removal reads as one `- path  size  N files` line, because listing every file of a build
 //! cache would be millions of lines. Either way the preview ends with a totals line. Shared so
-//! rtok and ketch do not each grow their own dry-run format.
+//! The token CLI and the package manager do not each grow their own dry-run format.
 
 use std::path::{Path, PathBuf};
 

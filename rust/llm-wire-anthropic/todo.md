@@ -1,1 +1,1 @@
-- T2. Adopt llm-wire-anthropic in cox (T1.6, needs publication)
+- T2. Adopt llm-wire-anthropic in the coding agent (T1.6, needs publication)

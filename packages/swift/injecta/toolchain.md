@@ -21,7 +21,7 @@ image and its default Xcode is 26, so the macOS job does not use that label.
 
 | Package | Where | Source | Why here |
 | --- | --- | --- | --- |
-| swift-dependencies 1.17.1 | local | https://github.com/pointfreeco/swift-dependencies | Comparison (the version Cox pins) |
+| swift-dependencies 1.17.1 | local | https://github.com/pointfreeco/swift-dependencies | Comparison (the version the coding agent pins) |
 | Factory 3.4.1 | local | https://github.com/hmlongco/Factory | Comparison |
 | Swinject 2.10.0 | local | https://github.com/Swinject/Swinject | Comparison |
 | Resolver 1.5.1 | local | https://github.com/hmlongco/Resolver | Comparison (deprecated upstream, still shipped by apps) |

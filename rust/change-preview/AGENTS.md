@@ -7,7 +7,7 @@ conflicts with this file, ask the creator.
 
 The dry-run preview every command that changes the disk prints: a unified diff
 or `--stat` lines for file edits, a `- path  size  N files` line for removals,
-and a totals line. Shared so rtok and ketch print one format.
+and a totals line. Shared so the token CLI and the package manager print one format.
 
 ## Commands
 

@@ -2,7 +2,7 @@
 name = "sqlite-change-feed"
 version = "0.1.0"
 edition = "2024"
-# cox's MSRV, the lowest of its consumers (cox 1.98, Mailune 1.99).
+# The coding agent's MSRV, the lowest of its consumers (the coding agent 1.98, Mailune 1.99).
 rust-version = "1.98"
 description = "Change feed for a SQLite database shared between processes: PRAGMA data_version polled through Diesel, seeing other connections' commits and not your own"
 license = "MIT OR Apache-2.0"
@@ -17,7 +17,7 @@ unsafe_code = "forbid"
 missing_docs = "warn"
 missing_debug_implementations = "warn"
 
-# Versions are the ones cox and Mailune lock. No default features and no
+# Versions are the ones the coding agent and Mailune lock. No default features and no
 # libsqlite3-sys choice: the application picks bundled SQLite or SQLCipher.
 [dependencies]
 diesel = { version = "2.3.13", default-features = false, features = ["sqlite"] }

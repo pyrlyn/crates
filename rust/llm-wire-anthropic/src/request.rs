@@ -31,7 +31,7 @@ use serde_json::{Map, Value, json};
 use super::{CacheTtl, wire};
 
 /// Anthropic accepts at most four `cache_control` breakpoints per request;
-/// a fifth is a 400. cox plans for three and clamps here so
+/// a fifth is a 400. The coding agent plans for three and clamps here so
 /// a caller's mistake costs a cache miss, not the turn.
 pub const MAX_BREAKPOINTS: usize = 4;
 
@@ -89,9 +89,9 @@ pub struct BuildCfg<'a> {
 
 /// A value the snapshot's types cannot hold, written over the typed
 /// placeholder at `messages[message].content[block].<key>` after
-/// serialization. cox's agent loop stores a tool input that was not valid JSON as
+/// serialization. The coding agent's agent loop stores a tool input that was not valid JSON as
 /// `null` (the spec allows only an object), and an image may carry a media
-/// type the snapshot does not list yet; neither is cox's to rewrite.
+/// type the snapshot does not list yet; neither is the coding agent's to rewrite.
 struct Raw {
     message: usize,
     block: usize,
@@ -437,7 +437,7 @@ mod tests {
                     cache: true,
                 },
                 SystemBlock {
-                    text: "You are cox.".into(),
+                    text: "You are the coding agent.".into(),
                     cache: true,
                 },
                 SystemBlock {
@@ -472,7 +472,7 @@ mod tests {
     #[test]
     fn anthropic_request_plain_text() {
         let mut req = base("claude-sonnet-5");
-        req.messages = vec![user_text("what does cox-provider own?")];
+        req.messages = vec![user_text("what does agent-provider own?")];
 
         insta::assert_json_snapshot!(build_body(&req, cfg(None)));
     }

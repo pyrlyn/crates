@@ -35,8 +35,8 @@ async fn ask(parts: Parts) -> Result<(), agent_loop::LoopError> {
 }
 ```
 
-Extracted from cox's `cox-core`; see `AGENTS.md` for what moved and what
-stays in cox.
+Extracted from the coding agent's `agent-core`; see `AGENTS.md` for what moved and what
+stays in the coding agent.
 
 Licensed `GPL-3.0-or-later OR LicenseRef-Royalty-Free`; see the repository's
 `LICENSE` and `LICENSE-ROYALTY-FREE.md`.

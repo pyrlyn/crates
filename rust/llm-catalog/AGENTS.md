@@ -10,13 +10,13 @@ a model id, its context window, max output, efforts, capability flags and
 price, merged from built-in rows, plugin rows, the host's configured entries
 and a user price file, plus the per-wire effort rule (`effort_for`, from
 `llm-wire`). Extracted
-from cox's `cox-models` so cox and aulo share one catalog. Pure: no I/O beyond
+from the coding agent's `agent-models` so the coding agent and aulo share one catalog. Pure: no I/O beyond
 parsing an embedded or caller-supplied string.
 
 ## Rules
 
-- **Behaviour-neutral with cox.** The merge order, the fill-only plugin rule
-  and the effort table (now in `llm-wire`) are cox's. Change one only together with cox.
+- **Behaviour-neutral with the coding agent.** The merge order, the fill-only plugin rule
+  and the effort table (now in `llm-wire`) are the coding agent's. Change one only together with the coding agent.
 - **The host's config types never enter this crate.** The host maps its own
   config and plugin manifest onto `llm_wire::ProviderModel` and `PluginModels`.
 - **Config files have a schema.** `models.toml` and `prices.toml` are
@@ -25,7 +25,7 @@ parsing an embedded or caller-supplied string.
   `UPDATE_SCHEMAS=1 cargo test -p llm-catalog` rewrites them). Only
   `config.rs` touches `figment`.
 - **Data files are copied, not edited.** `models.toml` and `prices.toml` come
-  from cox's vendor pipeline (models.dev). Refresh them from cox, never by hand.
+  from the coding agent's vendor pipeline (models.dev). Refresh them from the coding agent, never by hand.
 - **No `unwrap`, `expect` or `panic!` outside tests** (clippy denies them).
 - **Doc comments on every public item** (`missing_docs` is on).
 - **Published to crates.io** from this repository: a dependency on a sibling crate

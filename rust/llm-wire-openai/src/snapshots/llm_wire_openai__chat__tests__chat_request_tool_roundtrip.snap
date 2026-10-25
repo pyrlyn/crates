@@ -7,7 +7,7 @@ expression: body
   "messages": [
     {
       "role": "system",
-      "content": "<tool specs>\n\nYou are cox."
+      "content": "<tool specs>\n\nYou are the coding agent."
     },
     {
       "role": "user",

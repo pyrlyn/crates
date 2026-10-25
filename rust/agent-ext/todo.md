@@ -1,1 +1,1 @@
-- T2. Adopt agent-ext in cox (needs publication)
+- T2. Adopt agent-ext in the coding agent (needs publication)

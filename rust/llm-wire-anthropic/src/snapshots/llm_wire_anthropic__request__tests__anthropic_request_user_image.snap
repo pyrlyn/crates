@@ -1,5 +1,5 @@
 ---
-source: crates/cox-provider-anthropic/src/request.rs
+source: crates/agent-provider-anthropic/src/request.rs
 expression: "build_body(&req, cfg(None))"
 ---
 {
@@ -35,7 +35,7 @@ expression: "build_body(&req, cfg(None))"
     },
     {
       "type": "text",
-      "text": "You are cox.",
+      "text": "You are the coding agent.",
       "cache_control": {
         "type": "ephemeral",
         "ttl": "5m"

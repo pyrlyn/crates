@@ -54,7 +54,7 @@ struct Header {
 
 /// The directories to scan, in precedence order (later wins). `app_home` is
 /// the host's own home directory and `app_dir` its per-project directory
-/// name (`.cox`); the Claude Code locations are scanned after the host's own.
+/// name (`.agent`); the Claude Code locations are scanned after the host's own.
 pub fn skill_dirs(
     app_dir: &str,
     app_home: Option<&Path>,

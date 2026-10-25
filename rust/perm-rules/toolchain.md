@@ -4,8 +4,8 @@
 | --- | --- | --- | --- |
 | rustc | mise | Build | https://github.com/rust-lang/rust |
 | just | mise | Test recipe | https://github.com/casey/just |
-| ketch | see its README | Installs swarfr | https://github.com/pyrlyn/ketch |
-| swarfr | ketch | Lossless cleanup of target/ after tests | https://github.com/listepo/swarfr |
+| the package manager | see its README | Installs swarfr | https://github.com/pyrlyn |
+| swarfr | the package manager | Lossless cleanup of target/ after tests | https://github.com/listepo/swarfr |
 
 ## cargo
 
@@ -16,7 +16,7 @@
 | proptest | local | https://github.com/proptest-rs/proptest | Property: adding a deny rule never weakens a decision |
 | rstest | local | https://github.com/la10736/rstest | The decision table |
 
-## ketch
+## The package manager
 
 | Package | Where | Source | Why here |
 | --- | --- | --- | --- |

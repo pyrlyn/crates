@@ -13,4 +13,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Other
 
-- royalty-free licence option for crates shared with cox and aulo ([#38](https://github.com/pyrlyn/crates-packages/pull/38))
+- royalty-free licence option for crates shared with the coding agent and aulo ([#38](https://github.com/pyrlyn/crates-packages/pull/38))

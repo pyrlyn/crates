@@ -16,7 +16,7 @@
 //! catch-all variant, so an unrecognised `type` would turn into a hard
 //! deserialize error instead of the silent ignore `feed` has always given
 //! unknown frames. `Response` carries several non-`Option` fields (e.g.
-//! `created_at`) that this crate's minimal SSE fixtures don't set and cox
+//! `created_at`) that this crate's minimal SSE fixtures don't set and the coding agent
 //! never reads; only `ResponseUsage`, nested out of the `response.completed`
 //! frame's `response.usage`, is typed.
 
@@ -106,7 +106,7 @@ mod tests {
         // text_only.sse frame #4: first text delta.
         let event: ResponseTextDeltaEvent =
             serde_json::from_value(frame("text_only", 4)).expect("known event shape");
-        assert_eq!(event.delta, "cox-provider owns ");
+        assert_eq!(event.delta, "agent-provider owns ");
     }
 
     #[test]

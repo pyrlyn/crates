@@ -77,7 +77,7 @@ expression: body
     },
     {
       "type": "text",
-      "text": "You are cox.",
+      "text": "You are the coding agent.",
       "cache_control": {
         "type": "ephemeral",
         "ttl": "5m"

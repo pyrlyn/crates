@@ -7,7 +7,7 @@ conflicts with this file, ask the creator.
 
 gettext catalogs for an application's own strings: `.po` parsing (polib), the
 `Plural-Forms` evaluator, named placeholders, language negotiation and the
-per-message fallback chain. Extracted from cox's `cox-i18n`; cox and Mailune
+per-message fallback chain. Extracted from the coding agent's `agent-i18n`; the coding agent and Mailune
 (F10) are its consumers. It knows nothing about any one application: the
 locales, the default locale and constants such as a product name are passed in.
 A process-wide localizer, a `tr!` macro and native-catalog export
@@ -20,7 +20,7 @@ A process-wide localizer, a `tr!` macro and native-catalog export
   (translation, default `msgstr`, source text, id).
 - The plural grammar is GNU gettext's C subset; `src/plural.rs` tests it
   against CLDR for ru and uk. Do not widen it without a test.
-- Dependency versions follow cox's lock. Bump them only with the creator.
+- Dependency versions follow the coding agent's lock. Bump them only with the creator.
 
 ## Commands
 

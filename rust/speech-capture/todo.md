@@ -1,2 +1,2 @@
-- T2. Adopt speech-capture in cox (needs publication)
+- T2. Adopt speech-capture in the coding agent (needs publication)
 - T3. Adopt speech-capture in runa (needs publication)

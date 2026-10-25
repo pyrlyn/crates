@@ -12,7 +12,7 @@ without letting one failure stop the rest, and exposes their tools namespaced
 store; a server's elicitation request is mapped onto questions a person
 answers. The MCP *server* side (offering a host's own tools) is not here.
 
-Shared so cox, and later aulo, drive MCP servers one way.
+Shared so the coding agent, and later aulo, drive MCP servers one way.
 
 ## Rules specific to this crate
 

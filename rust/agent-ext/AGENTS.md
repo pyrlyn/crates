@@ -5,7 +5,7 @@ conflicts with this file, ask the creator.
 
 ## What this crate is
 
-The extension points cox and aulo load from files: `SKILL.md` skills (discovery,
+The extension points the coding agent and aulo load from files: `SKILL.md` skills (discovery,
 the index line for the prompt, the deferred `skill` tool) and Claude-Code-style
 shell hooks (`[[hooks.<Event>]]` commands, JSON payload on stdin, exit 2 blocks,
 `HookChain` over shell and plugin hooks). It carries no host types: `HookEvent`,

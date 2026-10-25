@@ -78,7 +78,7 @@ fn skills_vendored_sample_parses_its_frontmatter() {
     assert!(sample.allowed_tools.is_empty());
     let own = found.skills.iter().find(|s| s.name == "greeting").unwrap();
     assert_eq!(own.license.as_deref(), Some("MIT"));
-    assert_eq!(own.metadata["author"], "cox");
+    assert_eq!(own.metadata["author"], "the coding agent");
     assert_eq!(own.metadata["version"], "1");
     assert!(
         own.compatibility
@@ -128,7 +128,7 @@ fn skills_later_directories_override_earlier_same_names() {
         .unwrap();
     }
     let dirs = skill_dirs(
-        ".cox",
+        ".agent",
         None,
         Some(&home.path().join(".claude")),
         Some(project.path()),

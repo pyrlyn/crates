@@ -2,7 +2,7 @@
 name = "wasm-plugin-host"
 version = "0.1.0"
 edition = "2024"
-# cox's MSRV, the lowest of its consumers (cox 1.98, scull 1.99).
+# The coding agent's MSRV, the lowest of its consumers (the coding agent 1.98, scull 1.99).
 rust-version = "1.98"
 description = "Run WebAssembly plugins with extism: one worker thread per plugin, a memory cap, per-call deadlines and a control lane served before events"
 license = "MIT OR Apache-2.0"

@@ -1,1 +1,1 @@
-- T2. Adopt shell-classify in cox (needs publication)
+- T2. Adopt shell-classify in the coding agent (needs publication)

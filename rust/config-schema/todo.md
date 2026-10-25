@@ -1,2 +1,2 @@
-- T2. Adopt config-schema in ketch or rtok (needs publication)
-- T3. Adopt config-schema in cox
+- T2. Adopt config-schema in the package manager or the token CLI (needs publication)
+- T3. Adopt config-schema in the coding agent

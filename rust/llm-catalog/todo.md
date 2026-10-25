@@ -1,1 +1,1 @@
-- T1.6. Adopt llm-catalog in cox (needs publication)
+- T1.6. Adopt llm-catalog in the coding agent (needs publication)

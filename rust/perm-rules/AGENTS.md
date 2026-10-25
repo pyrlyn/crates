@@ -5,7 +5,7 @@ conflicts with this file, ask the creator.
 
 ## What this crate is
 
-The permission rule engine shared by cox and aulo: rule strings in Claude
+The permission rule engine shared by the coding agent and aulo: rule strings in Claude
 Code's `Tool(subject)` grammar (`Bash(git commit:*)`, `Edit(src/**)`,
 `mcp__srv__*`, `WebFetch(domain:x.com)`), the decision order (deny, mode, allow,
 ask, session grant, policy, risk fallback) and session-grant bookkeeping. Pure:

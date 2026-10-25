@@ -1,6 +1,6 @@
 # Built-in model rows: id, display name, context window, efforts and the
-# declared capability flags. Copied from cox's `default.toml`
-# `[providers.*].models` lists, which cox's `cox-vendor models` pipeline
+# declared capability flags. Copied from the coding agent's `default.toml`
+# `[providers.*].models` lists, which the coding agent's `agent-vendor models` pipeline
 # regenerates from https://models.dev/api.json (never hand-edited there).
 # `efforts = []` (omitted) means "any". Schema: schema/models.schema.json.
 

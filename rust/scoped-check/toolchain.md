@@ -7,8 +7,8 @@
 | cargo | mise | Runtime: `cargo metadata` via `cargo-changed-packages` | https://github.com/rust-lang/cargo |
 | bash | system package | Runtime: `scripts/bench.sh` | https://www.gnu.org/software/bash/ |
 | just | mise | Test recipe | https://github.com/casey/just |
-| ketch | see its README | Installs swarfr | https://github.com/pyrlyn/ketch |
-| swarfr | ketch | Lossless cleanup of target/ after tests | https://github.com/listepo/swarfr |
+| the package manager | see its README | Installs swarfr | https://github.com/pyrlyn |
+| swarfr | the package manager | Lossless cleanup of target/ after tests | https://github.com/listepo/swarfr |
 
 ## cargo
 
@@ -26,7 +26,7 @@
 | assert_cmd | local | https://github.com/assert-rs/assert_cmd | Tests: run the binary |
 | tempfile | local | https://github.com/Stebalien/tempfile | Tests: throwaway git repos |
 
-## ketch
+## The package manager
 
 | Package | Where | Source | Why here |
 | --- | --- | --- | --- |

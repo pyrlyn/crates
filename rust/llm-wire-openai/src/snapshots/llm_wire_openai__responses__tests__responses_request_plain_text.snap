@@ -8,7 +8,7 @@ expression: body
     {
       "type": "message",
       "role": "user",
-      "content": "what does cox-provider own?"
+      "content": "what does agent-provider own?"
     }
   ],
   "stream": true,
@@ -17,7 +17,7 @@ expression: body
   "reasoning": {
     "effort": "high"
   },
-  "instructions": "<tool specs>\n\nYou are cox.",
+  "instructions": "<tool specs>\n\nYou are the coding agent.",
   "tools": [
     {
       "type": "function",

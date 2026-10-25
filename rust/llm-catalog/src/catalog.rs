@@ -183,7 +183,7 @@ pub struct Catalog {
 
 impl Catalog {
     /// Built-in rows only: the embedded `models.toml` merged with the
-    /// embedded `prices.toml`, both copied from cox, which writes them only
+    /// embedded `prices.toml`, both copied from the coding agent, which writes them only
     /// through its vendor pipeline.
     pub fn builtin() -> Result<Self, CatalogError> {
         let models = config::builtin_models().map_err(CatalogError::Models)?;

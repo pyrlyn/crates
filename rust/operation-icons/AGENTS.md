@@ -5,8 +5,8 @@ conflicts with this file, ask the creator.
 
 ## What this crate is
 
-The verb-to-icon table and icon gutter of a status line, shared so rtok and
-ketch print one format. Tone-agnostic: the per-kind fallback icon stays with the caller.
+The verb-to-icon table and icon gutter of a status line, shared so the token CLI and
+The package manager print one format. Tone-agnostic: the per-kind fallback icon stays with the caller.
 
 ## Commands
 

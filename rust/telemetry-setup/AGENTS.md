@@ -9,7 +9,7 @@ The `tracing` setup applications repeat: a daily-rotated JSON log file, an
 optional human log on stderr, a filter from config or an environment variable,
 and OTLP trace export behind the `otlp` feature. Every line and every exported
 span is masked for secrets first. Extracted from aulo's `aulo-telemetry`;
-Mailune's F5 and cox's `cox-telemetry` are the next consumers. It knows nothing
+Mailune's F5 and the coding agent's `agent-telemetry` are the next consumers. It knows nothing
 about any one application: the name, the filter variable and extra credential
 shapes are settings.
 

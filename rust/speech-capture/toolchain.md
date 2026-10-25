@@ -6,8 +6,8 @@
 | just | mise | Test recipe | https://github.com/casey/just |
 | cmake | brew / system package | Builds whisper.cpp (feature `whisper` only) | https://github.com/Kitware/CMake |
 | libasound2-dev | apt (Linux only) | ALSA headers for cpal | https://github.com/alsa-project/alsa-lib |
-| ketch | see its README | Installs swarfr | https://github.com/pyrlyn/ketch |
-| swarfr | ketch | Lossless cleanup of target/ after tests | https://github.com/listepo/swarfr |
+| the package manager | see its README | Installs swarfr | https://github.com/pyrlyn |
+| swarfr | the package manager | Lossless cleanup of target/ after tests | https://github.com/listepo/swarfr |
 
 ## cargo
 
@@ -25,7 +25,7 @@
 | whisper-rs | local (feature `whisper`) | https://github.com/tazz4843/whisper-rs | whisper.cpp bindings for `Transcriber` |
 | tempfile | local (dev) | https://github.com/Stebalien/tempfile | Scratch files in tests |
 
-## ketch
+## The package manager
 
 | Package | Where | Source | Why here |
 | --- | --- | --- | --- |

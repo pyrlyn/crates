@@ -8,7 +8,7 @@ conflicts with this file, ask the creator.
 Register and unregister an MCP server in an agent host's JSON config file (Claude
 Code `~/.claude.json`, Cursor `~/.cursor/mcp.json`, and hosts with another server
 map such as OpenCode's `mcp`), changing only our entry. Extracted from
-`rtok-agent-sdk` so rtok and aulo share one implementation. Published to
+`tokcli-agent-sdk` so the token CLI and aulo share one implementation. Published to
 crates.io from this repository.
 
 ## Rules for changes

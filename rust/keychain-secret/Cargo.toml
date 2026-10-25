@@ -2,7 +2,7 @@
 name = "keychain-secret"
 version = "0.1.0"
 edition = "2024"
-# cox's and runa's MSRV, the lowest of its consumers (cox and runa 1.98, aulo and Mailune 1.99).
+# The coding agent's and runa's MSRV, the lowest of its consumers (the coding agent and runa 1.98, aulo and Mailune 1.99).
 rust-version = "1.98"
 description = "Application secrets from an environment variable or the OS keychain, never a config file: a redacted Secret type, an in-memory store for tests and a guard against tests reaching the real keychain"
 license = "MIT OR Apache-2.0"
@@ -17,7 +17,7 @@ unsafe_code = "forbid"
 missing_docs = "warn"
 missing_debug_implementations = "warn"
 
-# Versions are the ones cox, runa and aulo lock, so adopting the crate moves no lock file.
+# Versions are the ones the coding agent, runa and aulo lock, so adopting the crate moves no lock file.
 [dependencies]
 keyring = "4.2.0"
 thiserror = "2.0.21"

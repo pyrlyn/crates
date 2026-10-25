@@ -1,1 +1,1 @@
-- T1.6. Adopt llm-wire-openai in cox (needs publication)
+- T1.6. Adopt llm-wire-openai in the coding agent (needs publication)

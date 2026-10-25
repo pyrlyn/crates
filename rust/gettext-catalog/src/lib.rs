@@ -7,7 +7,7 @@
 //!
 //! Pure Rust: catalogs are parsed with `polib` and `Plural-Forms` rules
 //! evaluated by [`plural`], so there is no libintl to install. Extracted from
-//! cox's `cox-i18n`; the application keeps its catalogs, its process-wide
+//! The coding agent's `agent-i18n`; the application keeps its catalogs, its process-wide
 //! localizer and any native-catalog export.
 //!
 //! ```

@@ -1,1 +1,1 @@
-- T2. Adopt agent-host-config in rtok (needs publication)
+- T2. Adopt agent-host-config in the token CLI (needs publication)

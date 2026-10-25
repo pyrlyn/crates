@@ -15,11 +15,11 @@
 //! accumulators keyed by wire index, emitted only when the batch finishes,
 //! one whole call at a time (`ToolUseStart` → input → `ToolUseEnd`),
 //! because a `ToolUseInputDelta` names no call (T38.1). Wire ids (`tool_call_id`) are opaque
-//! provider strings (Ollama mints `call_xxx`, never a ULID), so cox mints
+//! provider strings (Ollama mints `call_xxx`, never a ULID), so the coding agent mints
 //! its own `CallId` per call and sends it back out as
-//! `tool.role: "tool"`, `tool_call_id` — the same "cox owns the id space"
+//! `tool.role: "tool"`, `tool_call_id` — the same "the coding agent owns the id space"
 //! move `responses.rs` makes with `function_call.call_id`, and it works
-//! for the same reason: cox owns the history, the server never has to
+//! for the same reason: the coding agent owns the history, the server never has to
 //! correlate our results with its own ids.
 //!
 //! **No auth by default.** Local servers (Ollama, vLLM, LM Studio,
@@ -229,7 +229,7 @@ fn message_items(m: &Message) -> Result<Vec<Value>, ProviderError> {
 /// header: Chat interleaves parallel calls by wire index).
 #[derive(Debug)]
 pub struct AccruedCall {
-    /// The cox id minted when the index first appears; carried by
+    /// The coding agent id minted when the index first appears; carried by
     /// `ToolUseStart` and sent back out as `tool_call_id`.
     pub id: CallId,
     /// The tool's name.
@@ -390,7 +390,7 @@ impl OpenAiChatStream {
                 // §1.2 StopReason: a provider only ever emits EndTurn/
                 // Refusal/Error. `tool_calls`, `stop`, `length` and any
                 // unknown reason all collapse to `EndTurn` here —
-                // `cox-core` infers tool use from the `ToolUseStart`s it
+                // `agent-core` infers tool use from the `ToolUseStart`s it
                 // saw (same collapse `anthropic::stream` performs for
                 // `tool_use`/`max_tokens`/`stop_sequence`).
                 "" | "tool_calls" | "stop" | "length" => events.push(ProviderEvent::Stop {
@@ -467,7 +467,7 @@ impl OpenAiChatStream {
     /// Emits the batch in wire-index order, each call as `ToolUseStart` →
     /// its signature, if any → its input → `ToolUseEnd`, and drains it so a
     /// second flush is a no-op.
-    /// `cox-core` commits a call only on `ToolUseEnd` (the bug T30.6 fixed
+    /// `agent-core` commits a call only on `ToolUseEnd` (the bug T30.6 fixed
     /// for Anthropic, T38.1 here). A call that never got a name has no tool
     /// to run and is dropped.
     fn flush(&mut self, events: &mut Vec<ProviderEvent>) {
@@ -791,7 +791,7 @@ mod tests {
         insta::assert_json_snapshot!("chat_stream_one_tool_call", run_fixture("one_tool_call"));
     }
 
-    /// T38.1: `cox-core` commits a call only on `ToolUseEnd` and a delta
+    /// T38.1: `agent-core` commits a call only on `ToolUseEnd` and a delta
     /// carries no call id, so interleaved calls must come out one whole
     /// call at a time: the fixture's second chunk for index 0 arrives after
     /// index 1 has started.
@@ -934,7 +934,7 @@ mod tests {
                     cache: true,
                 },
                 SystemBlock {
-                    text: "You are cox.".into(),
+                    text: "You are the coding agent.".into(),
                     cache: true,
                 },
             ],

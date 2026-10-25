@@ -19,4 +19,4 @@ assert_eq!(classify("rm -rf build"), Risk::Destructive);
 assert_eq!(segments("cd x && ls").commands, ["cd x", "ls"]);
 ```
 
-Extracted from cox's `bash` tool.
+Extracted from the coding agent's `bash` tool.

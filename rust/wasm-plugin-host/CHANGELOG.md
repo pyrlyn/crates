@@ -13,4 +13,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- *(wasm-plugin-host)* extism engine and worker extracted from cox-plugin
+- *(wasm-plugin-host)* extism engine and worker extracted from agent-plugin

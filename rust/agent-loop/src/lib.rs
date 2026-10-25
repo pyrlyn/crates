@@ -1,4 +1,4 @@
-//! A neutral LLM agent turn loop, extracted from cox's `cox-core`.
+//! A neutral LLM agent turn loop, extracted from the coding agent's `agent-core`.
 //! `Submission`s go in, `Event`s come out; one turn is a sequence of
 //! provider calls, each followed by its tool batch, until the model stops
 //! calling tools, the step limit is hit or the turn is interrupted.

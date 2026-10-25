@@ -1,1 +1,1 @@
-- T2. Adopt proc-sandbox in cox (needs publication)
+- T2. Adopt proc-sandbox in the coding agent (needs publication)

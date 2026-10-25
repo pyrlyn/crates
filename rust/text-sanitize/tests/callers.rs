@@ -1,6 +1,6 @@
-//! Each caller's own test suite, ported against the preset that replaces its sanitizer: cox's
-//! `cox-sanitize` against `sanitize`, ketch's `changelog::sanitize` against `sanitize_prose`,
-//! rtok's `sanitize::characters` against `terminal_noise` and `RECORD` with `LineEnds::Lf`.
+//! Each caller's own test suite, ported against the preset that replaces its sanitizer: the coding agent's
+//! `agent-sanitize` against `sanitize`, the package manager's `changelog::sanitize` against `sanitize_prose`,
+//! The token CLI's `sanitize::characters` against `terminal_noise` and `RECORD` with `LineEnds::Lf`.
 
 use std::borrow::Cow;
 
@@ -18,10 +18,10 @@ fn record_lf(s: &str) -> String {
     clean(s, &RECORD_LF).into_owned()
 }
 
-// cox-sanitize
+// agent-sanitize
 
 #[test]
-fn cox_keeps_newlines_tabs_and_shaping_joiners() {
+fn agent_keeps_newlines_tabs_and_shaping_joiners() {
     assert_eq!(sanitize("a\tb\nc"), "a\tb\nc");
     assert_eq!(sanitize("👩\u{200d}💻"), "👩\u{200d}💻");
     assert_eq!(sanitize("a\u{200b}\u{200b}b"), "ab");
@@ -29,21 +29,21 @@ fn cox_keeps_newlines_tabs_and_shaping_joiners() {
 }
 
 #[test]
-fn cox_cuts_an_unterminated_osc_at_the_line_end() {
+fn agent_cuts_an_unterminated_osc_at_the_line_end() {
     assert_eq!(sanitize("\u{1b}]0;title\nnext"), "\nnext");
 }
 
 #[test]
-fn cox_strips_model_osc8() {
+fn agent_strips_model_osc8() {
     let link = "\u{1b}]8;;https://evil.test\u{1b}\\click\u{1b}]8;;\u{1b}\\ me";
     assert_eq!(sanitize(link), "click me");
     assert_eq!(sanitize("\u{9d}8;;file:///etc\u{9c}x"), "x");
 }
 
-// ketch changelog::sanitize
+// The package manager changelog::sanitize
 
 #[test]
-fn ketch_changelog_cannot_drive_the_terminal_it_is_printed_to() {
+fn pkgmgr_changelog_cannot_drive_the_terminal_it_is_printed_to() {
     let hostile = "\u{1b}[2J\u{1b}]0;pwned\u{7}real\rtext\u{202e}reversed\u{9b}m";
     let body = sanitize_prose(hostile);
     assert_eq!(body, "[2J]0;pwnedrealtextreversedm");
@@ -52,23 +52,23 @@ fn ketch_changelog_cannot_drive_the_terminal_it_is_printed_to() {
 }
 
 #[test]
-fn ketch_drops_the_invisible_characters_that_reorder_a_line() {
+fn pkgmgr_drops_the_invisible_characters_that_reorder_a_line() {
     let hostile = "a\u{200e}b\u{200f}c\u{61c}d\u{200b}e\u{feff}f\u{2066}g\u{e0041}";
     assert_eq!(sanitize_prose(hostile), "abcdefg");
 }
 
 #[test]
-fn ketch_keeps_the_shape_of_the_prose() {
+fn pkgmgr_keeps_the_shape_of_the_prose() {
     assert_eq!(
         sanitize_prose("## 1.0\n\n\t- a\r\n- b\n"),
         "## 1.0\n\n\t- a\n- b\n"
     );
 }
 
-// rtok sanitize::{text (character part), terminal_noise}
+// The token CLI sanitize::{text (character part), terminal_noise}
 
 #[test]
-fn rtok_drops_each_kind_of_character_noise() {
+fn tokcli_drops_each_kind_of_character_noise() {
     let cases = [
         ("csi_colour", "\u{1b}[31mred\u{1b}[0m", "red"),
         ("csi_cursor", "a\u{1b}[2K\u{1b}[1Gb", "ab"),
@@ -110,7 +110,7 @@ fn rtok_drops_each_kind_of_character_noise() {
 }
 
 #[test]
-fn rtok_terminal_noise_touches_nothing_else() {
+fn tokcli_terminal_noise_touches_nothing_else() {
     let cases = [
         (
             "escapes",
@@ -143,12 +143,12 @@ fn rtok_terminal_noise_touches_nothing_else() {
 }
 
 #[test]
-fn rtok_terminal_noise_borrows_clean_text() {
+fn tokcli_terminal_noise_borrows_clean_text() {
     assert!(matches!(terminal_noise("a  \r\nb\t"), Cow::Borrowed(_)));
 }
 
 #[test]
-fn rtok_skip_escape_returns_the_index_after_the_sequence() {
+fn tokcli_skip_escape_returns_the_index_after_the_sequence() {
     let body = b"a\x1b[31mb\x1b]0;t\x07c\x1b=d";
     assert_eq!(skip_escape(body, 1), 6);
     assert_eq!(skip_escape(body, 7), 13);

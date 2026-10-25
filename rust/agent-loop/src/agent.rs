@@ -20,7 +20,7 @@ use crate::types::{Attachment, Decision, Event, ItemKind, Level, LoopError, Stat
 /// Limits for one agent.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Config {
-    /// Provider calls allowed per user turn (cox: `core.max_turns`); the
+    /// Provider calls allowed per user turn (the coding agent: `core.max_turns`); the
     /// turn ends `MaxTurns` when they are used up.
     pub max_steps: u32,
     /// Most `Concurrency::Parallel` calls running at once; `0` means 1.
@@ -34,7 +34,7 @@ pub struct Config {
 }
 
 impl Default for Config {
-    /// cox's defaults; the output cap is a backstop well above cox's own
+    /// The coding agent's defaults; the output cap is a backstop well above the coding agent's own
     /// 8 KiB truncation.
     fn default() -> Self {
         Self {
@@ -398,8 +398,8 @@ mod tests {
 
     const PREFIX: [&str; 3] = ["turn_started", "item_started(user_message)", "item_done"];
 
-    /// One provider call that answers `text` and nothing else, as cox's
-    /// golden snapshots show it (their `context_breakdown` stays in cox).
+    /// One provider call that answers `text` and nothing else, as the coding agent's
+    /// golden snapshots show it (their `context_breakdown` stays in the coding agent).
     const REPLY: [&str; 4] = [
         "item_started(assistant_message)",
         "text_delta",
@@ -481,7 +481,7 @@ text = "done"
     }
 
     #[tokio::test]
-    async fn one_tool_turn_matches_cox_event_order() {
+    async fn one_tool_turn_matches_agent_event_order() {
         let (events, h) = run(ONE_TOOL, Gate::default(), Config::default()).await;
         let tools = ["tool_call_requested", "tool_call_done"];
         assert_eq!(

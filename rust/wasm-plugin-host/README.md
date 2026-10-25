@@ -44,7 +44,7 @@ The application parses `plugin.toml` through `Manifest`; the crate checks
 the id, refuses a wasm path that leaves the package, and hashes the tree
 with `package_digest`.
 
-Extracted from cox's `cox-plugin` host, discovery and install layout so cox
+Extracted from the coding agent's `agent-plugin` host, discovery and install layout so the coding agent
 and scull share one engine and one package directory.
 
 Licensed under either of MIT or Apache-2.0 at your option.

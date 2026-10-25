@@ -5,7 +5,7 @@ conflicts with this file, ask the creator.
 
 ## What this crate is
 
-The bash risk classifier that cox's permission engine and aulo share:
+The bash risk classifier that the coding agent's permission engine and aulo share:
 `classify(line)` rates a command line `ReadOnly`, `Write`, `Exec` or
 `Destructive` and `segments(line)` lists the simple commands it runs, both from
 one tree-sitter-bash walk. It parses and walks only; it never runs anything.

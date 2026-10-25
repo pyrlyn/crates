@@ -9,7 +9,7 @@ let package = Package(
   platforms: [.macOS(.v15)],
   dependencies: [
     .package(path: ".."),
-    // The version Cox's PR #184 pins.
+    // The version the coding agent's PR #184 pins.
     .package(url: "https://github.com/pointfreeco/swift-dependencies", exact: "1.17.1"),
     .package(url: "https://github.com/Swinject/Swinject", exact: "2.10.0"),
     .package(url: "https://github.com/hmlongco/Factory", exact: "3.4.1"),

@@ -1,6 +1,6 @@
 //! Test support for the loop's own tests: a scripted provider over
 //! `llm_wire::test_util` scenarios, stub tools, a risk-based gate, a plain
-//! request builder and event helpers. Mirrors cox-core's loop-test harness
+//! request builder and event helpers. Mirrors agent-core's loop-test harness
 //! (`tests/common`) so the ported tests read the same.
 
 use std::collections::VecDeque;
@@ -25,7 +25,7 @@ use crate::{
 
 /// One provider call's script.
 pub enum Script {
-    /// A scenario turn, streamed like cox's `Scripted` does.
+    /// A scenario turn, streamed like the coding agent's `Scripted` does.
     Turn(TurnSpec),
     /// Sends these events, then hangs ignoring its cancel token: the worst
     /// provider an interrupt has to beat.
@@ -219,7 +219,7 @@ impl Tools for Kit {
     }
 }
 
-/// A gate like cox's default mode: read-only calls run, anything else
+/// A gate like the coding agent's default mode: read-only calls run, anything else
 /// asks; `deny` names tools a rule refuses, `ask` names subjects an `ask`
 /// rule catches, `AllowForSession` grants `(tool, subject)`.
 #[derive(Default)]
@@ -387,7 +387,7 @@ pub fn tool_results(events: &[Event]) -> Vec<(bool, String)> {
 }
 
 /// Each event's serde tag, with an item's kind or a turn's stop reason in
-/// parentheses: the shape cox-core's golden snapshots pin.
+/// parentheses: the shape agent-core's golden snapshots pin.
 pub fn shape(events: &[Event]) -> Vec<String> {
     events
         .iter()

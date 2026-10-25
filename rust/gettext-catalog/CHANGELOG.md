@@ -13,4 +13,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- *(gettext-catalog)* T22 gettext catalogs extracted from cox-i18n ([#44](https://github.com/pyrlyn/crates-packages/pull/44))
+- *(gettext-catalog)* T22 gettext catalogs extracted from agent-i18n ([#44](https://github.com/pyrlyn/crates-packages/pull/44))

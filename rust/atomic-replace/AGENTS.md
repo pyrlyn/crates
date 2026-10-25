@@ -7,10 +7,10 @@ conflicts with this file, ask the creator.
 
 The one atomic file write every project uses: a sibling temp file, the old
 file's permissions, symlinks kept, optional fsync of the file and its
-directory, then a rename over the target. Shared so rtok, ketch, cox, swarfr,
+directory, then a rename over the target. Shared so the token CLI, the package manager, the coding agent, swarfr,
 aulo and runa stop carrying their own copies.
 
-It stays std only, edition 2021 and Rust 1.86: ketch is the oldest consumer.
+It stays std only, edition 2021 and Rust 1.86: the package manager is the oldest consumer.
 
 ## Commands
 

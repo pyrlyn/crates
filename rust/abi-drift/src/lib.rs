@@ -7,7 +7,7 @@
 //! header with no tool to install. Line endings are compared as LF, because
 //! a Windows checkout may have turned the committed file, or an input such as
 //! `cbindgen.toml`'s header, into CRLF. Extracted from scull's `scull-ffi`
-//! and ketch's `ketch-capi` drift tests.
+//! and the package manager's `pkgmgr-capi` drift tests.
 //!
 //! ```no_run
 //! # fn main() -> Result<(), abi_drift::Error> {

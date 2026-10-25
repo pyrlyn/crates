@@ -1,7 +1,7 @@
 # shell-completions
 
-Shared shell completion generation for rtok, ketch and cox. Wraps `clap_complete`
-and provides the existing Clink generator extracted from rtok. Supports Bash,
+Shared shell completion generation for the token CLI, the package manager and the coding agent. Wraps `clap_complete`
+and provides the existing Clink generator extracted from the token CLI. Supports Bash,
 Zsh, Fish, PowerShell, Elvish and Clink without reading application state.
 
 Use `generate(Shell, Command, &mut Write)` for the six-shell interface, or

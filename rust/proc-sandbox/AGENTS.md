@@ -5,7 +5,7 @@ conflicts with this file, ask the creator.
 
 ## What this crate is
 
-The process sandbox and the path guard, extracted from cox's `cox-sandbox`:
+The process sandbox and the path guard, extracted from the coding agent's `agent-sandbox`:
 `sandbox::command` and `sandbox::argv` turn a `SandboxPolicy` into a confined
 `Command` or argv (Seatbelt on macOS, bubblewrap or Landlock plus seccomp on
 Linux), and `path::confine` keeps a path from an untrusted caller inside the
@@ -20,7 +20,7 @@ test that fails without it.
 - No `unwrap`, `expect` or `panic!` outside tests.
 - The Linux backends are `cfg(target_os = "linux")`; keep the argv and profile
   builders pure so they are tested on every platform.
-- No dependency on cox or aulo crates. The policy types live in `policy`.
+- No dependency on the coding agent or aulo crates. The policy types live in `policy`.
 
 ## Commands
 

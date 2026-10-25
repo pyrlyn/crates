@@ -2,7 +2,7 @@
 name = "telemetry-setup"
 version = "0.1.0"
 edition = "2024"
-# The lowest MSRV of its candidate consumers (cox 1.98, aulo and Mailune 1.99).
+# The lowest MSRV of its candidate consumers (the coding agent 1.98, aulo and Mailune 1.99).
 rust-version = "1.98"
 description = "tracing setup for applications: a rotating JSON log, a human stderr log and optional OTLP traces, with secrets masked before any line or span leaves the process"
 license = "MIT OR Apache-2.0"

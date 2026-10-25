@@ -6,7 +6,7 @@ allowed-tools:
   - read
   - grep
 metadata:
-  author: cox
+  author: the coding agent
   version: "1"
 compatibility: Needs nothing beyond the built-in tools.
 ---

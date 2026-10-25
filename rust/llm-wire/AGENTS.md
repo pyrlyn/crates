@@ -7,15 +7,15 @@ conflicts with this file, ask the creator.
 
 The provider contract an agent loop depends on instead of any model backend:
 the `Provider` trait, the neutral `Request` it takes, the `ProviderEvent`
-stream it returns, and the types those carry. Extracted from cox's
-`cox-protocol` so cox and aulo share one contract. Shapes and serde/schemars
+stream it returns, and the types those carry. Extracted from the coding agent's
+`agent-protocol` so the coding agent and aulo share one contract. Shapes and serde/schemars
 derives only: no wire format, no I/O.
 
 ## Rules
 
-- **Behaviour-neutral with cox.** Serde tags, field names and the schemars doc
-  strings are what cox's `docs/protocol.jsonschema` and its rollout files are
-  made of. Change one only together with cox, never alone.
+- **Behaviour-neutral with the coding agent.** Serde tags, field names and the schemars doc
+  strings are what the coding agent's `docs/protocol.jsonschema` and its rollout files are
+  made of. Change one only together with the coding agent, never alone.
 - **No `unwrap`, `expect` or `panic!` outside tests** (clippy denies them).
 - **Doc comments on every public item** (`missing_docs` is on).
 - **`test-util` stays optional.** The scenario parser and cassette helpers sit

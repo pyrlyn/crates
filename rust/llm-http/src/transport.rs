@@ -1,7 +1,7 @@
 //! The connection settings every HTTP wire reads from its config section.
 
-/// The transport knobs one provider section carries. Mirrors cox's
-/// `cox_protocol::config::Transport`, which carries cox's whole config
+/// The transport knobs one provider section carries. Mirrors the coding agent's
+/// `agent_protocol::config::Transport`, which carries the coding agent's whole config
 /// schema; a caller copies the four fields across.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Transport {

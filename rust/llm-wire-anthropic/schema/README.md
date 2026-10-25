@@ -5,7 +5,7 @@
 Anthropic's OpenAPI 3.1 spec, the snapshot the Stainless SDK generator last
 published for the Anthropic SDKs. `build.rs` generates the Anthropic wire types
 (`src/wire.rs`) from it with typify; nothing else reads it. The file is
-copied byte for byte from cox's `cox-provider-anthropic/schema/`.
+copied byte for byte from the coding agent's `agent-provider-anthropic/schema/`.
 
 | | |
 | --- | --- |
@@ -17,14 +17,14 @@ The file is JSON despite the `.yml` in the URL. The URL is a snapshot, not a
 maintained pointer: `anthropic-sdk-python` stopped linking a spec URL in
 `.stats.yml` on 2026-09-03 (commit `f9b0cf28`). A newer snapshot URL, when one
 is published, goes in `SNAPSHOT_URL` in
-`scripts/vendor/src/cox_vendor/anthropic_spec.py`.
+`scripts/vendor/src/agent_vendor/anthropic_spec.py`.
 
-This file is a vendored, non-package-manager artifact: no hand `curl`. cox's
-saved script `scripts/vendor` (`cox-vendor anthropic-spec`, with `--check` to
+This file is a vendored, non-package-manager artifact: no hand `curl`. The coding agent's
+saved script `scripts/vendor` (`agent-vendor anthropic-spec`, with `--check` to
 report staleness) re-vendors its copy; this crate has no such script yet, so
-a re-vendor here copies cox's file and updates the "Downloaded" and "sha256"
+a re-vendor here copies the coding agent's file and updates the "Downloaded" and "sha256"
 rows by hand.
 
-A changed spec regenerates the types on the next build. A field cox sets that
+A changed spec regenerates the types on the next build. A field the coding agent sets that
 the spec renamed or made required is a compile error in `request.rs`; the
-request snapshots catch any change to the bytes cox sends.
+request snapshots catch any change to the bytes the coding agent sends.

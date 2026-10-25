@@ -13,4 +13,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- *(abi-drift)* T24 drift tests for generated bindings from scull and ketch ([#46](https://github.com/pyrlyn/crates-packages/pull/46))
+- *(abi-drift)* T24 drift tests for generated bindings from scull and the package manager ([#46](https://github.com/pyrlyn/crates-packages/pull/46))

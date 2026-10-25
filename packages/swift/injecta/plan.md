@@ -12,10 +12,10 @@ counterpart of the Rust crate `injecta`.
 | T8 | todo | P1 | 2 | 0% | |
 | T9 | todo | P3 | 3 | 0% | |
 
-### T2. Try Injecta on Cox's app-wide services
+### T2. Try Injecta on the coding agent's app-wide services
 
 Wire `coreClient`, `secretStore`, `inboxClient` and the stores built from them in a branch of the
-Cox desktop app (`desktop/macos`) with a `@MainActor` app container and a per-session scope, next
+The coding agent desktop app (`desktop/macos`) with a `@MainActor` app container and a per-session scope, next
 to PR #184's swift-dependencies version, and compare lines, build time and test ergonomics. Done
 when both versions build and their test suites pass.
 

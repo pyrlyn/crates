@@ -15,7 +15,7 @@
 //! **Ids.** Same reasoning as `anthropic::stream`: `call_id` on the wire is
 //! an opaque provider string, never a valid ULID, so [`OpenAiResponsesStream`]
 //! mints a fresh `CallId::new()` per `function_call` output item instead of
-//! parsing it, and `message_items` round-trips that same cox-minted id back
+//! parsing it, and `message_items` round-trips that same agent-minted id back
 //! out as both `function_call.call_id` and `function_call_output.call_id`.
 //!
 //! **Tool-call correlation.** `ProviderEvent::ToolUseInputDelta`/`ToolUseEnd`
@@ -777,7 +777,7 @@ mod tests {
                     cache: true,
                 },
                 SystemBlock {
-                    text: "You are cox.".into(),
+                    text: "You are the coding agent.".into(),
                     cache: true,
                 },
             ],
@@ -808,7 +808,7 @@ mod tests {
     #[test]
     fn responses_request_plain_text() {
         let mut req = base("gpt-5.1");
-        req.messages = vec![user_text("what does cox-provider own?")];
+        req.messages = vec![user_text("what does agent-provider own?")];
 
         let body = build_body(&req).expect("no thinking blocks, never fails");
         insta::assert_json_snapshot!(body);

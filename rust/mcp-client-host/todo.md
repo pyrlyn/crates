@@ -1,1 +1,1 @@
-- T2. Adopt mcp-client-host in cox (needs publication)
+- T2. Adopt mcp-client-host in the coding agent (needs publication)

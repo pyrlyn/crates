@@ -3,7 +3,7 @@
 //! ```no_run
 //! let home = app_home::app_home("AULO_HOME", ".aulo");
 //! let cfg = app_home::config_home().map(|d| d.join("runa"));
-//! let bin = app_home::Dirs::from_env().expand_tilde("~\\.ketch\\bin");
+//! let bin = app_home::Dirs::from_env().expand_tilde("~\\.pkgmgr\\bin");
 //! ```
 //!
 //! Every resolver also runs over an injected variable lookup ([`Dirs::with`]),

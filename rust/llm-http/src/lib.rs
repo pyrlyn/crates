@@ -6,7 +6,7 @@
 //! around one provider stream ([`retry`]), plus the [`Transport`] section
 //! every wire's constructor takes.
 //!
-//! Extracted from cox's `cox-provider-http` so cox and aulo share one copy.
+//! Extracted from the coding agent's `agent-provider-http` so the coding agent and aulo share one copy.
 //! The error and event types come from [`llm_wire`].
 //!
 //! # Features

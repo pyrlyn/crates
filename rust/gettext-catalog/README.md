@@ -31,6 +31,6 @@ println!("{}", l.format("message-count", Some(&args)));
 Fractions and text counts select CLDR `other`: the `other_form` index, or a
 `# cldr-other:` translator comment on the entry.
 
-Extracted from cox's `cox-i18n`.
+Extracted from the coding agent's `agent-i18n`.
 
 Licensed under either of MIT or Apache-2.0 at your option.

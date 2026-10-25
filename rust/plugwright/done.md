@@ -279,7 +279,7 @@ succeed with it disabled (macOS locally, Linux in a container).
 **Result:** wasmtime/wasmi in `wasm_wall_clock_timeout_on_every_engine`, wasmer in its own e2e.
 
 ### T47 — Absorb wasm-plugin-host into plugwright (C4)
-`pyrlyn/crates/rust/wasm-plugin-host` (crates.io 0.1.7) ran extism plugins for kerf, weft and cox.
+`pyrlyn/crates/rust/wasm-plugin-host` (crates.io 0.1.7) ran extism plugins for kerf, weft and the coding agent.
 What plugwright lacked moved in: the generic parts serve every backend, the extism ABI and host
 functions live only in `plugwright-extism`. Consumer migrations and the wasm-plugin-host
 deprecation release are separate PRs in their own repositories.
@@ -301,9 +301,9 @@ deprecation release are separate PRs in their own repositories.
   failures → `WasmError::Trap`). `load` / `load_with_wasi` return a `Worker`; `Wasi` mounts
   `(host, guest)` directories (`ro:` prefix = read-only) with no environment or arguments.
   Design D27 records why extism guests may get WASI while D13 still holds for `plugwright-wasm`.
-**Done when:** the wasm-plugin-host and cox host tests pass against the new crates.
+**Done when:** the wasm-plugin-host and the coding agent host tests pass against the new crates.
 **Result:** 10 worker tests, 19 package tests and 13 extism tests (wasm-plugin-host's suite plus
-cox's three WASI tests and a manifest-timeout test) pass. `Cargo.lock` keeps one wasmtime
+The coding agent's three WASI tests and a manifest-timeout test) pass. `Cargo.lock` keeps one wasmtime
 (49.0.2); extism adds second copies of sha2 0.10, thiserror 1 and a few of their deps.
 
 ### T21 — Unload verification (C3)

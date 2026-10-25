@@ -23,4 +23,4 @@ let found = discover(&dirs);
 let prompt_part = index(&found.skills);
 ```
 
-Extracted from cox's `cox-ext`.
+Extracted from the coding agent's `agent-ext`.

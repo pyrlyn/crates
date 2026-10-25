@@ -1,1 +1,1 @@
-- T2. Adopt perm-rules in cox (needs publication)
+- T2. Adopt perm-rules in the coding agent (needs publication)

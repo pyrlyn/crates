@@ -2,7 +2,7 @@
 
 Copy a file to `<name>.bak-<unix-seconds>` before replacing it.
 
-Used by `ketch config reset` and by rtok agent host setup. A missing file is not
+Used by `config reset` and by the token CLI agent host setup. A missing file is not
 copied. Copies are created with `create_new`, so a planted symlink at the backup
 name cannot redirect the write, and a second copy in the same second gets a
 `-<n>` suffix. Hard links and symlinks are never treated as backups.

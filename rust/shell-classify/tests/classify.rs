@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later OR LicenseRef-Royalty-Free
 // Licensed under GPL-3.0 or later, or under the royalty-free licence in LICENSE-ROYALTY-FREE.md
 
-//! Fixture lines for `classify` and `segments`, moved from cox's `bash` tool
+//! Fixture lines for `classify` and `segments`, moved from the coding agent's `bash` tool
 //! tests. Each table is the claim: a line and the risk or split it must keep.
 
 use shell_classify::{Risk, classify, segments};
@@ -28,7 +28,7 @@ fn bash_cd_and_rm_rf_are_classified_destructive() {
         ("cat a | grep b | head -3", Risk::ReadOnly),
         ("git status && git diff --stat", Risk::ReadOnly),
         ("git log --oneline -5; git show HEAD", Risk::ReadOnly),
-        ("cargo test -p cox-tools", Risk::ReadOnly),
+        ("cargo test -p agent-tools", Risk::ReadOnly),
         ("npm test", Risk::ReadOnly),
         ("echo hi", Risk::ReadOnly),
         ("cd src && pwd", Risk::ReadOnly),

@@ -7,7 +7,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-/// Failures from a `Provider` implementation (`cox-provider`).
+/// Failures from a `Provider` implementation (`agent-provider`).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema, thiserror::Error)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum ProviderError {
@@ -52,7 +52,7 @@ pub enum ProviderError {
     /// The stream was cancelled via `Interrupt`.
     #[error("provider call cancelled")]
     Cancelled,
-    /// The SSE/JSON stream contained a line cox could not parse.
+    /// The SSE/JSON stream contained a line the coding agent could not parse.
     #[error("parse error at line {line}")]
     Parse {
         /// 1-based line number within the stream where parsing failed.

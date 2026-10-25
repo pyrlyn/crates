@@ -6,7 +6,7 @@
 //! wrote: `SKILL.md` skills and Claude-Code-style shell hooks. Both are
 //! untrusted input and both fail open: a broken skill or hook is reported
 //! (a notice, a `Failed` outcome) and skipped, never fatal. Separate from
-//! any one host so cox and aulo load them the same way.
+//! any one host so the coding agent and aulo load them the same way.
 
 #![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used, clippy::panic))]
 

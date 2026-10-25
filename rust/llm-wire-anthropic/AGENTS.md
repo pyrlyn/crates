@@ -8,15 +8,15 @@ conflicts with this file, ask the creator.
 The Anthropic Messages wire for LLM agent loops: the translation of an
 `llm-wire` `Request` into a Messages body (cache breakpoints, thinking,
 effort), the SSE to `ProviderEvent` state machine, and a streaming client that
-implements `llm_wire::Provider` over `llm-http`. Extracted from cox's
-`cox-provider-anthropic` so cox and aulo share one copy.
+implements `llm_wire::Provider` over `llm-http`. Extracted from the coding agent's
+`agent-provider-anthropic` so the coding agent and aulo share one copy.
 
 ## Rules
 
-- **Behaviour-neutral with cox.** Request bytes, breakpoint placement, which
-  frames become which events and which usage counters saturate match cox's.
+- **Behaviour-neutral with the coding agent.** Request bytes, breakpoint placement, which
+  frames become which events and which usage counters saturate match the coding agent's.
   The request snapshots and the recorded SSE fixtures prove it; change one
-  only together with cox, never alone.
+  only together with the coding agent, never alone.
 - **Provider output is untrusted input.** Keep the guards in `stream`: an
   unknown block, delta or event kind is skipped before the typed parse, a
   malformed frame is `ProviderError::Parse`, a counter past `u32` saturates

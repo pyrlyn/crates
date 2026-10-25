@@ -66,8 +66,8 @@ pub struct PriceTable {
 }
 
 impl PriceTable {
-    /// The table compiled into the binary (`prices.toml`, copied from cox,
-    /// whose `cox-vendor models` pipeline is its only writer).
+    /// The table compiled into the binary (`prices.toml`, copied from the coding agent,
+    /// whose `agent-vendor models` pipeline is its only writer).
     pub fn embedded() -> Result<Self, PriceError> {
         Self::parse(config::PRICES_TOML)
     }

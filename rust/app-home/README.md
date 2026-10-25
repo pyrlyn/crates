@@ -5,7 +5,7 @@ Resolve where a command-line app keeps its files, the same way on every OS.
 ```rust
 let home = app_home::app_home("AULO_HOME", ".aulo");   // $AULO_HOME, else ~/.aulo
 let cfg = app_home::config_home().map(|d| d.join("runa")); // $XDG_CONFIG_HOME, else ~/.config
-let p = app_home::Dirs::from_env().expand_tilde("~\\.ketch\\bin");
+let p = app_home::Dirs::from_env().expand_tilde("~\\.pkgmgr\\bin");
 ```
 
 - `user_home`: `HOME`, else `USERPROFILE`, else the OS account's home. An

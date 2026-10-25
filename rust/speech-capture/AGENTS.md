@@ -5,7 +5,7 @@ conflicts with this file, ask the creator.
 
 ## What this crate is
 
-The audio front end for speech-to-text, shared by cox, runa and aulo: the default
+The audio front end for speech-to-text, shared by the coding agent, runa and aulo: the default
 microphone (`Recorder`, and `InputDevice` for a streaming sink), the default or a named speaker (`OutputDevice`, for a streaming source), audio file decode (`decode_audio`), resampling to 16 kHz
 mono, an energy VAD (`energy_vad`) and, behind the `whisper` cargo feature
 (off by default), a whisper.cpp `Transcriber`. Audio stays in memory; nothing

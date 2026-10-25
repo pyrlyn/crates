@@ -31,6 +31,6 @@ assert!(!energy_vad(&pcm, TARGET_SAMPLE_RATE).is_empty());
 # Ok::<(), speech_capture::Error>(())
 ```
 
-Merged from cox's `cox-voice` capture and runa's `runa-media` decode, resample
+Merged from the coding agent's `agent-voice` capture and runa's `runa-media` decode, resample
 and VAD. On Linux, building
 needs the ALSA headers (`libasound2-dev`).

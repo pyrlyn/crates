@@ -16,13 +16,13 @@
 //! panic on a malformed frame and the HTTP layer maps every failure to a
 //! `ProviderError`.
 //!
-//! Extracted from cox's `cox-provider-openai` so cox and aulo share one copy.
+//! Extracted from the coding agent's `agent-provider-openai` so the coding agent and aulo share one copy.
 //! The section and model types the wires read (`llm_http::Transport`,
 //! `llm_wire::ProviderModel`, `llm_wire::Capabilities`) live in the crates
 //! below, so a host holds one copy of each.
 
 // Imported at the crate root so the wires' `crate::http`, `crate::retry` and
-// `crate::sse` paths resolve exactly as they did inside cox.
+// `crate::sse` paths resolve exactly as they did inside the coding agent.
 use llm_http::{http, retry, sse};
 
 pub mod chat;

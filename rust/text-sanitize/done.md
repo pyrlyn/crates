@@ -1,21 +1,21 @@
 # text-sanitize — completed tasks
 
-### T1. Extract the terminal and bidi guard from cox, ketch and rtok
+### T1. Extract the terminal and bidi guard from the coding agent, the package manager and the token CLI
 
-Merged cox's `cox-sanitize::{sanitize, sanitize_with}`, ketch's `changelog::sanitize` and the
-character half of rtok's `sanitize` (`characters`, `terminal_noise`, `skip_escape`) into one scanner,
-`clean(s, &Options)`, with one preset per caller: `Options::TERMINAL` (cox), `Options::PROSE`
-(ketch), `Options::RECORD` (rtok; `LineEnds::Lf` for its `text`). `skip_escape` is public for
-rtok's byte scanner. No dependencies. Adoption by the three apps is T2 to T4 in `plan.md`.
+Merged the coding agent's `agent-sanitize::{sanitize, sanitize_with}`, the package manager's `changelog::sanitize` and the
+character half of the token CLI's `sanitize` (`characters`, `terminal_noise`, `skip_escape`) into one scanner,
+`clean(s, &Options)`, with one preset per caller: `Options::TERMINAL` (the coding agent), `Options::PROSE`
+(the package manager), `Options::RECORD` (the token CLI; `LineEnds::Lf` for its `text`). `skip_escape` is public for
+The token CLI's byte scanner. No dependencies. Adoption by the three apps is T2 to T4 in `plan.md`.
 
-Out of scope, and staying where it is: cox's `redact::scrub` (secrets) and `truncate` (display
-width), and rtok's wrapper-block regex, whitespace folding and JSON walker, which clean a record
+Out of scope, and staying where it is: the coding agent's `redact::scrub` (secrets) and `truncate` (display
+width), and the token CLI's wrapper-block regex, whitespace folding and JSON walker, which clean a record
 and do not guard a terminal. Their tests were not ported.
 
-What each implementation handled (sources: `apps/cox/crates/cox-sanitize/src/lib.rs`,
-`apps/ketch/crates/ketch-core/src/changelog.rs`, `apps/rtok/src/sanitize.rs`, as of this commit):
+What each implementation handled (sources: `apps/agent/crates/agent-sanitize/src/lib.rs`,
+`apps/pkgmgr/crates/pkgmgr-core/src/changelog.rs`, `apps/tokcli/src/sanitize.rs`, as of this commit):
 
-| Input | cox | ketch | rtok | text-sanitize |
+| Input | the coding agent | the package manager | the token CLI | text-sanitize |
 | --- | --- | --- | --- | --- |
 | `ESC [ … final` (CSI) | removed whole | `ESC` only, `[2J` stays | removed whole | whole (`Sequences`), `ESC` only (`ControlsOnly`) |
 | `ESC ]` OSC, to BEL or ST | removed whole | `ESC`, BEL only | removed whole | same split |
@@ -36,21 +36,21 @@ What each implementation handled (sources: `apps/cox/crates/cox-sanitize/src/lib
 
 Behaviour that changed for a caller, all on malformed or rare input no source test covers:
 
-- `Sequences` removes a sequence's C1 forms whole for rtok (it dropped only the introducer) and
-  removes DCS, SOS, PM and APC payloads for rtok (it kept them).
-- An `ESC` before a newline or a non-ASCII character no longer eats it (cox ate both; rtok ate
+- `Sequences` removes a sequence's C1 forms whole for the token CLI (it dropped only the introducer) and
+  removes DCS, SOS, PM and APC payloads for the token CLI (it kept them).
+- An `ESC` before a newline or a non-ASCII character no longer eats it (the coding agent ate both; the token CLI ate
   the newline).
-- An unterminated sequence stops before the newline for rtok (it ran to the end of the text).
-- A CSI ends before any control byte, so `ESC [ 3 1 ESC [ 0 m` is two sequences; cox and rtok
+- An unterminated sequence stops before the newline for the token CLI (it ran to the end of the text).
+- A CSI ends before any control byte, so `ESC [ 3 1 ESC [ 0 m` is two sequences; the coding agent and the token CLI
   left `0m` behind.
 - A ZWJ or ZWNJ is kept only if it is between two visible characters after the cleaning, so
-  `a ZWJ ESC[0m ZWJ b` no longer keeps both joiners (cox kept both, and a second pass changed the
+  `a ZWJ ESC[0m ZWJ b` no longer keeps both joiners (the coding agent kept both, and a second pass changed the
   text).
-- `PROSE` removes U+2028 and U+2029, which ketch's doc comment already claimed.
+- `PROSE` removes U+2028 and U+2029, which the package manager's doc comment already claimed.
 
-Tests: `tests/callers.rs` holds cox's three `sanitize` tests (its `truncate` test stays with
-`truncate`), ketch's three `sanitize` tests (the hostile-changelog one calls `sanitize_prose` instead
-of `from_release`), rtok's character cases of `text_drops_each_kind_of_noise` and
+Tests: `tests/callers.rs` holds the coding agent's three `sanitize` tests (its `truncate` test stays with
+`truncate`), the package manager's three `sanitize` tests (the hostile-changelog one calls `sanitize_prose` instead
+of `from_release`), the token CLI's character cases of `text_drops_each_kind_of_noise` and
 `terminal_noise_touches_nothing_else`, `terminal_noise_borrows_clean_text` and a `skip_escape` test,
 plus tests for each row above that no source pinned and a seeded 4000-string idempotence check over
 every preset. 19 tests; `cargo clippy -p text-sanitize --all-targets -- -D warnings` and

@@ -7,7 +7,7 @@
 //! file wants: it already knows about its own writes. The version does not
 //! say which table changed, so a `true` means "re-read what you show".
 //! Pull-based: no thread, no timer; the caller polls as often as it
-//! refreshes. Extracted from cox's `cox-store` (`watch.rs`).
+//! refreshes. Extracted from the coding agent's `agent-store` (`watch.rs`).
 //!
 //! The version is per connection, so a [`ChangeToken`] is meaningful only
 //! with the connection that issued it. Each consumer holds its own token, so

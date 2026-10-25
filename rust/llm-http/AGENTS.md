@@ -8,15 +8,15 @@ conflicts with this file, ask the creator.
 The HTTP plumbing every LLM provider wire needs on top of `reqwest`: client
 construction, credential lookup (env var, then platform keyring), auth
 headers, non-2xx to `ProviderError` mapping, retry with backoff around one
-provider stream, and generic SSE framing. Extracted from cox's
-`cox-provider-http` so cox and aulo share one copy. Errors and events are
+provider stream, and generic SSE framing. Extracted from the coding agent's
+`agent-provider-http` so the coding agent and aulo share one copy. Errors and events are
 `llm-wire` types.
 
 ## Rules
 
-- **Behaviour-neutral with cox.** Which statuses map to which `ProviderError`,
+- **Behaviour-neutral with the coding agent.** Which statuses map to which `ProviderError`,
   which errors retry, the backoff curve and the env-first key lookup match
-  cox's. Change one only together with cox, never alone.
+  The coding agent's. Change one only together with the coding agent, never alone.
 - **Secrets stay out of logs and errors.** Auth headers are marked sensitive,
   a bad credential is `ProviderError::Auth` with no text, and nothing here
   formats a key. Keep the tests that prove it.

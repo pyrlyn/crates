@@ -4,7 +4,7 @@
 
 //! Copy a file to `<name>.bak-<unix-seconds>` before replacing it.
 //!
-//! Shared by ketch (`config reset`) and rtok (agent host setup). Two targets:
+//! Shared by the package manager (`config reset`) and the token CLI (agent host setup). Two targets:
 //!
 //! - [`backup`] puts the copy beside the file; a sibling `.bak-*` that already holds the
 //!   same bytes makes it `Ok(None)`.

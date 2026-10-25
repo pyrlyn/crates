@@ -13,4 +13,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- *(sqlite-change-feed)* T23 cross-process change feed extracted from cox-store ([#45](https://github.com/pyrlyn/crates-packages/pull/45))
+- *(sqlite-change-feed)* T23 cross-process change feed extracted from agent-store ([#45](https://github.com/pyrlyn/crates-packages/pull/45))

@@ -4,7 +4,7 @@ If an AGENTS.md or CLAUDE.md exists higher in the tree, follow it too; on confli
 
 ## What this workspace is
 
-Cargo workspace of five small Rust crates shared by ketch and rtok:
+Cargo workspace of five small Rust crates shared by the package manager and the token CLI:
 
 | Crate | Role |
 | --- | --- |
@@ -21,7 +21,7 @@ Cargo workspace of five small Rust crates shared by ketch and rtok:
 | `scoped-check` | Binary that runs only the check commands a change touches |
 | `telemetry-setup` | `tracing` setup with rotating JSON logs, optional OTLP traces and secret redaction, shared by aulo and Mailune |
 | `sqlite-change-feed` | Change feed for a SQLite database shared between processes: `PRAGMA data_version` through Diesel |
-| `wasm-plugin-host` | WebAssembly plugin host (extism) shared by cox and scull: worker per plugin, memory cap, deadlines |
+| `wasm-plugin-host` | WebAssembly plugin host (extism) shared by the coding agent and scull: worker per plugin, memory cap, deadlines |
 
 Each member directory has its own `AGENTS.md`. This file is the workspace root.
 

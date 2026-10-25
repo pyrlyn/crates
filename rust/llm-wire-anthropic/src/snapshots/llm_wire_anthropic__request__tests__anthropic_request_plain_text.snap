@@ -11,7 +11,7 @@ expression: "build_body(&req, cfg(None))"
       "content": [
         {
           "type": "text",
-          "text": "what does cox-provider own?"
+          "text": "what does agent-provider own?"
         }
       ]
     }
@@ -27,7 +27,7 @@ expression: "build_body(&req, cfg(None))"
     },
     {
       "type": "text",
-      "text": "You are cox.",
+      "text": "You are the coding agent.",
       "cache_control": {
         "type": "ephemeral",
         "ttl": "5m"

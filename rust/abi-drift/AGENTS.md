@@ -8,8 +8,8 @@ conflicts with this file, ask the creator.
 Drift tests for generated bindings: `Drift` compares generated text with a
 committed file (unified diff on mismatch, rewrite under a bless switch), and
 `cbindgen_header` / `csbindgen_file` render bindings to compare. Extracted from
-scull's `crates/scull-ffi/tests/bindings.rs` and ketch's `ketch-capi` drift
-test; scull, ketch and Mailune (B6) are its consumers.
+scull's `crates/scull-ffi/tests/bindings.rs` and the package manager's `pkgmgr-capi` drift
+test; scull, the package manager and Mailune (B6) are its consumers.
 
 ## Rules
 
@@ -18,8 +18,8 @@ test; scull, ketch and Mailune (B6) are its consumers.
   the diff.
 - `tests/fixtures/ffi` is read as text by the generators and never compiled.
   After changing it, regenerate with `ABI_DRIFT_BLESS=1 cargo test -p abi-drift`.
-- `rust-version` stays at ketch's 1.86 while ketch is a consumer.
-- Dependency versions follow scull's and ketch's locks. Bump them only with the creator.
+- `rust-version` stays at the package manager's 1.86 while the package manager is a consumer.
+- Dependency versions follow scull's and the package manager's locks. Bump them only with the creator.
 
 ## Commands
 

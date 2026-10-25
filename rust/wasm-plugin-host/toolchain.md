@@ -4,8 +4,8 @@
 | --- | --- | --- | --- |
 | rustc | mise | Build | https://github.com/rust-lang/rust |
 | just | mise | Test recipe | https://github.com/casey/just |
-| ketch | see its README | Installs swarfr | https://github.com/pyrlyn/ketch |
-| swarfr | ketch | Lossless cleanup of target/ after tests | https://github.com/listepo/swarfr |
+| the package manager | see its README | Installs swarfr | https://github.com/pyrlyn |
+| swarfr | the package manager | Lossless cleanup of target/ after tests | https://github.com/listepo/swarfr |
 
 ## cargo
 
@@ -18,7 +18,7 @@
 | sha2 | local | https://github.com/RustCrypto/hashes | SHA-256 package digest |
 | thiserror | local | https://github.com/dtolnay/thiserror | `PluginError` |
 
-## ketch
+## The package manager
 
 | Package | Where | Source | Why here |
 | --- | --- | --- | --- |

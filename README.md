@@ -2,7 +2,7 @@
 
 [![ci](https://github.com/pyrlyn/crates/actions/workflows/ci.yml/badge.svg)](https://github.com/pyrlyn/crates/actions/workflows/ci.yml) [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=listepo_crates-packages&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=listepo_crates-packages) [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=listepo_crates-packages&metric=coverage)](https://sonarcloud.io/component_measures?id=listepo_crates-packages&metric=coverage) [![Tests](https://img.shields.io/sonar/tests/listepo_crates-packages?server=https%3A%2F%2Fsonarcloud.io&compact_message)](https://sonarcloud.io/component_measures?id=listepo_crates-packages&metric=tests)
 
-Small, focused Rust crates shared by the creator's projects (`ketch`, `rtok`, `scull` and others).
+Small, focused Rust crates shared by the creator's projects (the package manager, the token CLI, `scull` and others).
 
 | Crate | What it does |
 | --- | --- |
@@ -162,7 +162,7 @@ open the pull request (workflow permissions), so it fails before any tag.
 Licensed under the [GNU General Public License v3.0 or later](LICENSE)
 (`GPL-3.0-or-later`).
 
-The crates shared with cox and aulo (`agent-ext`, `agent-host-config`,
+The crates shared with the coding agent and aulo (`agent-ext`, `agent-host-config`,
 `agent-loop`, `config-schema`, `llm-*`, `mcp-client-host`, `owner-listener`, `perm-rules`,
 `proc-sandbox`, `shell-classify`, `speech-capture`, `text-sanitize`) are
 offered under `GPL-3.0-or-later OR LicenseRef-Royalty-Free`: the second option

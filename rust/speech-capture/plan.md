@@ -7,9 +7,9 @@ Microphone capture, audio file decode, resampling to 16 kHz mono and an energy V
 | T2 | todo | P2 | 2 | 0% | |
 | T3 | todo | P2 | 2 | 0% | |
 
-### T2. Adopt speech-capture in cox (needs publication)
+### T2. Adopt speech-capture in the coding agent (needs publication)
 
-Replace the `Recorder` in `crates/cox-voice/src/capture.rs` and its `Transcriber` in cox with this crate (feature `whisper` for the transcriber), mapping `speech_capture::Error` and `TranscribeError` to cox's `VoiceError` and `DictationError`. Blocked until the crate is published: it is `publish = false` today, so it must first be published (or the release flow set up for it).
+Replace the `Recorder` in `crates/agent-voice/src/capture.rs` and its `Transcriber` in the coding agent with this crate (feature `whisper` for the transcriber), mapping `speech_capture::Error` and `TranscribeError` to the coding agent's `VoiceError` and `DictationError`. Blocked until the crate is published: it is `publish = false` today, so it must first be published (or the release flow set up for it).
 
 ### T3. Adopt speech-capture in runa (needs publication)
 

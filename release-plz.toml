@@ -11,10 +11,10 @@
 git_release_enable = false
 git_tag_enable = false
 
-# Unlike ketch, some crates here are published to crates.io (see the README),
+# Unlike the package manager, some crates here are published to crates.io (see the README),
 # but not all of them, and a crate's first release has nothing on the registry
 # to diff against: the lookup comes back empty and release-plz concludes there
-# is nothing to compare — the same trap ketch's release-plz.toml documents. So
+# is nothing to compare — the same trap the package manager's release-plz.toml documents. So
 # the registry is not consulted, and the `<crate>-v<version>` git tags are the
 # record of what was released; release.yml creates the tag by publishing the
 # release.

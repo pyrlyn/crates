@@ -22,6 +22,6 @@ The crate enables only Diesel's `sqlite` feature and no `libsqlite3-sys`
 features, so the application chooses bundled SQLite, the system library or
 SQLCipher.
 
-Extracted from cox's `cox-store` (`watch.rs`).
+Extracted from the coding agent's `agent-store` (`watch.rs`).
 
 Licensed under either of MIT or Apache-2.0 at your option.

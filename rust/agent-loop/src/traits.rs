@@ -70,7 +70,7 @@ pub enum Verdict {
 /// no tool before the gate (or the user) allows it.
 #[async_trait]
 pub trait Approvals: Send + Sync {
-    /// Runs once per call before `decide` (cox: the `PreToolUse` hook and
+    /// Runs once per call before `decide` (the coding agent: the `PreToolUse` hook and
     /// risk advice). Returns the call to judge, possibly with new input,
     /// or `Err` with the text the model sees instead of a result.
     async fn prepare(&self, call: ToolCall) -> Result<ToolCall, String> {
@@ -99,7 +99,7 @@ pub enum Next {
 }
 
 /// The session-specific parts of a turn: request assembly and the hooks
-/// around a provider call (cox: prompts, routing, compaction, ledger).
+/// around a provider call (the coding agent: prompts, routing, compaction, ledger).
 #[async_trait]
 pub trait Context: Send + Sync {
     /// The user message's content for a new turn. By default the text,
@@ -115,7 +115,7 @@ pub trait Context: Send + Sync {
     /// Builds the request for provider call number `step` (1-based) of
     /// `turn`. May rewrite `history` first (compaction).
     async fn request(&self, turn: TurnId, step: u32, history: &mut Vec<Message>) -> Next;
-    /// Whether `error` is worth one `recover` per turn (cox: a context
+    /// Whether `error` is worth one `recover` per turn (the coding agent: a context
     /// that is too long).
     fn retryable(&self, error: &ProviderError) -> bool {
         let _ = error;
@@ -127,7 +127,7 @@ pub trait Context: Send + Sync {
         let _ = (error, history);
         false
     }
-    /// A provider call's usage, before its `Usage` event (cox: the ledger).
+    /// A provider call's usage, before its `Usage` event (the coding agent: the ledger).
     async fn on_usage(&self, turn: TurnId, usage: &Usage) -> Result<(), LoopError> {
         let _ = (turn, usage);
         Ok(())

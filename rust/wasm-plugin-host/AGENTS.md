@@ -5,7 +5,7 @@ conflicts with this file, ask the creator.
 
 ## What this crate is
 
-The WebAssembly plugin host shared by cox and scull: extism under a memory cap,
+The WebAssembly plugin host shared by the coding agent and scull: extism under a memory cap,
 one worker thread per plugin, per-call deadlines, and a control lane served
 before an event lane. It knows nothing about what plugins are for; each
 application keeps its own manifest, exports and host functions and plugs them in
@@ -15,7 +15,7 @@ root) is generic over the application's manifest type and home directory.
 
 ## Rules
 
-- The only crate here that links extism and wasmtime. Their versions follow cox's
+- The only crate here that links extism and wasmtime. Their versions follow the coding agent's
   pins (`extism 1.30.0`, `wasmtime 43`); bump them only with the creator, and both
   together, or a second wasmtime resolves that extism never sees.
 - WASI stays off until extism ships wasmtime >= 48 (RUSTSEC-2026-0269).

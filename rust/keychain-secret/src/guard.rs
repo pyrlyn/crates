@@ -8,8 +8,8 @@
 //! Comments and string contents are blanked before the search, so a doc
 //! comment or a string fixture that merely mentions a forbidden name never
 //! counts as a call. Raw strings (`r#"…"#`) are not special-cased: the worst
-//! a mismatch does is widen or shrink a masked span. Extracted from cox's
-//! `crates/cox/tests/no_real_keychain_in_tests.rs`.
+//! a mismatch does is widen or shrink a masked span. Extracted from the coding agent's
+//! `crates/agent/tests/no_real_keychain_in_tests.rs`.
 //!
 //! ```no_run
 //! #[test]

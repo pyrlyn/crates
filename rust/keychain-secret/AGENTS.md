@@ -9,8 +9,8 @@ Application secrets: environment first, then the OS keychain (keyring 4),
 never a config file. `Secret`, `SecretStore` with `Keychain`, `MemoryStore` and
 `NoStore`, `resolve`, the keychain switch, `reject_inline_secrets`, and the
 `guard` scanner that keeps tests off the real keychain. Extracted from runa
-(`runa-cloud/src/secrets.rs`), cox (`cox-provider-http` and
-`crates/cox/tests/no_real_keychain_in_tests.rs`) and aulo
+(`runa-cloud/src/secrets.rs`), the coding agent (`agent-provider-http` and
+`crates/agent/tests/no_real_keychain_in_tests.rs`) and aulo
 (`aulo-server/src/auth/token.rs`); Mailune's C1 is the next consumer.
 
 ## Rules
@@ -24,7 +24,7 @@ never a config file. `Secret`, `SecretStore` with `Keychain`, `MemoryStore` and
   in `Debug`.
 - Removing a name from `is_secret_key` lets that key back into config files;
   the tests pin the list.
-- Dependency versions follow cox's, runa's and aulo's locks. Bump them only with the creator.
+- Dependency versions follow the coding agent's, runa's and aulo's locks. Bump them only with the creator.
 
 ## Commands
 

@@ -2,7 +2,7 @@
 name = "abi-drift"
 version = "0.1.0"
 edition = "2021"
-# ketch's MSRV, the lowest of its consumers (ketch 1.86, scull 1.99); similar 3.2 needs 1.85.
+# The package manager's MSRV, the lowest of its consumers (the package manager 1.86, scull 1.99); similar 3.2 needs 1.85.
 rust-version = "1.86"
 description = "Drift tests for generated bindings: regenerate a cbindgen header or csbindgen C# file, diff it against the committed copy, rewrite it under a bless variable"
 license = "MIT OR Apache-2.0"
@@ -23,7 +23,7 @@ default = ["cbindgen", "csbindgen"]
 cbindgen = ["dep:cbindgen"]
 csbindgen = ["dep:csbindgen"]
 
-# Versions are the ones scull and ketch lock; similar is change-preview's.
+# Versions are the ones scull and the package manager lock; similar is change-preview's.
 [dependencies]
 # Library API only, without cbindgen's CLI.
 cbindgen = { version = "0.29.3", default-features = false, optional = true }

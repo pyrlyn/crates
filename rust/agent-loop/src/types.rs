@@ -1,7 +1,7 @@
 //! What crosses the loop's boundary: `Submission`s in, `Event`s out, and
 //! the tool-call and approval shapes both carry. Each type is the neutral
-//! subset of its namesake in cox's `cox-protocol`, with the same serde tags
-//! and field names, so a cox rollout line for one of these events reads back
+//! subset of its namesake in the coding agent's `agent-protocol`, with the same serde tags
+//! and field names, so a coding agent rollout line for one of these events reads back
 //! here and a surface maps one enum onto the other variant by variant.
 
 use std::path::PathBuf;
@@ -205,7 +205,7 @@ pub enum Why {
     },
     /// The active policy forces asking regardless of risk.
     Policy {
-        /// The policy's name (cox: `untrusted`, `on-request`, ...).
+        /// The policy's name (the coding agent: `untrusted`, `on-request`, ...).
         policy: String,
     },
 }
@@ -233,7 +233,7 @@ pub enum LoopError {
         /// The underlying provider failure.
         error: ProviderError,
     },
-    /// The event sink could not take an event (cox: the rollout store).
+    /// The event sink could not take an event (the coding agent: the rollout store).
     #[error("event sink failed: {message}")]
     Sink {
         /// The sink's error text.
@@ -375,10 +375,10 @@ mod tests {
     use super::*;
     use pretty_assertions::assert_eq;
 
-    /// The serde shape is cox's: a cox rollout line for a shared event
+    /// The serde shape is the coding agent's: a coding agent rollout line for a shared event
     /// reads back here unchanged.
     #[test]
-    fn events_keep_the_cox_wire_shape() {
+    fn events_keep_the_agent_wire_shape() {
         let call_id = CallId::new();
         let ev = Event::ApprovalDecided {
             call_id,
@@ -400,7 +400,7 @@ mod tests {
         let why: Why = serde_json::from_value(serde_json::json!({
             "type": "policy", "policy": "untrusted"
         }))
-        .expect("cox ApprovalPolicy reads as a string");
+        .expect("the coding agent ApprovalPolicy reads as a string");
         assert_eq!(
             why,
             Why::Policy {
@@ -409,9 +409,9 @@ mod tests {
         );
     }
 
-    /// A cox `UserTurn` carries `confirm_think`; the loop ignores it.
+    /// A the coding agent `UserTurn` carries `confirm_think`; the loop ignores it.
     #[test]
-    fn user_turn_reads_a_cox_submission() {
+    fn user_turn_reads_a_agent_submission() {
         let sub: Submission = serde_json::from_value(serde_json::json!({
             "type": "user_turn", "text": "hi", "attachments": [], "confirm_think": false
         }))

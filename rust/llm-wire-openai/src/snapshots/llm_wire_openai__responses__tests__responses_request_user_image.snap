@@ -28,7 +28,7 @@ expression: body
   "reasoning": {
     "effort": "high"
   },
-  "instructions": "<tool specs>\n\nYou are cox.",
+  "instructions": "<tool specs>\n\nYou are the coding agent.",
   "tools": [
     {
       "type": "function",

@@ -5,7 +5,7 @@ expression: "run_fixture(\"text_only\")"
 [
   {
     "type": "text_delta",
-    "text": "cox-provider owns "
+    "text": "agent-provider owns "
   },
   {
     "type": "text_delta",

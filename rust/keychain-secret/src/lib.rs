@@ -3,8 +3,8 @@
 //! accident; [`reject_inline_secrets`] refuses a TOML config that holds one;
 //! [`MemoryStore`] and [`guard`] keep tests away from the real keychain.
 //!
-//! Extracted from runa's `runa-cloud` (`secrets.rs`), cox's
-//! `cox-provider-http` key lookup and its `no_real_keychain_in_tests` guard,
+//! Extracted from runa's `runa-cloud` (`secrets.rs`), the coding agent's
+//! `agent-provider-http` key lookup and its `no_real_keychain_in_tests` guard,
 //! and aulo's `aulo-server` token store.
 //!
 //! ```

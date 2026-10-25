@@ -1,3 +1,3 @@
-- T2. Adopt text-sanitize in cox
-- T3. Adopt text-sanitize in rtok
-- T4. Adopt text-sanitize in ketch
+- T2. Adopt text-sanitize in the coding agent
+- T3. Adopt text-sanitize in the token CLI
+- T4. Adopt text-sanitize in the package manager

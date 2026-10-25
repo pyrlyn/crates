@@ -25,7 +25,7 @@ use reqwest::header::{HeaderMap, HeaderValue};
 use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 // Imported at the crate root so the `crate::http`/`crate::retry`/`crate::sse`
-// paths this wire used inside cox resolve unchanged.
+// paths this wire used inside the coding agent resolve unchanged.
 use llm_http::{Transport, http, retry, sse};
 
 /// The API version this wire pins; Anthropic requires it on every request.
@@ -252,7 +252,7 @@ impl Provider for AnthropicProvider {
 
     async fn count_tokens(&self, _req: &Request) -> Result<u32, ProviderError> {
         // `POST {base_url}/v1/messages/count_tokens` with the same body;
-        // out of scope for the streaming wire; cox lands it in its T1.8.
+        // out of scope for the streaming wire; the coding agent lands it in its T1.8.
         Err(ProviderError::Unsupported {
             feature: "count_tokens lands in T1.8".into(),
         })

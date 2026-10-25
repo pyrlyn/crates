@@ -5,8 +5,8 @@
 # multiplier — see usage.rs PriceTable::cost.
 # Verified on 2026-09-02 from https://platform.claude.com/docs/pricing
 # Type-2 provider rows regenerated on 2026-09-25 from https://models.dev/api.json by
-# `uv run --project scripts/vendor cox-vendor models` (scripts/vendor/src/
-# cox_vendor/models.py) — re-run that command to refresh instead of
+# `uv run --project scripts/vendor agent-vendor models` (scripts/vendor/src/
+# agent_vendor/models.py) — re-run that command to refresh instead of
 # hand-editing. ids match default.toml [providers.*].models exactly so
 # every catalogued model prices its ledger row. OpenAI-compatible vendors
 # bill no cache-write surcharge unless models.dev's `cost.cache_write` says

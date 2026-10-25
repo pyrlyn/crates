@@ -19,7 +19,7 @@ use crate::ids::{ArchiveId, CallId};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Risk {
-    /// Cannot change anything cox does not already show the model.
+    /// Cannot change anything the coding agent does not already show the model.
     ReadOnly,
     /// Writes inside the workspace.
     Write,
@@ -64,8 +64,8 @@ pub enum Tier {
 /// breaks that shape — it carries the calling plugin's id — so `Job` gets
 /// hand-written `Serialize`/`Deserialize`/`JsonSchema` instead of deriving
 /// them: the wire and ledger form is still a single string, `"plugin:<id>"`
-/// (PL§7d, T33.15), which `to_tag`/`from_tag` (`cox-store`) and `tag`
-/// (`cox`'s `stats.rs`) already assume for every `Job` value. Losing `Copy`
+/// (PL§7d, T33.15), which `to_tag`/`from_tag` (`agent-store`) and `tag`
+/// (the coding agent's `stats.rs`) already assume for every `Job` value. Losing `Copy`
 /// (a `String` payload cannot be `Copy`) is why call sites that used to
 /// read `self.job`/`row.job` as a value now clone it.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -88,12 +88,12 @@ pub enum Job {
     Explore,
     /// A background shell/HTTP subagent.
     Shell,
-    /// A custom subagent definition (`.cox/agents`/`.claude/agents`,
+    /// A custom subagent definition (`.agent/agents`/`.claude/agents`,
     /// T34.1): its own `tier`/`model` decides the tier, not this job.
     Agent,
     /// A hook-driven LLM call.
     Hook,
-    /// A plugin's own `cox_model_call` (PL§7d, T33.15): the router runs it
+    /// A plugin's own `agent_model_call` (PL§7d, T33.15): the router runs it
     /// at or below the plugin's granted tier, never `think`, and the
     /// ledger row's job tag is `plugin:<id>`. No `[jobs]` entry names it —
     /// its tier comes from the call itself, already grant-clamped.
@@ -193,13 +193,13 @@ impl JsonSchema for Job {
                 { "description": "An `explore` subagent.", "type": "string", "const": "explore" },
                 { "description": "A background shell/HTTP subagent.", "type": "string", "const": "shell" },
                 {
-                    "description": "A custom subagent definition (`.cox/agents`/`.claude/agents`,\nT34.1): its own `tier`/`model` decides the tier, not this job.",
+                    "description": "A custom subagent definition (`.agent/agents`/`.claude/agents`,\nT34.1): its own `tier`/`model` decides the tier, not this job.",
                     "type": "string",
                     "const": "agent"
                 },
                 { "description": "A hook-driven LLM call.", "type": "string", "const": "hook" },
                 {
-                    "description": "A plugin's own `cox_model_call` (PL§7d, T33.15): the router runs it\nat or below the plugin's granted tier, never `think`, and the\nledger row's job tag is `plugin:<id>`. No `[jobs]` entry names it —\nits tier comes from the call itself, already grant-clamped.",
+                    "description": "A plugin's own `agent_model_call` (PL§7d, T33.15): the router runs it\nat or below the plugin's granted tier, never `think`, and the\nledger row's job tag is `plugin:<id>`. No `[jobs]` entry names it —\nits tier comes from the call itself, already grant-clamped.",
                     "type": "string",
                     "pattern": "^plugin:.+$"
                 }
@@ -266,7 +266,7 @@ pub enum Thinking {
 ///
 /// Reused for both `ProviderEvent::Stop` (one provider call) and
 /// `Event::TurnDone` (the whole turn); a provider only ever emits
-/// `EndTurn`/`Refusal`/`Error`, the others are added by `cox-core` once it
+/// `EndTurn`/`Refusal`/`Error`, the others are added by `agent-core` once it
 /// has aggregated multiple calls in a turn.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(tag = "type", rename_all = "snake_case")]
@@ -291,7 +291,7 @@ pub enum StopReason {
 /// A pointer to a full tool output stored in the archive (plan.md §1.7/D6a).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct ArchiveRef {
-    /// The archive row's id (`cox expand <id>`).
+    /// The archive row's id (`expand <id>`).
     pub id: ArchiveId,
     /// Size of the archived payload, in bytes.
     pub bytes: u64,
@@ -308,7 +308,7 @@ pub struct Usage {
     pub cache_read_tokens: u32,
     /// Input tokens written to cache (billed at the cache-write rate).
     pub cache_write_tokens: u32,
-    /// True when the provider reported no usage and cox estimated it.
+    /// True when the provider reported no usage and the coding agent estimated it.
     pub estimated: bool,
     /// Computed cost of this call, in USD.
     pub cost_usd: f64,
@@ -436,7 +436,7 @@ pub struct Message {
 }
 
 /// A provider-neutral request; providers translate this to their own wire
-/// format, and nothing above `cox-provider` knows what that format is
+/// format, and nothing above `agent-provider` knows what that format is
 /// (plan.md §1.2).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct Request {
@@ -491,7 +491,7 @@ pub enum ProviderEvent {
         name: String,
     },
     /// The current tool-use block's thought signature (Gemini over the Chat
-    /// wire). Opaque: cox never reads it, and it is replayed only to the wire
+    /// wire). Opaque: the coding agent never reads it, and it is replayed only to the wire
     /// that produced it. Follows its call's `ToolUseStart`, before `ToolUseEnd`.
     ToolUseSignature {
         /// The signature, byte-for-byte as received.
@@ -518,7 +518,7 @@ pub enum ProviderEvent {
     Retrying {
         /// Which retry attempt this is (1-based).
         attempt: u32,
-        /// How long cox waited before this attempt.
+        /// How long the coding agent waited before this attempt.
         after_ms: u64,
     },
     /// The call failed.
@@ -598,7 +598,7 @@ mod tests {
 
     /// Every fieldless `Job` still serializes as its bare tag (unchanged by
     /// the hand-written impl), and `Plugin` serializes/round-trips as
-    /// `plugin:<id>`: the literal ledger tag cox's store and stats rely on.
+    /// `plugin:<id>`: the literal ledger tag the coding agent's store and stats rely on.
     #[test]
     fn job_tags_are_plain_strings_and_plugin_round_trips_by_id() {
         assert_eq!(serde_json::to_value(Job::Main).unwrap(), "main");

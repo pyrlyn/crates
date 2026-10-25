@@ -8,6 +8,6 @@ test: && swarfr
 # and that's where cargo puts target/.
 swarfr:
     #!/usr/bin/env sh
-    command -v swarfr >/dev/null || { echo "swarfr not found; install it with: ketch install swarfr"; exit 0; }
+    command -v swarfr >/dev/null || { echo "swarfr not found; install it with: cargo install --git https://github.com/pyrlyn/swarfr"; exit 0; }
     [ -d ../target ] || exit 0
     swarfr run ../target || test $? -eq 2

@@ -9,14 +9,14 @@ The OpenAI Chat Completions and Responses wires: for each, a pure request
 translator, a pure SSE to `ProviderEvent` state machine and a thin client that
 implements `llm_wire::Provider` over `llm-http`. They also serve every
 OpenAI-compatible endpoint (Ollama, LM Studio, vLLM, OpenRouter, DeepSeek,
-Gemini's compatibility endpoint, xAI, runa). Extracted from cox's
-`cox-provider-openai` so cox and aulo share one copy.
+Gemini's compatibility endpoint, xAI, runa). Extracted from the coding agent's
+`agent-provider-openai` so the coding agent and aulo share one copy.
 
 ## Rules
 
-- **Behaviour-neutral with cox.** Request bodies, event mapping, error mapping
-  and retry behaviour match cox's; the insta snapshots pin the bodies and
-  events byte for byte. Change one only together with cox, never alone.
+- **Behaviour-neutral with the coding agent.** Request bodies, event mapping, error mapping
+  and retry behaviour match the coding agent's; the insta snapshots pin the bodies and
+  events byte for byte. Change one only together with the coding agent, never alone.
 - **Provider output is untrusted input.** A malformed, truncated or unknown
   frame is a `ProviderError::Parse` or ignored, never a panic; tool calls
   are emitted whole and only once they have a name; keys travel only in a

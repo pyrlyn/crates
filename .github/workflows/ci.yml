@@ -37,7 +37,7 @@ jobs:
           bad=0
           for sha in $(git rev-list --no-merges --reverse "$base..HEAD"); do
             subject=$(git log -1 --format=%s "$sha")
-            # Same passthrough as ketch: git writes reverts in its own format,
+            # Same passthrough as the package manager: git writes reverts in its own format,
             # not as conventional commits.
             case "$subject" in
               "Revert "*) continue ;;
@@ -53,7 +53,7 @@ jobs:
   # pyrlyn/ci ci-rust.yml: fmt once, then clippy, check and tests per target: Linux x86_64 +
   # aarch64, macOS aarch64, Windows x86_64. The shared matrix at this pin still builds macOS
   # x86_64, so the targets are listed here: Intel macOS is not supported.
-  # file-backup is std-only and shared by ketch and rtok on all three platforms. The toolchain
+  # file-backup is std-only and shared by the package manager and the token CLI on all three platforms. The toolchain
   # comes from mise.toml (with rust-src), pinned exactly (every job fails on another rustc).
   rust:
     if: github.event_name != 'pull_request' || !github.event.pull_request.draft
