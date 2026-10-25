@@ -32,7 +32,7 @@ bench = ["dep:serde_json"]
 # NEON (aarch64) and runtime-detected AVX2 + FMA (x86_64) dot products; off keeps the
 # scalar kernels and leaves `unsafe` in src/sqlite.rs only.
 simd = []
-# Runs `insert_batch` on the rayon thread pool.
+# Runs `insert_batch` and `compact` on the rayon thread pool.
 parallel = ["dep:rayon"]
 
 [dependencies]

@@ -28,16 +28,18 @@ no global lock), and 1024-node BLOB pages in one SQLite table.
 | `bundled` | on | compiles SQLite in (`libsqlite3-sys/bundled`); turn off to link the system SQLite or SQLCipher |
 | `bench` | off | builds the `vecbench` binary (dataset generator and benchmark driver) |
 | `simd` | off | NEON (aarch64) and runtime-detected AVX2 + FMA (x86_64) dot products; scalar fallback |
-| `parallel` | off | `insert_batch` inserts on the rayon thread pool |
+| `parallel` | off | `insert_batch` and `compact` insert on the rayon thread pool |
 
 `insert_batch(&ids, &flat_vectors)` inserts many vectors and saves them in one
 transaction. `search_filtered(&q, k, |id| allowed.contains(&id))` searches
 with a predicate or allow-list applied inside the graph walk.
+`delete(&ids)` tombstones vectors (hidden from search at once, persisted by
+`save`); `compact()` rebuilds the graph without them.
 
 Performance features, how to turn each on or off, and why some candidates
 were skipped: [docs/features.md](docs/features.md).
 
-The index lives in its own tables (`vdb_meta`, `vdb_page`); deleting the file
+The index lives in its own tables (`vdb_meta`, `vdb_page`, `vdb_tomb`); deleting the file
 removes it. The qdrant-edge comparison is a separate, unpublished crate in
 `bench-qdrant/` (see [docs/benchmark.md](docs/benchmark.md)).
 
@@ -65,7 +67,9 @@ Benchmarks are manual and never run in CI.
 
 ## Limitations
 
-- No delete or update: an id inserted twice is two nodes. Rebuild to drop data.
+- No in-place update: an id inserted twice is two nodes; update is `delete`
+  then `insert`. `delete` scans all nodes, and tombstones cost memory and
+  recall until `compact` (a full rebuild).
 - Cosine similarity only; vectors are normalized on insert and query.
 - `m`, `ef_construction` and quantization are fixed when the file is created;
   reopening keeps the stored values (`ef_search` can change at any time).

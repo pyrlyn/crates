@@ -38,9 +38,9 @@ use distance::{dot, dot_i8};
 
 use std::cell::RefCell;
 use std::cmp::Ordering;
-use std::collections::{BTreeSet, BinaryHeap};
+use std::collections::{BTreeSet, BinaryHeap, HashSet};
 use std::sync::OnceLock;
-use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering as AO};
+use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering as AO};
 
 use parking_lot::{Mutex, RwLock};
 
@@ -128,6 +128,8 @@ struct Node {
     id: u64,
     vec: Vector,
     links: Box<[RwLock<Vec<u32>>]>,
+    /// Tombstone: still walked through, never returned; dropped by `compact`.
+    deleted: AtomicBool,
 }
 
 const PAGE: usize = 1024;
@@ -169,6 +171,13 @@ impl Arena {
     }
     fn len(&self) -> usize {
         self.len.load(AO::Acquire)
+    }
+    /// Every node in index order; needs ownership, so no push can be in flight.
+    fn into_nodes(self) -> impl Iterator<Item = Node> {
+        self.buckets
+            .into_iter()
+            .filter_map(OnceLock::into_inner)
+            .flat_map(|b| b.into_vec().into_iter().filter_map(OnceLock::into_inner))
     }
 }
 
@@ -265,6 +274,12 @@ pub struct VecDb {
     /// (entry node, its level); `u64::MAX` when empty.
     entry: RwLock<u64>,
     dirty: Mutex<BTreeSet<u32>>,
+    /// Nodes tombstoned in memory since the last save.
+    new_tombs: Mutex<Vec<u32>>,
+    /// Tombstoned nodes still in the arena.
+    deleted: AtomicUsize,
+    /// Set by `compact`: the next save replaces every page and tombstone row.
+    rewrite: AtomicBool,
     rng: AtomicU64,
     db: Mutex<sqlite::Db>,
 }
@@ -275,6 +290,7 @@ impl std::fmt::Debug for VecDb {
             .field("dim", &self.dim)
             .field("params", &self.params)
             .field("len", &self.len())
+            .field("tombstones", &self.tombstones())
             .finish_non_exhaustive()
     }
 }
@@ -295,7 +311,8 @@ impl VecDb {
             "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; PRAGMA mmap_size=17179869184;
              PRAGMA page_size=16384;
              CREATE TABLE IF NOT EXISTS vdb_meta (k INTEGER PRIMARY KEY, v INTEGER NOT NULL);
-             CREATE TABLE IF NOT EXISTS vdb_page (no INTEGER PRIMARY KEY, data BLOB NOT NULL);",
+             CREATE TABLE IF NOT EXISTS vdb_page (no INTEGER PRIMARY KEY, data BLOB NOT NULL);
+             CREATE TABLE IF NOT EXISTS vdb_tomb (node INTEGER PRIMARY KEY);",
         )?;
         let mut me = Self {
             dim,
@@ -305,6 +322,9 @@ impl VecDb {
             arena: Arena::new(),
             entry: RwLock::new(u64::MAX),
             dirty: Mutex::new(BTreeSet::new()),
+            new_tombs: Mutex::new(Vec::new()),
+            deleted: AtomicUsize::new(0),
+            rewrite: AtomicBool::new(false),
             rng: AtomicU64::new(0x9E37_79B9_7F4A_7C15),
             db: Mutex::new(db),
         };
@@ -312,9 +332,13 @@ impl VecDb {
         Ok(me)
     }
 
-    /// Number of stored vectors.
+    /// Number of stored vectors, tombstoned ones included until [`compact`](Self::compact).
     pub fn len(&self) -> usize {
         self.arena.len()
+    }
+    /// Number of tombstoned vectors (deleted, not yet compacted away).
+    pub fn tombstones(&self) -> usize {
+        self.deleted.load(AO::Relaxed)
     }
     /// `true` when no vector is stored.
     pub fn is_empty(&self) -> bool {
@@ -353,12 +377,23 @@ impl VecDb {
         self.params.ef_construction = meta[2] as usize;
         self.params.quant = Quant::from_code(meta[3])?;
         *self.entry.get_mut() = meta[4] as u64;
-        let mut st = db.prepare("SELECT data FROM vdb_page ORDER BY no")?;
+        {
+            let mut st = db.prepare("SELECT data FROM vdb_page ORDER BY no")?;
+            while st.step()? {
+                let mut b = st.col_blob(0);
+                while !b.is_empty() {
+                    let n = self.read_node(&mut b)?;
+                    self.arena.push(n);
+                }
+            }
+        }
+        let mut st = db.prepare("SELECT node FROM vdb_tomb")?;
         while st.step()? {
-            let mut b = st.col_blob(0);
-            while !b.is_empty() {
-                let n = self.read_node(&mut b)?;
-                self.arena.push(n);
+            let i = u32::try_from(st.col_i64(0)).ok();
+            if let Some(n) = i.and_then(|i| self.arena.get(i))
+                && !n.deleted.swap(true, AO::Relaxed)
+            {
+                *self.deleted.get_mut() += 1;
             }
         }
         Ok(())
@@ -414,6 +449,7 @@ impl VecDb {
             id,
             vec,
             links: links.into(),
+            deleted: AtomicBool::new(false),
         })
     }
 
@@ -444,18 +480,42 @@ impl VecDb {
         }
     }
 
-    /// Writes every page touched since the last save in one transaction.
-    /// Returns the number of pages written.
+    /// Writes every page touched and every tombstone set since the last save in one
+    /// transaction. Returns the number of pages written. On failure the transaction is
+    /// rolled back and the pending pages stay pending for the next save.
     pub fn save(&self) -> Result<usize> {
         let pages: Vec<u32> = std::mem::take(&mut *self.dirty.lock())
             .into_iter()
             .collect();
+        let tombs = std::mem::take(&mut *self.new_tombs.lock());
+        let rewrite = self.rewrite.load(AO::Acquire);
         let db = self.db.lock();
+        if let Err(e) = self.write(&db, &pages, &tombs, rewrite) {
+            let _ = db.exec("ROLLBACK");
+            self.dirty.lock().extend(pages);
+            self.new_tombs.lock().extend(tombs);
+            return Err(e);
+        }
+        self.rewrite.store(false, AO::Release);
+        db.exec("PRAGMA wal_checkpoint(TRUNCATE);")?;
+        Ok(pages.len())
+    }
+
+    fn write(&self, db: &sqlite::Db, pages: &[u32], tombs: &[u32], rewrite: bool) -> Result<()> {
         db.exec("BEGIN IMMEDIATE")?;
+        if rewrite {
+            db.exec("DELETE FROM vdb_page; DELETE FROM vdb_tomb;")?;
+        }
         {
+            let mut st = db.prepare("INSERT OR IGNORE INTO vdb_tomb (node) VALUES (?)")?;
+            for &t in tombs {
+                st.bind_i64(1, i64::from(t))?;
+                st.step()?;
+                st.reset();
+            }
             let mut st = db.prepare("INSERT OR REPLACE INTO vdb_page (no, data) VALUES (?, ?)")?;
             let mut buf = Vec::new();
-            for &p in &pages {
+            for &p in pages {
                 buf.clear();
                 let start = p as usize * PAGE;
                 for i in start..(start + PAGE).min(self.len()) {
@@ -484,8 +544,7 @@ impl VecDb {
                 st.reset();
             }
         }
-        db.exec("COMMIT; PRAGMA wal_checkpoint(TRUNCATE);")?;
-        Ok(pages.len())
+        db.exec("COMMIT")
     }
 
     fn node(&self, i: u32) -> &Node {
@@ -636,6 +695,54 @@ impl VecDb {
         self.save()
     }
 
+    /// Tombstones every stored vector whose id is in `ids` and returns how many were
+    /// newly tombstoned. Searches skip them at once; [`save`](Self::save) persists the
+    /// tombstones, and [`compact`](Self::compact) removes the vectors. Scans every node.
+    pub fn delete(&self, ids: &[u64]) -> usize {
+        let ids: HashSet<u64> = ids.iter().copied().collect();
+        let mut hit = Vec::new();
+        for i in 0..self.len() as u32 {
+            if let Some(n) = self.arena.get(i)
+                && ids.contains(&n.id)
+                && !n.deleted.swap(true, AO::AcqRel)
+            {
+                hit.push(i);
+            }
+        }
+        self.deleted.fetch_add(hit.len(), AO::Relaxed);
+        let count = hit.len();
+        self.new_tombs.lock().extend(hit);
+        count
+    }
+
+    /// Rebuilds the graph from the live vectors only, dropping tombstoned ones, and saves
+    /// the result in one transaction that replaces every page. Returns the number of
+    /// vectors removed (`0`: nothing to do, nothing written). Vectors keep their stored
+    /// encoding; with the `parallel` feature they are re-inserted on rayon. Node order
+    /// changes, so cost is that of a full build.
+    pub fn compact(&mut self) -> Result<usize> {
+        let removed = *self.deleted.get_mut();
+        if removed == 0 {
+            return Ok(0);
+        }
+        let old = std::mem::replace(&mut self.arena, Arena::new());
+        *self.entry.get_mut() = u64::MAX;
+        *self.deleted.get_mut() = 0;
+        self.new_tombs.get_mut().clear();
+        self.dirty.get_mut().clear();
+        let live: Vec<Node> = old
+            .into_nodes()
+            .filter(|n| !n.deleted.load(AO::Relaxed))
+            .collect();
+        self.add_many(live, |n| {
+            let q = n.vec.decode();
+            self.add(n.id, &q, n.vec);
+        });
+        *self.rewrite.get_mut() = true;
+        self.save()?;
+        Ok(removed)
+    }
+
     fn add_raw(&self, id: u64, v: &[f32]) {
         let mut q = v.to_vec();
         normalize(&mut q);
@@ -650,7 +757,12 @@ impl VecDb {
         let links = (0..=level)
             .map(|l| RwLock::new(Vec::with_capacity(if l == 0 { m0 } else { self.params.m })))
             .collect();
-        let me = self.arena.push(Node { id, vec, links });
+        let me = self.arena.push(Node {
+            id,
+            vec,
+            links,
+            deleted: AtomicBool::new(false),
+        });
         self.mark(me);
         let entry = {
             let e = *self.entry.read();
@@ -756,8 +868,12 @@ impl VecDb {
             k
         };
         let ef = self.ef_search.load(AO::Relaxed).max(want);
-        let accept = |i: u32| filter.is_none_or(|f| f(self.node(i).id));
-        let accept: Option<&dyn Fn(u32) -> bool> = filter.is_some().then_some(&accept);
+        let tombs = self.deleted.load(AO::Relaxed) > 0;
+        let accept = |i: u32| {
+            let n = self.node(i);
+            !(tombs && n.deleted.load(AO::Relaxed)) && filter.is_none_or(|f| f(n.id))
+        };
+        let accept: Option<&dyn Fn(u32) -> bool> = (tombs || filter.is_some()).then_some(&accept);
         let mut r = self.search_layer_if(&q, &[best], ef, 0, accept);
         r.truncate(want);
         if rerank {

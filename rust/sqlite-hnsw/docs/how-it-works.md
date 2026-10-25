@@ -30,6 +30,8 @@ node is higher. `insert` and `search` can run from any number of threads.
 One SQLite file in WAL mode with two tables: `vdb_meta` (dimension, `m`,
 `ef_construction`, quantization, entry point) and `vdb_page` (1024 nodes per
 BLOB). Inserts mark pages dirty; `save` rewrites only dirty pages in one
-transaction. `open` reads the pages through SQLite's mmap I/O and parses them
+transaction. Deleted nodes are tombstones: a flag per node, rows in
+`vdb_tomb`, skipped by search, removed by `compact` (a rebuild from the live
+vectors). `open` reads the pages through SQLite's mmap I/O and parses them
 straight into the arena. The SQLite binding is a small FFI layer over
 `libsqlite3-sys` (`src/sqlite.rs`, the only module with `unsafe`).

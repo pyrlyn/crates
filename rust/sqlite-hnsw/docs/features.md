@@ -13,6 +13,7 @@ parameter that changes nothing unless set.
 | i8 search with f32 rerank | **chosen**, `Quant::I8Rerank` + `Params::rerank` | The benchmark shows i8 walks faster than f32 (p50 10 vs 15 ms at ef 1024) but loses recall (0.951 vs 0.963). Rescoring a few candidates with exact `f32` fixes the order where quantization swapped neighbours. A new mode, so `F32` and `I8` files and behaviour stay unchanged. |
 | parallel build + batch insert | **chosen**, `insert_batch` + feature `parallel` (off by default) | `insert` is already thread-safe, so the rayon version is a small loop, and a bulk load no longer needs a hand-written thread pool (as `vecbench` has). The batch saves once, in one transaction. rayon is already in the workspace lock; the feature keeps it out of default builds. |
 | filtered search | **chosen**, `search_filtered(q, k, predicate)` | Post-filtering the top `k` returns too few hits. Filtering inside the beam (the hnswlib approach) is a few lines in `search_layer` and costs nothing when unused. An allow-list is the predicate `|id| set.contains(&id)`, so one API covers both. The same hook later serves tombstones. |
+| delete via tombstones + compaction | **chosen**, `delete(&ids)`, `compact()` | The crate had no delete at all. A tombstone is one flag per node checked in the same accept hook as the filter, plus a new `vdb_tomb` table, so pages and old files stay as they are. Compaction rebuilds from the live vectors: simpler and safer than repairing links in place, at the cost of a full build. |
 
 Skipped:
 
@@ -175,3 +176,55 @@ nothing; an accept-all filter returns exactly what `search` returns.
   vectors directly.
 - No payload index: the predicate sees only the id. Map ids to attributes
   yourself.
+
+## Delete: tombstones and compaction (`delete`, `compact`)
+
+**How it works.** `delete(&ids)` scans the arena once and sets a tombstone
+flag on every node whose id is in `ids` (all copies of a duplicate id). It
+returns how many nodes were newly tombstoned. Searches check the flag in the
+same accept hook as `search_filtered`: a tombstoned node is still walked
+through, so the graph stays connected, but it is never returned. When there
+are no tombstones the check is skipped. `save` writes the new tombstones as
+rows of a new table `vdb_tomb (node INTEGER PRIMARY KEY)` in the same
+transaction as the pages. Pages are not rewritten for a delete. `open` reads
+the table back.
+
+`compact(&mut self)` takes the arena, keeps the live nodes, and re-inserts them
+into a fresh graph. Each vector keeps its stored encoding (`f32`, `i8`, or
+`i8` + `f32`), so there is no requantization. With `parallel` this uses the
+same warm-up-then-rayon path as `insert_batch`. Then one transaction runs
+`DELETE FROM vdb_page; DELETE FROM vdb_tomb;`, writes every page and the meta
+row, and commits. It returns the number of vectors removed. With no
+tombstones it does nothing and returns `0`.
+
+`save` now rolls back on any error and keeps the pending pages, tombstones
+and (after `compact`) the full rewrite pending, so a later `save` can retry.
+Before, a failed save lost the dirty-page list and left the transaction open.
+
+**Enable.** Call `db.delete(&[id, ...])`, then `db.save()` to persist, and
+`db.compact()` when `db.tombstones()` gets large, for example above 10-20% of
+`db.len()`. An update is `delete` followed by `insert`.
+
+**Disable.** Do not call them. Files without deletes get only an empty
+`vdb_tomb` table, created on `open`.
+
+**Test.** `cargo test -p sqlite-hnsw --test delete`: deleted ids vanish from
+search at once, and repeated or unknown ids count 0; every copy of a
+duplicate id is deleted; tombstones persist only after `save` and need no
+page rewrite; `compact` drops 2000 of 2500 vectors, leaves nothing dirty,
+keeps self-recall >= 95% and survives a reopen; compacting everything leaves
+a usable empty index; `compact` keeps `I8Rerank` vectors exact; a filter and
+tombstones combine.
+
+**Limitations.**
+
+- `delete` scans every node (no id index): O(n) per call, so batch the ids.
+- Tombstoned nodes still take memory, disk, and slots in neighbour lists
+  until `compact`. Many tombstones lower recall at a given `ef` and make
+  searches walk more nodes.
+- `compact` costs a full rebuild, needs `&mut self` (no concurrent searches
+  meanwhile), changes the internal node order, and saves.
+- An unsaved `delete` is lost on crash. An insert running at the same time as
+  a `delete` of the same id may survive it.
+- Older builds ignore `vdb_tomb`: they show deleted vectors again (until
+  `compact`, which removes them from the pages for good).
