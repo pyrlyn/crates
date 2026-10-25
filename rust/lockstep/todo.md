@@ -1,4 +1,3 @@
-- T1. Research and choose the approach
 - T2. Lock levels and an acquisition API with a global order
 - T3. Mutex and RwLock wrappers with order checking
 - T4. Lock-free queue and stack

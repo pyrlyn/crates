@@ -1,6 +1,8 @@
 //! Ordered locks.
 //!
-//! Intended contents: lock levels (ranks) and the `OrderedMutex` and
-//! `OrderedRwLock` wrappers. Acquiring a lock requires proof that the thread
-//! holds only lower levels: a typestate token or const-generic level at
-//! compile time where possible, a runtime check in debug builds otherwise.
+//! Intended contents: lock levels and the `OrderedMutex` and `OrderedRwLock`
+//! wrappers over the `std::sync` locks. Levels are marker types whose order a
+//! macro generates from one list; acquiring a lock borrows a token for a lower
+//! level, so out-of-order locking is a `cargo check` error. Const generic
+//! levels were rejected because their check fails only at `cargo build` (see
+//! `docs/research.md`).

@@ -3,70 +3,50 @@
 GitHub: https://github.com/pyrlyn/crates/tree/main/rust/lockstep
 
 Locks that cannot deadlock: one global acquisition order, or lock-free structures. Research and
-the chosen approach: [docs/research.md](docs/research.md). Finished tasks: [done.md](done.md).
+the chosen approach (decisions 1–10): [docs/research.md](docs/research.md). Finished tasks:
+[done.md](done.md).
 
 | # | Status | Priority | Complexity | Readiness | Agent |
 | --- | --- | --- | --- | --- | --- |
-| T1 | in progress | P0 | 3 | 10% | Claude Code / claude-opus-5-5 |
 | T2 | todo | P1 | 4 | 0% | |
 | T3 | todo | P1 | 3 | 0% | |
-| T4 | todo | P2 | 4 | 0% | |
+| T4 | todo | P2 | 2 | 0% | |
 | T5 | todo | P2 | 2 | 0% | |
 | T6 | todo | P1 | 3 | 0% | |
 | T7 | todo | P2 | 3 | 0% | |
 | T8 | todo | P2 | 3 | 0% | |
 | T9 | todo | P3 | 2 | 0% | |
 
-### T1. Research and choose the approach
-
-Every later task depends on how the order is expressed and checked, so the choice comes first.
-Study the Rust options: `parking_lot`'s `deadlock_detection`, what the borrow checker can and
-cannot guarantee about locks, lock-ordering crates (`lock_ordering`, `happylock` and any
-others), lock-free libraries such as crossbeam, and loom for model testing. Study other
-languages: Go channels, Erlang actors and message passing, Haskell STM.
-
-Done: `docs/research.md` compares the options with primary sources (URL plus version or date
-checked) and records the decision: global lock order, lock-free, or both; how a level is
-expressed (typestate token, const generic, runtime rank); which existing crates lockstep wraps or
-reuses instead of reimplementing; how the crate's `unsafe_code = "forbid"` fits the lock-free
-part. Tasks T2–T9 are updated to match the decision.
-
-Execution plan:
-
-1. Read the docs and source of `parking_lot`, `happylock`, `lock_ordering` and similar crates
-   found on crates.io, crossbeam, loom; note version and maintenance state from the registry.
-2. Read the primary docs on Go channels, Erlang message passing and Haskell STM; note only what
-   transfers to a Rust library.
-3. Write `docs/research.md`: option table, reuse candidates, decision and its reasons.
-4. Adjust the T2–T9 cards and `toolchain.md` to the decision.
-5. Check: `cargo test -p lockstep`, `cargo clippy -p lockstep --all-targets -- -D warnings`,
-   `cargo fmt --all -- --check` still pass; every fact in `docs/research.md` has a source.
-
 ### T2. Lock levels and an acquisition API with a global order
 
-Every lock has a level; a thread may only take a lock above every level it holds. Checked at
-compile time (typestate or const generics) where the type system allows it, at run time in debug
-builds otherwise.
+Every lock has a level; a thread may only take a lock above the level it holds (research
+decisions 2 and 3).
 
-Done: a public level type and acquisition API in `src/ordered/`; taking a lower or equal level
-while holding a higher one is a compile error or a debug-build rejection; unit tests for both.
+Done: in `src/ordered/`, a `macro_rules!` macro that turns one ordered list of marker types into
+levels and the "after" relation for every pair; a `Token<L>` whose root comes from a thread-local
+check (one live root per thread, `None` otherwise) and is not `Send`; an acquisition API that
+takes `&mut Token<A>` and returns the next token only when the lock's level is after `A`.
+Out-of-order locking is a `cargo check` error, proved by compile-fail tests (trybuild or doctests
+marked `compile_fail`); a second root token on the same thread is refused at run time.
 
 ### T3. Mutex and RwLock wrappers with order checking
 
-`OrderedMutex`, `OrderedRwLock` and their guards on top of the T2 API.
+`OrderedMutex` and `OrderedRwLock` over `std::sync::Mutex` and `RwLock` (decision 5), with their
+guards, on the T2 API; plus a collection that takes several locks of one level at once in address
+order (decision 4).
 
-Done: the wrappers lock, unlock and release their level on guard drop; read and write guards of
-`OrderedRwLock` follow the same order; tests cover nested acquisition, out-of-order rejection and
-guard drop order.
+Done: the wrappers lock and unlock and give the token back when the guard drops; read and write
+guards of `OrderedRwLock` follow the same order; poisoning behaves as in `std`; the collection
+locks every member or none and never twice. Tests cover nested acquisition, guard drop order and
+the collection.
 
 ### T4. Lock-free queue and stack
 
-Where no lock is needed, a lock-free queue or stack removes the problem. The crate forbids
-`unsafe`, so the structures most likely wrap a maintained crate chosen in T1 instead of being
-written here.
+Where no lock is needed, a lock-free queue or stack removes the problem. They wrap `scc::Queue`
+and `scc::Stack` (decision 8), so `unsafe_code = "forbid"` stays.
 
 Done: queue and stack types in `src/lockfree/` with tests under concurrent producers and
-consumers; the reused crate is listed in `toolchain.md` and `rust.md`.
+consumers; `scc` is listed in `toolchain.md` and `rust.md`.
 
 ### T5. Detect locks taken outside the crate
 
@@ -78,30 +58,32 @@ example proves clippy reports such a lock.
 
 ### T6. Runtime order-violation detector
 
-Fires when acquisition order is violated at run time. On by default in debug builds, behind a
-feature flag in release; configurable to panic or to log.
+For locks whose rank is known only at run time, such as one lock per record ordered by id
+(decision 7). Fires when a thread takes a rank not above every rank it holds. On by default in
+debug builds, behind a feature flag in release; configurable to panic or to log.
 
-Done: the detector in `src/detect.rs` with the feature flag and the panic/log switch; tests for
-both modes and for the release default.
+Done: the detector in `src/detect.rs` with a thread-local stack of held ranks, the feature flag
+and the panic/log switch; tests for both modes and for the release default.
 
 ### T7. Model and stress tests
 
-Prove the order holds under every interleaving loom explores and under load.
+Prove the order holds under every interleaving loom explores and under load (decision 9).
 
-Done: loom model tests for the ordered locks behind a `loom` cfg, a stress test with many
-threads, both run in CI.
+Done: loom model tests for the ordered locks and the root-token check behind a `loom` cfg, a
+stress test with many threads, both run in CI.
 
 ### T8. Deadlock scenario tests
 
 Classic cases that deadlock without lockstep: AB/BA with two mutexes, dining philosophers, a
 lock cycle across three threads, RwLock upgrade.
 
-Done: each scenario runs with `std` or `parking_lot` under a timeout and is shown to hang, then
-the same scenario with lockstep is shown impossible (a compile-fail test or a runtime
-rejection).
+Done: each scenario runs with `std` locks under a timeout and is shown to hang, then the same
+scenario with lockstep is shown impossible: a compile-fail test for the ordered levels, the
+same-level collection for the philosophers, a runtime rejection for run-time ranks.
 
 ### T9. Documentation with examples
 
 Done: crate docs and the README describe enabling, disabling, testing and the limits, with
-runnable examples for the ordered locks, the lock-free types and the detector; "Skeleton only"
-is gone from the README and `lib.rs`.
+runnable examples for the ordered locks, the collection, the lock-free types and the detector,
+and credit `lock_tree`, `lock_ordering` and happylock for the ideas taken from them; "Skeleton
+only" is gone from the README and `lib.rs`.
