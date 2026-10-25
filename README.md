@@ -39,7 +39,7 @@ Small, focused Rust crates shared by the creator's projects (`ketch`, `rtok`, `s
 | [`scoped-check`](rust/scoped-check) | Run only the check commands a change touches (binary) |
 | [`telemetry-setup`](rust/telemetry-setup) | `tracing` setup: rotating JSON log, stderr log, optional OTLP traces, secrets masked before they leave the process |
 | [`sqlite-change-feed`](rust/sqlite-change-feed) | Change feed for a SQLite database shared between processes: `PRAGMA data_version` through Diesel |
-| [`sqlitex-graph`](rust/sqlitex-graph) | Code-symbol store in SQLite with a native reference/call graph in CSR segments: lock-free readers, delta writes with background merge, `graph_impact`/`graph_callers`/`graph_callees` table-valued functions, also as a loadable extension |
+| [`sqlitex-graph`](rust/sqlx/sqlitex-graph) | Code-symbol store in SQLite with a native reference/call graph in CSR segments: lock-free readers, delta writes with background merge, `graph_impact`/`graph_callers`/`graph_callees` table-valued functions, also as a loadable extension |
 | [`wasm-plugin-host`](rust/wasm-plugin-host) | Run WebAssembly plugins with extism: a worker thread per plugin, memory cap, per-call deadlines, control lane before events |
 | [`workspace-graph`](rust/workspace-graph) | Load a workspace's direct dependency graph and assert rules over it in tests (not published) |
 | [`atomic-replace`](atomic-replace) | Replace a file atomically: sibling temp file, kept permissions and symlinks, optional fsync, rename |
