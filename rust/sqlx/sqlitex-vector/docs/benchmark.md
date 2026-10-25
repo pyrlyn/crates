@@ -135,8 +135,8 @@ Nothing here runs in CI or `cargo test`. Running the benchmark is manual.
 cargo build --release -p sqlitex-vector --features bench --bin vecbench
 B=target/release/vecbench W=/tmp/vecbench            # any scratch dir, needs ~2 GB
 $B gen $W/data 100000 384 1000 10000                  # dataset + exact ground truth
-python3 rust/sqlitex-vector/scripts/vector_bench.py $B $W vecdb-m16 vecdb-m32 vecdb-m32-i8
-python3 rust/sqlitex-vector/scripts/vector_bench_report.py $W/results.jsonl
+python3 rust/sqlx/sqlitex-vector/scripts/vector_bench.py $B $W vecdb-m16 vecdb-m32 vecdb-m32-i8
+python3 rust/sqlx/sqlitex-vector/scripts/vector_bench_report.py $W/results.jsonl
 ```
 
 With qdrant-edge: build the same driver from `bench-qdrant/`, an unpublished
@@ -144,9 +144,9 @@ crate outside the workspace (own `Cargo.lock`) that compiles
 `src/bin/vecbench.rs` with the `qdrant` engine on:
 
 ```sh
-cargo build --release --manifest-path rust/sqlitex-vector/bench-qdrant/Cargo.toml
-B=rust/sqlitex-vector/bench-qdrant/target/release/vecbench   # or $CARGO_TARGET_DIR/release/vecbench
-python3 rust/sqlitex-vector/scripts/vector_bench.py $B $W    # all configs, qdrant-* included
+cargo build --release --manifest-path rust/sqlx/sqlitex-vector/bench-qdrant/Cargo.toml
+B=rust/sqlx/sqlitex-vector/bench-qdrant/target/release/vecbench   # or $CARGO_TARGET_DIR/release/vecbench
+python3 rust/sqlx/sqlitex-vector/scripts/vector_bench.py $B $W    # all configs, qdrant-* included
 ```
 
 It uses `qdrant-edge = "=0.9.0"` from crates.io. To measure a fork instead,

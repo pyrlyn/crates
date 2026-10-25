@@ -246,7 +246,7 @@ fn open(engine: &str, db: &Path, dim: usize, m: usize, efc: usize, quant: &str) 
         #[cfg(feature = "qdrant")]
         "qdrant" => Box::new(qd::open(db, dim, m, efc)),
         #[cfg(not(feature = "qdrant"))]
-        "qdrant" => panic!("qdrant engine: build vecbench from rust/sqlitex-vector/bench-qdrant"),
+        "qdrant" => panic!("qdrant engine: build vecbench from rust/sqlx/sqlitex-vector/bench-qdrant"),
         e => panic!("unknown engine {e}"),
     }
 }
