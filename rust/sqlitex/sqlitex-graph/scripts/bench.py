@@ -14,8 +14,12 @@ def old_conn():
 def new_conn():
     c = sqlite3.connect("data/new.db", check_same_thread=False)
     c.enable_load_extension(True); c.load_extension(EXT, entrypoint="sqlite3_extension_init"); c.enable_load_extension(False)
-    for p in ("journal_mode=WAL", "synchronous=NORMAL", "cache_size=-65536", "mmap_size=268435456", "temp_store=MEMORY"):
-        c.execute("pragma " + p)
+    # PRAGMA values cannot be bound as parameters, so each statement is a fixed literal.
+    c.execute("PRAGMA journal_mode=WAL")
+    c.execute("PRAGMA synchronous=NORMAL")
+    c.execute("PRAGMA cache_size=-65536")
+    c.execute("PRAGMA mmap_size=268435456")
+    c.execute("PRAGMA temp_store=MEMORY")
     return c
 
 OLD = {
@@ -95,7 +99,14 @@ for depth in (1, 2, 3):
 R["impact_mismatch"] = mismatch
 for q in ("graph", "symbol OR impact", "cache"):
     R["lat"][f"fts '{q}'"] = {"old": timeit(lambda a: oc.execute(FTS_OLD, [q, ROOT]).fetchall(), [0], 200),
-                              "new": timeit(lambda a: nc.execute(FTS_NEW.format(t=f"defs_fts_{rid}"), [q]).fetchall(), [0], 200)}
+                              "new": timeit(lambda a: nc.execute(FTS_NEW_SQL, [q]).fetchall(), [0], 200)}
+def fts_table(root_id):
+    """Per-root FTS5 table name. Identifiers cannot be bound, so the root id must be a plain int
+    (it comes from `roots.id`), and the name is double-quoted."""
+    if type(root_id) is not int or root_id < 0:
+        raise ValueError(f"bad root id {root_id!r}")
+    return f'"defs_fts_{root_id}"'
+FTS_NEW_SQL = FTS_NEW.format(t=fts_table(rid))  # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- identifier is a validated int, user text is bound via ?
 # sizes
 def fsize(p): return sum(os.path.getsize(p + s) for s in ("", "-wal") if os.path.exists(p + s))
 sym = oc.execute("SELECT count(*) FROM symbols").fetchone()[0]
