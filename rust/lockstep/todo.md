@@ -1,0 +1,8 @@
+- T2. Lock levels and an acquisition API with a global order
+- T3. Mutex and RwLock wrappers with order checking
+- T4. Lock-free queue and stack
+- T5. Detect locks taken outside the crate
+- T6. Runtime order-violation detector
+- T7. Model and stress tests
+- T8. Deadlock scenario tests
+- T9. Documentation with examples
