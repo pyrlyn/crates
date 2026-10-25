@@ -1,7 +1,139 @@
 #![allow(dead_code)]
 use sqlite_csr_graph::Connection;
-use std::collections::BTreeSet;
+use sqlite_csr_graph::graph::{Base, Delta, Dict, FileOp, Graph, Snapshot};
+use sqlite_csr_graph::segment::{Edge, KIND_IMPORT, KIND_REF};
+use std::collections::{BTreeSet, HashMap};
 use std::path::PathBuf;
+use std::sync::Arc;
+
+/// Deterministic xorshift generator (no `rand` dependency).
+pub struct Rng(pub u64);
+
+impl Rng {
+    pub fn next(&mut self) -> u64 {
+        self.0 ^= self.0 << 13;
+        self.0 ^= self.0 >> 7;
+        self.0 ^= self.0 << 17;
+        self.0
+    }
+    pub fn below(&mut self, n: u32) -> u32 {
+        (self.next() % n.max(1) as u64) as u32
+    }
+}
+
+fn push_ref(
+    users: &mut Vec<(u32, Edge)>,
+    callees: &mut Vec<(u32, Edge)>,
+    rng: &mut Rng,
+    file: u32,
+    names: u32,
+) {
+    let name = 1 + rng.below(names);
+    if rng.below(8) == 0 {
+        users.push((
+            name,
+            Edge {
+                file,
+                kind: KIND_IMPORT,
+                other: 0,
+            },
+        ));
+        return;
+    }
+    let owner = if rng.below(10) == 0 {
+        0
+    } else {
+        1 + rng.below(names)
+    };
+    users.push((
+        name,
+        Edge {
+            file,
+            kind: KIND_REF,
+            other: owner,
+        },
+    ));
+    if owner != 0 {
+        callees.push((
+            owner,
+            Edge {
+                file,
+                kind: KIND_REF,
+                other: name,
+            },
+        ));
+    }
+}
+
+/// An in-memory graph for root `/r` (id 1) without SQLite: names `n1..=n{names}` (id 0 is
+/// the empty name), files `src/f{i}.rs`, random references (some unscoped), imports and
+/// definitions in the base, and a delta that replaces about one file in eight.
+pub fn random_graph(seed: u64, names: u32, files: u32, refs: usize) -> Graph {
+    let mut rng = Rng(seed | 1);
+    let mut dict = Dict::default();
+    dict.set_name(0, "");
+    for i in 1..=names {
+        dict.set_name(i, &format!("n{i}"));
+    }
+    for f in 0..files {
+        dict.set_file(f, 1, &format!("src/f{f}.rs"));
+    }
+    dict.roots.insert("/r".into(), 1);
+    let (mut users, mut callees, mut fdefs) = (vec![], vec![], vec![]);
+    for _ in 0..refs {
+        let file = rng.below(files);
+        push_ref(&mut users, &mut callees, &mut rng, file, names);
+    }
+    for f in 0..files {
+        for _ in 0..rng.below(4) {
+            fdefs.push((f, 1 + rng.below(names)));
+        }
+    }
+    let base = Base::from_pairs(users, callees, fdefs, 0);
+    let mut ops = vec![];
+    for seq in 0..files / 8 {
+        let file = rng.below(files);
+        let mut op = FileOp {
+            seq: seq as u64 + 1,
+            generation: 1,
+            file,
+            ..Default::default()
+        };
+        for _ in 0..rng.below(6) {
+            push_ref(&mut op.users, &mut op.callees, &mut rng, file, names);
+        }
+        op.defs = (0..rng.below(3)).map(|_| 1 + rng.below(names)).collect();
+        op.defs.sort_unstable();
+        op.defs.dedup();
+        op.users.sort_unstable();
+        op.users.dedup();
+        op.callees.sort_unstable();
+        op.callees.dedup();
+        ops.push(Arc::new(op));
+    }
+    let snap = Snapshot {
+        base: Arc::new(base),
+        delta: Arc::new(Delta::from_ops(ops)),
+    };
+    Graph::new(dict, HashMap::from([(1, snap)]))
+}
+
+/// `(depth, path, scope)` rows as text.
+pub fn impact_text(
+    g: &Graph,
+    rows: &[sqlite_csr_graph::graph::ImpactRow],
+) -> Vec<(u32, String, String)> {
+    let d = g.dict.load();
+    rows.iter()
+        .map(|r| {
+            (
+                r.depth,
+                d.path(r.file).to_string(),
+                d.name(r.scope).to_string(),
+            )
+        })
+        .collect()
+}
 
 /// Every edge of a snapshot: (users, callees, filedefs).
 pub type Edges = (

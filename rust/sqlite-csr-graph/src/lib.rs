@@ -11,15 +11,15 @@ pub mod vtab;
 /// The safe SQLite wrapper this crate is built on (over `libsqlite3-sys`).
 pub mod sqlite {
     pub use crate::ffi::{
-        CachedStatement, Connection, Context, Error, FromSql, FunctionFlags, OpenFlags,
-        OptionalExtension, Params, Result, Row, RowIndex, Rows, Statement, ToSql, Transaction,
-        TransactionBehavior, Value,
+        CachedStatement, Connection, Context, DEFAULT_STATEMENT_CACHE_CAPACITY, Error, FromSql,
+        FunctionFlags, OpenFlags, OptionalExtension, Params, Result, Row, RowIndex, Rows,
+        Statement, ToSql, Transaction, TransactionBehavior, Value,
     };
 }
 
 pub use ffi::{Connection, Error, Value};
 pub use graph::Graph;
-pub use store::{DefRow, FileSymbols, RefRow, Store};
+pub use store::{DefRow, FileSymbols, RefRow, Store, StoreOptions};
 
 #[cfg(feature = "rtok-import")]
 pub mod rtok;

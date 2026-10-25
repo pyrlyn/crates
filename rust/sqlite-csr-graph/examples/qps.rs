@@ -105,8 +105,10 @@ fn bench(
 }
 
 fn main() {
+    // must run before the first connection; affects every connection in the process
+    // (not in the loadable build, where the host owns SQLite)
+    #[cfg(not(feature = "loadable"))]
     if std::env::var("QPS_MEMSTATUS0").is_ok() {
-        // must run before the first connection; affects every connection in the process
         assert!(sqlite_csr_graph::disable_sqlite_memstatus());
     }
     let a: Vec<String> = std::env::args().collect();

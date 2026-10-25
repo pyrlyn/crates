@@ -5,9 +5,9 @@ use crate::ffi::{Connection, OpenFlags, OptionalExtension, TransactionBehavior};
 use crate::graph::{Base, Delta, Dict, FileOp, Graph, Snapshot};
 use crate::params;
 use crate::segment::{Csr, Edge, KIND_IMPORT, KIND_REF};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 
 /// Result of every store operation.
@@ -87,7 +87,8 @@ pub fn tune(conn: &Connection) -> Result<()> {
 
 pub(crate) fn import_kind(conn: &Connection) -> Result<i64> {
     Ok(conn
-        .query_row("SELECT id FROM kinds WHERE kind='import'", [], |r| r.get(0))
+        .prepare_cached("SELECT id FROM kinds WHERE kind='import'")?
+        .query_row([], |r| r.get(0))
         .optional()?
         .unwrap_or(-1))
 }
@@ -261,17 +262,18 @@ pub fn load_graph(conn: &Connection) -> Result<Graph> {
             let (p, g, d) = r?;
             parts.insert(p, (g, d));
         }
-        let seg = |p: &str| {
+        // Move each blob into its segment (no second copy of the bytes).
+        let mut seg = |p: &str| {
             parts
-                .get(p)
-                .and_then(|(_, d)| Csr::from_blob(d.clone()).ok())
+                .remove(p)
+                .and_then(|(g, d)| Csr::from_blob(d).ok().map(|c| (g, c)))
         };
         let base = match (seg("users"), seg("callees"), seg("filedefs")) {
-            (Some(users), Some(callees), Some(filedefs)) => Base {
+            (Some((generation, users)), Some((_, callees)), Some((_, filedefs))) => Base {
                 users,
                 callees,
                 filedefs,
-                generation: parts["users"].0,
+                generation,
             },
             _ => build_base(conn, rid)?,
         };
@@ -376,16 +378,53 @@ pub struct FileSymbols {
     pub refs: Vec<RefRow>,
 }
 
+/// Default [`StoreOptions::merge_threshold`].
+pub const DEFAULT_MERGE_THRESHOLD: usize = 20_000;
+
+/// When the writer folds the in-memory delta into a new segment.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct StoreOptions {
+    /// Merge once the delta's [`Delta::weight`] (edges + 16 per file op) exceeds this.
+    /// Lower: smaller deltas for readers to overlay, more merges. Default 20,000.
+    pub merge_threshold: usize,
+    /// Start that merge on a background thread after a write. `false`: merge only on
+    /// [`Store::merge_now`] or `graph_merge(root)`.
+    pub auto_merge: bool,
+}
+
+impl Default for StoreOptions {
+    fn default() -> Self {
+        StoreOptions {
+            merge_threshold: DEFAULT_MERGE_THRESHOLD,
+            auto_merge: true,
+        }
+    }
+}
+
+/// The write connection and what it already set up.
+struct Writer {
+    conn: Connection,
+    /// Roots whose FTS view and table this connection created or found.
+    fts_roots: HashSet<u32>,
+}
+
 /// Single writer + shared lock-free graph. Readers use [`Store::reader`] (one connection per thread).
 pub struct Store {
     path: PathBuf,
-    conn: Mutex<Connection>,
+    conn: Mutex<Writer>,
     pub graph: Arc<Graph>,
     merging: Arc<AtomicBool>,
+    merge_threshold: AtomicUsize,
+    auto_merge: AtomicBool,
 }
 
 impl Store {
+    /// [`Store::open_with`] and the default [`StoreOptions`].
     pub fn open(path: &Path) -> Result<Store> {
+        Self::open_with(path, StoreOptions::default())
+    }
+
+    pub fn open_with(path: &Path, options: StoreOptions) -> Result<Store> {
         let conn = Connection::open(path)?;
         tune(&conn)?;
         conn.execute_batch(SCHEMA)?;
@@ -393,10 +432,33 @@ impl Store {
         let graph = graph_for(path, true)?;
         Ok(Store {
             path: path.to_path_buf(),
-            conn: Mutex::new(conn),
+            conn: Mutex::new(Writer {
+                conn,
+                fts_roots: HashSet::new(),
+            }),
             graph,
             merging: Arc::new(AtomicBool::new(false)),
+            merge_threshold: options.merge_threshold.into(),
+            auto_merge: options.auto_merge.into(),
         })
+    }
+
+    /// The options in effect now.
+    pub fn options(&self) -> StoreOptions {
+        StoreOptions {
+            merge_threshold: self.merge_threshold.load(Ordering::Relaxed),
+            auto_merge: self.auto_merge.load(Ordering::Relaxed),
+        }
+    }
+
+    /// Change [`StoreOptions::merge_threshold`]; checked on the next write.
+    pub fn set_merge_threshold(&self, n: usize) {
+        self.merge_threshold.store(n, Ordering::Relaxed);
+    }
+
+    /// Change [`StoreOptions::auto_merge`]; checked on the next write.
+    pub fn set_auto_merge(&self, on: bool) {
+        self.auto_merge.store(on, Ordering::Relaxed);
     }
 
     /// A new read connection with the graph table-valued functions registered.
@@ -449,44 +511,48 @@ impl Store {
     }
 
     fn write_file(&self, fs: &FileSymbols, delete: bool) -> Result<()> {
-        let mut conn = self.conn.lock().unwrap();
+        let mut w = self.conn.lock().unwrap();
+        let Writer { conn, fts_roots } = &mut *w;
         let _w = self.graph.writer.lock().unwrap();
         let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
         let mut new_names = vec![];
+        // Every statement below runs once per write: all of them come from the cache.
         let generation: i64 = tx
-            .query_row(
-                "UPDATE meta SET value=value+1 WHERE key='gen' RETURNING value",
-                [],
-                |r| r.get(0),
-            )
+            .prepare_cached("UPDATE meta SET value=value+1 WHERE key='gen' RETURNING value")?
+            .query_row([], |r| r.get(0))
             .optional()?
             .unwrap_or_else(|| {
                 tx.execute("INSERT INTO meta VALUES('gen', 1)", []).ok();
                 1
             });
-        tx.execute("INSERT OR IGNORE INTO roots(path) VALUES (?1)", [&fs.root])?;
-        let root: u32 = tx.query_row("SELECT id FROM roots WHERE path=?1", [&fs.root], |r| {
-            r.get(0)
-        })?;
-        tx.execute(
+        tx.prepare_cached("INSERT OR IGNORE INTO roots(path) VALUES (?1)")?
+            .execute([&fs.root])?;
+        let root: u32 = tx
+            .prepare_cached("SELECT id FROM roots WHERE path=?1")?
+            .query_row([&fs.root], |r| r.get(0))?;
+        tx.prepare_cached(
             "INSERT INTO files(root_id, path, sha, mtime, size, gen) VALUES (?1,?2,?3,?4,?5,?6) \
              ON CONFLICT(root_id, path) DO UPDATE SET sha=excluded.sha, mtime=excluded.mtime, size=excluded.size, gen=excluded.gen",
-            params![root, fs.path, fs.sha, fs.mtime, fs.size, generation],
-        )?;
-        let file: u32 = tx.query_row(
-            "SELECT id FROM files WHERE root_id=?1 AND path=?2",
-            params![root, fs.path],
-            |r| r.get(0),
-        )?;
-        ensure_root_fts(&tx, root)?;
+        )?
+        .execute(params![root, fs.path, fs.sha, fs.mtime, fs.size, generation])?;
+        let file: u32 = tx
+            .prepare_cached("SELECT id FROM files WHERE root_id=?1 AND path=?2")?
+            .query_row(params![root, fs.path], |r| r.get(0))?;
+        // The FTS view and table are created once per root and connection, not per write.
+        let new_fts = !fts_roots.contains(&root);
+        if new_fts {
+            ensure_root_fts(&tx, root)?;
+        }
         let fts = fts_table(root as i64);
-        tx.execute(
+        tx.prepare_cached(
             &format!("INSERT INTO {fts}({fts}, rowid, name, signature, doc) SELECT 'delete', id, name, signature, doc FROM fts_src_{root} \
              WHERE id IN (SELECT id FROM defs WHERE file_id=?1)"),
-            [file],
-        )?;
-        tx.execute("DELETE FROM defs WHERE file_id=?1", [file])?;
-        tx.execute("DELETE FROM refs WHERE file_id=?1", [file])?;
+        )?
+        .execute([file])?;
+        tx.prepare_cached("DELETE FROM defs WHERE file_id=?1")?
+            .execute([file])?;
+        tx.prepare_cached("DELETE FROM refs WHERE file_id=?1")?
+            .execute([file])?;
         if !delete {
             for d in &fs.defs {
                 let n = Self::intern(&tx, "names", "name", &d.name, &mut new_names)?;
@@ -512,6 +578,9 @@ impl Store {
         let imp = import_kind(&tx)?;
         let op = file_op(&tx, file, generation, imp)?;
         tx.commit()?;
+        if new_fts {
+            fts_roots.insert(root);
+        }
         // Publish: dictionary first (so readers can resolve new ids), then the root delta.
         let cur = self.graph.dict.load();
         if !new_names.is_empty()
@@ -532,8 +601,10 @@ impl Store {
         }
         let snap = self.graph.apply_locked(root, op);
         drop(_w);
-        drop(conn);
-        if snap.delta.edges + snap.delta.ops.len() * 16 > self.graph.merge_threshold {
+        drop(w);
+        if self.auto_merge.load(Ordering::Relaxed)
+            && snap.delta.weight() > self.merge_threshold.load(Ordering::Relaxed)
+        {
             self.spawn_merge(root);
         }
         Ok(())

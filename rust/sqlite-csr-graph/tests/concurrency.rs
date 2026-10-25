@@ -44,14 +44,12 @@ fn readers_and_writer_and_merge() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("s.db");
     let n = 64u32;
-    let mut store = Store::open(&path).unwrap();
+    let store = Store::open(&path).unwrap();
     for i in 0..n {
         store.upsert_file(&file(i, n, 0)).unwrap();
     }
     store.merge_now(1).unwrap();
-    if let Some(g) = Arc::get_mut(&mut store.graph) {
-        g.merge_threshold = 300;
-    }
+    store.set_merge_threshold(300);
     let store = Arc::new(store);
     let stop = Arc::new(AtomicBool::new(false));
     let reads = Arc::new(AtomicU64::new(0));

@@ -32,19 +32,39 @@ pub fn put_varint(out: &mut Vec<u8>, mut v: u32) {
     out.push(v as u8);
 }
 
+/// Decode the varint at `*pos` and advance past it. Unrolled for the one to five bytes a
+/// `u32` takes, with the one-byte case (most file deltas) first; a run of continuation
+/// bytes stops after the fifth byte instead of shifting past 32 bits.
 #[inline]
 pub fn get_varint(buf: &[u8], pos: &mut usize) -> u32 {
-    let mut v: u32 = 0;
-    let mut shift = 0;
-    loop {
-        let b = buf[*pos];
-        *pos += 1;
-        v |= ((b & 0x7f) as u32) << shift;
-        if b < 0x80 {
-            return v;
-        }
-        shift += 7;
+    let p = *pos;
+    let b = buf[p];
+    if b < 0x80 {
+        *pos = p + 1;
+        return b as u32;
     }
+    let mut v = (b & 0x7f) as u32;
+    let b = buf[p + 1];
+    v |= ((b & 0x7f) as u32) << 7;
+    if b < 0x80 {
+        *pos = p + 2;
+        return v;
+    }
+    let b = buf[p + 2];
+    v |= ((b & 0x7f) as u32) << 14;
+    if b < 0x80 {
+        *pos = p + 3;
+        return v;
+    }
+    let b = buf[p + 3];
+    v |= ((b & 0x7f) as u32) << 21;
+    if b < 0x80 {
+        *pos = p + 4;
+        return v;
+    }
+    *pos = p + 5;
+    // Only the low four bits of the fifth byte fit in a u32; the shift drops the rest.
+    v | ((buf[p + 4] as u32) << 28)
 }
 
 #[inline]
@@ -184,27 +204,32 @@ impl Csr {
         None
     }
 
-    /// Visit the decoded list at key index `i`.
+    /// Visit the decoded list at key index `i`. One loop per encoding (the encoding test is
+    /// outside the loop), decoding from the list's own slice.
     #[inline]
     pub fn for_each_at(&self, i: usize, mut f: impl FnMut(Edge)) {
-        let (a, b) = (self.offset(i), self.offset(i + 1));
-        let p = &self.payload()[..b];
-        let mut pos = a;
+        let p = &self.payload()[self.offset(i)..self.offset(i + 1)];
+        let mut pos = 0;
         let mut prev = 0u32;
-        while pos < b {
-            let v = get_varint(p, &mut pos);
-            if self.enc == ENC_EDGES {
+        if self.enc == ENC_EDGES {
+            while pos < p.len() {
+                let v = get_varint(p, &mut pos);
                 let kind = (v & 1) as u8;
-                let file = prev + (v >> 1);
-                prev = file;
+                prev = prev.wrapping_add(v >> 1);
                 let other = if kind == KIND_REF {
                     get_varint(p, &mut pos)
                 } else {
                     0
                 };
-                f(Edge { file, kind, other });
-            } else {
-                prev += v;
+                f(Edge {
+                    file: prev,
+                    kind,
+                    other,
+                });
+            }
+        } else {
+            while pos < p.len() {
+                prev = prev.wrapping_add(get_varint(p, &mut pos));
                 f(Edge {
                     file: prev,
                     kind: 0,

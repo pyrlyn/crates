@@ -6013,6 +6013,7 @@ dependencies = [
  "arc-swap",
  "diesel",
  "libsqlite3-sys",
+ "rayon",
  "tempfile",
 ]
 

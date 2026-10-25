@@ -3,7 +3,9 @@
 
 use crate::segment::{Csr, ENC_EDGES, ENC_IDS, Edge, KIND_IMPORT, KIND_REF};
 use arc_swap::ArcSwap;
+use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
+use std::hash::{BuildHasherDefault, Hasher};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
@@ -120,6 +122,10 @@ impl Delta {
     }
     pub fn max_seq(&self) -> u64 {
         self.ops.iter().map(|o| o.seq).max().unwrap_or(0)
+    }
+    /// What the merge threshold is compared with: delta edges plus 16 per file op.
+    pub fn weight(&self) -> usize {
+        self.edges + self.ops.len() * 16
     }
 }
 
@@ -261,6 +267,355 @@ impl Dict {
     }
 }
 
+// ---------------------------------------------------------------- traversal scratch
+
+/// Hasher for the crate's own integer ids (murmur3's 64-bit finalizer). The keys are ids
+/// this crate assigned, not attacker-chosen strings, so SipHash's flood resistance buys
+/// nothing here and costs most of an insert.
+#[derive(Debug, Default, Clone, Copy)]
+struct IdHasher(u64);
+
+impl Hasher for IdHasher {
+    fn finish(&self) -> u64 {
+        self.0
+    }
+    fn write(&mut self, bytes: &[u8]) {
+        for &b in bytes {
+            self.write_u64(b as u64);
+        }
+    }
+    fn write_u32(&mut self, n: u32) {
+        self.write_u64(n as u64);
+    }
+    #[inline]
+    fn write_u64(&mut self, n: u64) {
+        let mut x = self.0 ^ n;
+        x ^= x >> 33;
+        x = x.wrapping_mul(0xff51_afd7_ed55_8ccd);
+        x ^= x >> 33;
+        x = x.wrapping_mul(0xc4ce_b9fe_1a85_ec53);
+        x ^= x >> 33;
+        self.0 = x;
+    }
+}
+
+type IdSet = HashSet<u64, BuildHasherDefault<IdHasher>>;
+
+#[inline]
+fn pack(file: u32, owner: u32) -> u64 {
+    ((file as u64) << 32) | owner as u64
+}
+
+/// Bitset over dense name ids that remembers the words it set, so clearing it costs the
+/// number of visited names, not the size of the id space.
+#[derive(Debug, Default)]
+struct Bits {
+    words: Vec<u64>,
+    touched: Vec<u32>,
+}
+
+impl Bits {
+    /// Set `id`; true if it was clear.
+    #[inline]
+    fn insert(&mut self, id: u32) -> bool {
+        let w = (id / 64) as usize;
+        if w >= self.words.len() {
+            self.words.resize(w + 1, 0);
+        }
+        let m = 1u64 << (id % 64);
+        let word = &mut self.words[w];
+        if *word & m != 0 {
+            return false;
+        }
+        if *word == 0 {
+            self.touched.push(w as u32);
+        }
+        *word |= m;
+        true
+    }
+    fn clear(&mut self) {
+        for &w in &self.touched {
+            self.words[w as usize] = 0;
+        }
+        self.touched.clear();
+    }
+}
+
+/// The buffers one traversal needs. Taken from a per-thread pool and given back when the
+/// walk is dropped, so a reader thread allocates them once rather than on every query.
+#[derive(Debug, Default)]
+struct Scratch {
+    /// Names already expanded (or queued for the next level).
+    expanded: Bits,
+    /// `(file, owner)` pairs already returned (`impact` only).
+    seen: IdSet,
+    frontier: Vec<u32>,
+    next: Vec<u32>,
+}
+
+/// Scratch sets kept per thread (one per walk alive at the same time, e.g. a join of two
+/// table-valued functions), and the size above which a set is freed instead of kept.
+const POOL_PER_THREAD: usize = 4;
+const KEEP_SEEN: usize = 1 << 20;
+const KEEP_WORDS: usize = 1 << 16;
+
+thread_local! {
+    static POOL: RefCell<Vec<Scratch>> = const { RefCell::new(Vec::new()) };
+}
+
+impl Scratch {
+    fn take() -> Scratch {
+        POOL.try_with(|p| p.try_borrow_mut().ok().and_then(|mut p| p.pop()))
+            .ok()
+            .flatten()
+            .unwrap_or_default()
+    }
+
+    fn give(mut self) {
+        if self.seen.capacity() > KEEP_SEEN || self.expanded.words.len() > KEEP_WORDS {
+            return;
+        }
+        self.expanded.clear();
+        self.seen.clear();
+        self.frontier.clear();
+        self.next.clear();
+        // During thread teardown the pool may be gone; the scratch is then just dropped.
+        let _ = POOL.try_with(move |p| {
+            if let Ok(mut p) = p.try_borrow_mut()
+                && p.len() < POOL_PER_THREAD
+            {
+                p.push(self);
+            }
+        });
+    }
+}
+
+/// Level-by-level `impact` from one or more start names. Each [`ImpactWalk::next_level`]
+/// expands one more hop, so a caller that stops early (a SQL `LIMIT`) never pays for the
+/// deeper levels. Holds its snapshot, so writers and merges never wait for it.
+#[derive(Debug)]
+pub struct ImpactWalk {
+    snap: Arc<Snapshot>,
+    dict: Arc<Dict>,
+    depth: u32,
+    level: u32,
+    s: Scratch,
+    #[cfg(feature = "parallel")]
+    par_min: usize,
+}
+
+/// Frontier size from which the `parallel` feature expands a level on rayon's pool:
+/// below it, splitting the work costs more than it saves.
+#[cfg(feature = "parallel")]
+pub const DEFAULT_PARALLEL_MIN_FRONTIER: usize = 256;
+
+impl ImpactWalk {
+    fn new(snap: Arc<Snapshot>, dict: Arc<Dict>, starts: &[u32], depth: u32) -> ImpactWalk {
+        let mut s = Scratch::take();
+        for &start in starts {
+            if start != 0 && s.expanded.insert(start) {
+                s.frontier.push(start);
+            }
+        }
+        ImpactWalk {
+            snap,
+            dict,
+            depth,
+            level: 0,
+            s,
+            #[cfg(feature = "parallel")]
+            par_min: DEFAULT_PARALLEL_MIN_FRONTIER,
+        }
+    }
+
+    /// The dictionary the rows' ids resolve against.
+    pub fn dict(&self) -> &Dict {
+        &self.dict
+    }
+
+    /// Levels expanded so far.
+    pub fn level(&self) -> u32 {
+        self.level
+    }
+
+    /// The rows first reached at the next level, sorted by (path, scope); `None` once the
+    /// walk reached `depth` or ran out of names to expand.
+    pub fn next_level(&mut self) -> Option<Vec<ImpactRow>> {
+        while !self.s.frontier.is_empty() && self.level < self.depth {
+            self.level += 1;
+            let rows = self.expand();
+            if !rows.is_empty() {
+                return Some(rows);
+            }
+        }
+        None
+    }
+
+    fn expand(&mut self) -> Vec<ImpactRow> {
+        let level = self.level;
+        let snap = &*self.snap;
+        #[cfg(feature = "parallel")]
+        let batches = (self.s.frontier.len() >= self.par_min).then(|| self.collect_parallel());
+        #[cfg(not(feature = "parallel"))]
+        let batches: Option<Vec<Vec<(u32, u32)>>> = None;
+        #[cfg(feature = "parallel")]
+        let par = batches.is_some();
+        let Scratch {
+            expanded,
+            seen,
+            frontier,
+            next,
+        } = &mut self.s;
+        let mut rows = Vec::new();
+        let mut add = |file: u32, owner: u32| {
+            if seen.insert(pack(file, owner)) {
+                rows.push(ImpactRow {
+                    depth: level,
+                    file,
+                    scope: owner,
+                });
+            }
+            if owner != 0 && expanded.insert(owner) {
+                next.push(owner);
+            }
+        };
+        match batches {
+            // Same pairs in the same order as the sequential loop, so the rows and the next
+            // frontier are identical.
+            Some(b) => b.into_iter().flatten().for_each(|(f, o)| add(f, o)),
+            None => {
+                for &tip in frontier.iter() {
+                    users_of(snap, tip, &mut add);
+                }
+            }
+        }
+        std::mem::swap(frontier, next);
+        next.clear();
+        let d = &*self.dict;
+        let by_path_scope = |a: &ImpactRow, b: &ImpactRow| {
+            (d.path(a.file), d.name(a.scope)).cmp(&(d.path(b.file), d.name(b.scope)))
+        };
+        #[cfg(feature = "parallel")]
+        if par {
+            rayon::slice::ParallelSliceMut::par_sort_unstable_by(&mut rows[..], by_path_scope);
+            return rows;
+        }
+        rows.sort_unstable_by(by_path_scope);
+        rows
+    }
+
+    /// Every use of the frontier's names in frontier order, decoded on rayon's pool.
+    /// Pairs returned at an earlier level are dropped here already: they add no row and
+    /// their owner was expanded then.
+    #[cfg(feature = "parallel")]
+    fn collect_parallel(&self) -> Vec<Vec<(u32, u32)>> {
+        use rayon::prelude::*;
+        let (snap, seen) = (&*self.snap, &self.s.seen);
+        let chunk = (self.s.frontier.len() / (rayon::current_num_threads() * 4)).max(16);
+        self.s
+            .frontier
+            .par_chunks(chunk)
+            .map(|tips| {
+                let mut out = Vec::new();
+                for &tip in tips {
+                    users_of(snap, tip, |f, o| {
+                        if !seen.contains(&pack(f, o)) {
+                            out.push((f, o));
+                        }
+                    });
+                }
+                out
+            })
+            .collect()
+    }
+}
+
+impl Drop for ImpactWalk {
+    fn drop(&mut self) {
+        std::mem::take(&mut self.s).give();
+    }
+}
+
+/// `(file, owner)` for every use of `name`: the owner scope of a reference, or each name
+/// defined in a file that imports `name`.
+#[inline]
+fn users_of(snap: &Snapshot, name: u32, mut f: impl FnMut(u32, u32)) {
+    snap.users(name, |e| {
+        if e.kind == KIND_IMPORT {
+            snap.filedefs(e.file, |d| f(e.file, d));
+        } else {
+            f(e.file, e.other);
+        }
+    });
+}
+
+/// Level-by-level `neighbors`: distinct names one more hop away per
+/// [`NeighborsWalk::next_level`].
+#[derive(Debug)]
+pub struct NeighborsWalk {
+    snap: Arc<Snapshot>,
+    dict: Arc<Dict>,
+    depth: u32,
+    level: u32,
+    outgoing: bool,
+    s: Scratch,
+}
+
+impl NeighborsWalk {
+    /// The dictionary the rows' ids resolve against.
+    pub fn dict(&self) -> &Dict {
+        &self.dict
+    }
+
+    /// `(level, name)` for the names first reached at the next level, sorted by name.
+    pub fn next_level(&mut self) -> Option<Vec<(u32, u32)>> {
+        while !self.s.frontier.is_empty() && self.level < self.depth {
+            self.level += 1;
+            let snap = &*self.snap;
+            let Scratch {
+                expanded,
+                frontier,
+                next,
+                ..
+            } = &mut self.s;
+            let mut push = |m: u32| {
+                if m != 0 && expanded.insert(m) {
+                    next.push(m);
+                }
+            };
+            for &n in frontier.iter() {
+                if self.outgoing {
+                    snap.callees(n, |e| push(e.other));
+                } else {
+                    snap.users(n, |e| {
+                        if e.kind == KIND_REF {
+                            push(e.other)
+                        } else {
+                            snap.filedefs(e.file, &mut push)
+                        }
+                    });
+                }
+            }
+            std::mem::swap(frontier, next);
+            next.clear();
+            if !frontier.is_empty() {
+                let d = &*self.dict;
+                let mut v: Vec<u32> = frontier.clone();
+                v.sort_unstable_by(|a, b| d.name(*a).cmp(d.name(*b)));
+                let level = self.level;
+                return Some(v.into_iter().map(|n| (level, n)).collect());
+            }
+        }
+        None
+    }
+}
+
+impl Drop for NeighborsWalk {
+    fn drop(&mut self) {
+        std::mem::take(&mut self.s).give();
+    }
+}
+
 pub type RootCell = ArcSwap<Snapshot>;
 
 /// All roots of one database.
@@ -270,7 +625,8 @@ pub struct Graph {
     /// Serialises writers (graph publication only; readers never touch it).
     pub writer: Mutex<()>,
     seq: AtomicU64,
-    pub merge_threshold: usize,
+    #[cfg(feature = "parallel")]
+    parallel_min_frontier: std::sync::atomic::AtomicUsize,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -292,8 +648,23 @@ impl Graph {
             ),
             writer: Mutex::new(()),
             seq: AtomicU64::new(1),
-            merge_threshold: 20_000,
+            #[cfg(feature = "parallel")]
+            parallel_min_frontier: DEFAULT_PARALLEL_MIN_FRONTIER.into(),
         }
+    }
+
+    /// Expand a BFS level on rayon's pool once its frontier has at least `n` names
+    /// (default [`DEFAULT_PARALLEL_MIN_FRONTIER`]; `usize::MAX` keeps every walk on the
+    /// calling thread). Applies to walks started afterwards.
+    #[cfg(feature = "parallel")]
+    pub fn set_parallel_min_frontier(&self, n: usize) {
+        self.parallel_min_frontier.store(n, Ordering::Relaxed);
+    }
+
+    /// See [`Graph::set_parallel_min_frontier`].
+    #[cfg(feature = "parallel")]
+    pub fn parallel_min_frontier(&self) -> usize {
+        self.parallel_min_frontier.load(Ordering::Relaxed)
     }
 
     pub fn snapshot(&self, root: u32) -> Option<Arc<Snapshot>> {
@@ -332,11 +703,19 @@ impl Graph {
     }
 
     /// Swap in a merged base built from `from`; ops published after `from` stay in the delta.
-    pub fn install_merged(&self, root: u32, from: &Snapshot, base: Base) {
+    /// Returns false (and changes nothing) if another merge installed a base since `from`
+    /// was taken: that base already holds more, and installing this one would drop the ops
+    /// the other merge folded. They stay in the delta for the next merge.
+    pub fn install_merged(&self, root: u32, from: &Snapshot, base: Base) -> bool {
         let _w = self.writer.lock().unwrap();
         let roots = self.roots.load();
-        let Some(cell) = roots.get(&root) else { return };
+        let Some(cell) = roots.get(&root) else {
+            return false;
+        };
         let cur = cell.load();
+        if !Arc::ptr_eq(&cur.base, &from.base) {
+            return false;
+        }
         let cut = from.delta.max_seq();
         let rest: Vec<_> = cur
             .delta
@@ -349,101 +728,84 @@ impl Graph {
             base: Arc::new(base),
             delta: Arc::new(Delta::from_ops(rest)),
         }));
+        true
     }
 
     /// rtok `impact` semantics with a global visited set (frontier dedup):
     /// level-by-level BFS from `name`; every (file, owner) reached gets its minimal level.
+    /// Rows are sorted by (depth, path, scope).
     pub fn impact(&self, root: u32, name: &str, depth: u32) -> Vec<ImpactRow> {
-        let dict = self.dict.load();
-        let (Some(snap), Some(&start)) = (self.snapshot(root), dict.name_ids.get(name)) else {
+        self.impact_many(root, &[name], depth)
+    }
+
+    /// [`Graph::impact`] from several start names at once (e.g. every symbol a change
+    /// touched): one BFS with all of them at level 0, so each (file, owner) gets its
+    /// smallest depth from any start and shared callers are expanded once.
+    pub fn impact_many(&self, root: u32, names: &[&str], depth: u32) -> Vec<ImpactRow> {
+        let Some(mut walk) = self.impact_walk(root, names, depth) else {
             return vec![];
         };
-        if start == 0 {
-            return vec![];
+        let mut rows = vec![];
+        while let Some(level) = walk.next_level() {
+            rows.extend(level);
         }
-        let mut seen: HashMap<(u32, u32), u32> = HashMap::new();
-        let mut expanded: HashSet<u32> = HashSet::from([start]);
-        let mut frontier = vec![start];
-        let mut level = 1;
-        while !frontier.is_empty() && level <= depth {
-            let mut next = Vec::new();
-            for &tip in &frontier {
-                let mut add = |file: u32, owner: u32, next: &mut Vec<u32>| {
-                    if let std::collections::hash_map::Entry::Vacant(v) = seen.entry((file, owner))
-                    {
-                        v.insert(level);
-                    }
-                    if owner != 0 && expanded.insert(owner) {
-                        next.push(owner);
-                    }
-                };
-                snap.users(tip, |e| {
-                    if e.kind == KIND_IMPORT {
-                        snap.filedefs(e.file, |d| add(e.file, d, &mut next));
-                    } else {
-                        add(e.file, e.other, &mut next);
-                    }
-                });
-            }
-            frontier = next;
-            level += 1;
-        }
-        let mut rows: Vec<ImpactRow> = seen
-            .into_iter()
-            .map(|((file, scope), depth)| ImpactRow { depth, file, scope })
-            .collect();
-        rows.sort_by(|a, b| {
-            (a.depth, dict.path(a.file), dict.name(a.scope)).cmp(&(
-                b.depth,
-                dict.path(b.file),
-                dict.name(b.scope),
-            ))
-        });
         rows
+    }
+
+    /// The lazy form of [`Graph::impact_many`]; `None` for an unknown root.
+    pub fn impact_walk(&self, root: u32, names: &[&str], depth: u32) -> Option<ImpactWalk> {
+        // Snapshot first: the writer publishes the dictionary before the delta, so a
+        // dictionary loaded afterwards knows every id the snapshot holds.
+        let snap = self.snapshot(root)?;
+        let dict = self.dict.load_full();
+        let starts: Vec<u32> = names
+            .iter()
+            .filter_map(|n| dict.name_ids.get(*n).copied())
+            .collect();
+        #[cfg_attr(not(feature = "parallel"), allow(unused_mut))]
+        let mut walk = ImpactWalk::new(snap, dict, &starts, depth);
+        #[cfg(feature = "parallel")]
+        {
+            walk.par_min = self.parallel_min_frontier();
+        }
+        Some(walk)
     }
 
     /// Distinct names reachable within `depth` hops. `outgoing=false`: who uses me
     /// (owners of refs + defs of importing files); `true`: what I call.
     pub fn neighbors(&self, root: u32, name: &str, depth: u32, outgoing: bool) -> Vec<(u32, u32)> {
-        let dict = self.dict.load();
-        let (Some(snap), Some(&start)) = (self.snapshot(root), dict.name_ids.get(name)) else {
+        let Some(mut walk) = self.neighbors_walk(root, name, depth, outgoing) else {
             return vec![];
         };
-        let mut level_of: HashMap<u32, u32> = HashMap::from([(start, 0)]);
-        let mut frontier = vec![start];
-        for level in 1..=depth {
-            let mut next = Vec::new();
-            for &n in &frontier {
-                let mut push = |m: u32| {
-                    if m != 0 && !level_of.contains_key(&m) {
-                        level_of.insert(m, level);
-                        next.push(m);
-                    }
-                };
-                if outgoing {
-                    snap.callees(n, |e| push(e.other));
-                } else {
-                    snap.users(n, |e| {
-                        if e.kind == KIND_REF {
-                            push(e.other)
-                        } else {
-                            snap.filedefs(e.file, &mut push)
-                        }
-                    });
-                }
-            }
-            if next.is_empty() {
-                break;
-            }
-            frontier = next;
+        let mut v = vec![];
+        while let Some(level) = walk.next_level() {
+            v.extend(level);
         }
-        let mut v: Vec<(u32, u32)> = level_of
-            .into_iter()
-            .filter(|(n, _)| *n != start)
-            .map(|(n, l)| (l, n))
-            .collect();
-        v.sort_by(|a, b| (a.0, dict.name(a.1)).cmp(&(b.0, dict.name(b.1))));
         v
+    }
+
+    /// The lazy form of [`Graph::neighbors`]; `None` for an unknown root or name.
+    pub fn neighbors_walk(
+        &self,
+        root: u32,
+        name: &str,
+        depth: u32,
+        outgoing: bool,
+    ) -> Option<NeighborsWalk> {
+        let snap = self.snapshot(root)?;
+        let dict = self.dict.load_full();
+        let start = *dict.name_ids.get(name)?;
+        let mut s = Scratch::take();
+        s.expanded.insert(start);
+        s.frontier.push(start);
+        Some(NeighborsWalk {
+            snap,
+            dict,
+            depth,
+            level: 0,
+            outgoing,
+            s,
+        })
     }
 
     /// Distinct (file, owner scope) pairs referencing `name` (refs only, no imports).

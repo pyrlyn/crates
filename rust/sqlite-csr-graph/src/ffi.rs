@@ -10,11 +10,12 @@
 use libsqlite3_sys as ffi;
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::ffi::{CStr, CString, c_char, c_int, c_void};
+use std::ffi::{CStr, CString, c_char, c_int, c_uint, c_void};
 use std::marker::PhantomData;
 use std::ops::{BitOr, Deref, DerefMut};
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::path::Path;
+use std::rc::Rc;
 
 // ---------------------------------------------------------------- errors
 
@@ -464,16 +465,109 @@ pub enum TransactionBehavior {
 
 struct RawStmt(*mut ffi::sqlite3_stmt);
 
+impl RawStmt {
+    fn finalize(self) {
+        // SAFETY: a cached statement belongs to its connection, is not in use (it is in the
+        // cache or just left it) and is finalized once, here.
+        unsafe { ffi::sqlite3_finalize(self.0) };
+    }
+}
+
+/// Default [`Connection::set_prepared_statement_cache_capacity`].
+pub const DEFAULT_STATEMENT_CACHE_CAPACITY: usize = 64;
+
+/// The statements of one SQL text that are free for reuse.
+struct CacheEntry {
+    key: Rc<str>,
+    stmts: Vec<RawStmt>,
+    /// Tick of the last return to the cache (least recently used goes first).
+    used: u64,
+}
+
+/// Statements kept by [`Connection::prepare_cached`], at most `capacity` of them.
+struct StmtCache {
+    map: HashMap<Rc<str>, CacheEntry>,
+    capacity: usize,
+    len: usize,
+    tick: u64,
+}
+
+impl StmtCache {
+    fn new() -> StmtCache {
+        StmtCache {
+            map: HashMap::new(),
+            capacity: DEFAULT_STATEMENT_CACHE_CAPACITY,
+            len: 0,
+            tick: 0,
+        }
+    }
+
+    /// A free statement for `sql` and its key.
+    fn take(&mut self, sql: &str) -> Option<(Rc<str>, RawStmt)> {
+        let e = self.map.get_mut(sql)?;
+        let s = e.stmts.pop()?;
+        self.len -= 1;
+        Some((e.key.clone(), s))
+    }
+
+    /// Keep `s` for reuse; returns what no longer fits (the caller finalizes it).
+    fn put(&mut self, key: Rc<str>, s: RawStmt) -> Vec<RawStmt> {
+        self.tick += 1;
+        let tick = self.tick;
+        let e = self.map.entry(key.clone()).or_insert_with(|| CacheEntry {
+            key,
+            stmts: vec![],
+            used: 0,
+        });
+        e.stmts.push(s);
+        e.used = tick;
+        self.len += 1;
+        self.shrink()
+    }
+
+    /// Evict least recently used statements until `len <= capacity`.
+    fn shrink(&mut self) -> Vec<RawStmt> {
+        let mut out = vec![];
+        while self.len > self.capacity {
+            let Some(key) = self
+                .map
+                .values()
+                .min_by_key(|e| e.used)
+                .map(|e| e.key.clone())
+            else {
+                break;
+            };
+            if let Some(e) = self.map.get_mut(&*key) {
+                if let Some(s) = e.stmts.pop() {
+                    out.push(s);
+                    self.len -= 1;
+                }
+                if e.stmts.is_empty() {
+                    self.map.remove(&*key);
+                }
+            }
+        }
+        out
+    }
+
+    fn drain(&mut self) -> Vec<RawStmt> {
+        self.len = 0;
+        self.map.drain().flat_map(|(_, e)| e.stmts).collect()
+    }
+}
+
 /// A SQLite connection: owned (opened here, closed on drop) or borrowed from a host
 /// (extension entry point, auto-extension). `Send`, not `Sync`: use one per thread.
 pub struct Connection {
     db: *mut ffi::sqlite3,
     owned: bool,
-    cache: RefCell<HashMap<String, Vec<RawStmt>>>,
+    cache: RefCell<StmtCache>,
 }
 
 // SAFETY: a connection may move between threads; it is !Sync (RefCell), so it is never used
-// from two threads at once, which is all SQLITE_OPEN_NOMUTEX requires.
+// from two threads at once, which is all SQLITE_OPEN_NOMUTEX requires. The cache's `Rc` keys
+// are cloned only into `CachedStatement`s, which borrow the connection, so no clone can
+// stay behind on another thread when the connection moves.
 unsafe impl Send for Connection {}
 
 impl std::fmt::Debug for Connection {
@@ -516,7 +610,7 @@ impl Connection {
         Ok(Connection {
             db,
             owned: true,
-            cache: RefCell::default(),
+            cache: RefCell::new(StmtCache::new()),
         })
     }
 
@@ -526,7 +620,7 @@ impl Connection {
         Connection {
             db,
             owned: false,
-            cache: RefCell::default(),
+            cache: RefCell::new(StmtCache::new()),
         }
     }
 
@@ -568,14 +662,20 @@ impl Connection {
 
     /// Prepare one statement.
     pub fn prepare(&self, sql: &str) -> Result<Statement<'_>> {
+        self.prepare_flags(sql, 0)
+    }
+
+    /// `sqlite3_prepare_v3` (flags 0 is `sqlite3_prepare_v2`).
+    fn prepare_flags(&self, sql: &str, flags: c_uint) -> Result<Statement<'_>> {
         let n = len_c(sql.len())?;
         let mut st = std::ptr::null_mut();
         // SAFETY: sql pointer/length are valid for the call; SQLite copies what it needs.
         let rc = unsafe {
-            ffi::sqlite3_prepare_v2(
+            ffi::sqlite3_prepare_v3(
                 self.db,
                 sql.as_ptr() as *const c_char,
                 n,
+                flags,
                 &mut st,
                 std::ptr::null_mut(),
             )
@@ -596,22 +696,53 @@ impl Connection {
         })
     }
 
-    /// Prepare through a per-connection cache keyed by the SQL text.
+    /// Prepare through a per-connection cache keyed by the SQL text. A miss is prepared
+    /// with `SQLITE_PREPARE_PERSISTENT` (SQLite keeps long-lived statements out of the
+    /// lookaside allocator); the statement goes back to the cache when dropped.
     pub fn prepare_cached(&self, sql: &str) -> Result<CachedStatement<'_>> {
-        let hit = self.cache.borrow_mut().get_mut(sql).and_then(Vec::pop);
-        let stmt = match hit {
-            Some(r) => Statement {
-                raw: r.0,
-                db: self.db,
-                _c: PhantomData,
-            },
-            None => self.prepare(sql)?,
+        let hit = self.cache.borrow_mut().take(sql);
+        let (key, stmt) = match hit {
+            Some((key, r)) => (
+                key,
+                Statement {
+                    raw: r.0,
+                    db: self.db,
+                    _c: PhantomData,
+                },
+            ),
+            None => (
+                Rc::from(sql),
+                self.prepare_flags(sql, ffi::SQLITE_PREPARE_PERSISTENT)?,
+            ),
         };
         Ok(CachedStatement {
             conn: self,
-            sql: sql.to_owned(),
+            key,
             stmt: Some(stmt),
         })
+    }
+
+    /// Keep at most `n` statements for [`Connection::prepare_cached`] (default
+    /// [`DEFAULT_STATEMENT_CACHE_CAPACITY`]; least recently used are finalized first).
+    /// `0` turns the cache off: every cached statement is finalized when dropped.
+    pub fn set_prepared_statement_cache_capacity(&self, n: usize) {
+        let evicted = {
+            let mut c = self.cache.borrow_mut();
+            c.capacity = n;
+            c.shrink()
+        };
+        evicted.into_iter().for_each(RawStmt::finalize);
+    }
+
+    /// Finalize every statement the cache holds (statements in use are kept until dropped).
+    pub fn flush_prepared_statement_cache(&self) {
+        let all = self.cache.borrow_mut().drain();
+        all.into_iter().for_each(RawStmt::finalize);
+    }
+
+    /// Statements the cache holds now (not counting those in use).
+    pub fn prepared_statement_cache_len(&self) -> usize {
+        self.cache.borrow().len
     }
 
     /// Prepare, bind, run to completion; returns `sqlite3_changes`.
@@ -740,12 +871,11 @@ impl Connection {
 
 impl Drop for Connection {
     fn drop(&mut self) {
-        for (_, v) in self.cache.get_mut().drain() {
-            for s in v {
-                // SAFETY: cached statements belong to this handle and are finalized once.
-                unsafe { ffi::sqlite3_finalize(s.0) };
-            }
-        }
+        self.cache
+            .get_mut()
+            .drain()
+            .into_iter()
+            .for_each(RawStmt::finalize);
         if self.owned {
             // SAFETY: we opened it; every statement borrows the connection, so none is still
             // open, and the cached ones were finalized above.
@@ -937,14 +1067,14 @@ impl<'c> Statement<'c> {
 /// A statement from [`Connection::prepare_cached`]; returns to the cache on drop.
 pub struct CachedStatement<'c> {
     conn: &'c Connection,
-    sql: String,
+    key: Rc<str>,
     stmt: Option<Statement<'c>>,
 }
 
 impl std::fmt::Debug for CachedStatement<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("CachedStatement")
-            .field("sql", &self.sql)
+            .field("sql", &&*self.key)
             .finish_non_exhaustive()
     }
 }
@@ -966,12 +1096,12 @@ impl Drop for CachedStatement<'_> {
         if let Some(mut s) = self.stmt.take() {
             s.reset();
             let raw = std::mem::replace(&mut s.raw, std::ptr::null_mut());
-            self.conn
+            let evicted = self
+                .conn
                 .cache
                 .borrow_mut()
-                .entry(std::mem::take(&mut self.sql))
-                .or_default()
-                .push(RawStmt(raw));
+                .put(self.key.clone(), RawStmt(raw));
+            evicted.into_iter().for_each(RawStmt::finalize);
         }
     }
 }
@@ -1064,7 +1194,26 @@ pub(crate) trait TableFunction: Send + Sync + 'static {
     fn schema(&self) -> &'static CStr;
     fn ncols(&self) -> c_int;
     fn nargs(&self) -> c_int;
-    fn run(&self, args: &[Value]) -> Result<Vec<Vec<Value>>>;
+    /// How many leading result columns the rows come sorted by (ascending, BINARY), so an
+    /// `ORDER BY` on a prefix of them needs no sorter.
+    fn order_cols(&self) -> c_int;
+    fn open(&self, args: &[Value]) -> Result<Box<dyn RowStream>>;
+}
+
+/// One result cell, borrowed from the stream until the next [`RowStream::advance`].
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum Cell<'a> {
+    Null,
+    Int(i64),
+    Text(&'a str),
+}
+
+/// The rows of one `xFilter` call, produced while SQLite steps through them.
+pub(crate) trait RowStream: Send {
+    /// Move to the next row (the first one on the first call); false at the end.
+    fn advance(&mut self) -> bool;
+    /// Column `col` of the current row.
+    fn cell(&self, col: usize) -> Cell<'_>;
 }
 
 #[repr(C)]
@@ -1076,8 +1225,9 @@ struct Tab {
 #[repr(C)]
 struct Cursor {
     base: ffi::sqlite3_vtab_cursor,
-    rows: Vec<Vec<Value>>,
-    pos: usize,
+    rows: Option<Box<dyn RowStream>>,
+    eof: bool,
+    rowid: i64,
 }
 
 /// Eponymous-only (`xCreate` null): usable as `graph_impact(...)` without `CREATE VIRTUAL TABLE`.
@@ -1185,6 +1335,19 @@ unsafe extern "C" fn x_best_index(
             info.idxNum = mask;
             info.estimatedCost = if mask & 1 != 0 { 10.0 } else { 1e12 };
             info.estimatedRows = 100;
+            // The rows come sorted by their first `order_cols` columns. SQLite only lists
+            // ORDER BY terms that are plain columns with the column's own (BINARY)
+            // collation, so a prefix of those, all ascending, is already satisfied.
+            let n = info.nOrderBy.max(0);
+            if n > 0 && n <= f.order_cols() {
+                let consumed = (0..n as usize).all(|k| {
+                    let o = &*info.aOrderBy.add(k);
+                    o.iColumn == k as c_int && o.desc == 0
+                });
+                if consumed {
+                    info.orderByConsumed = 1;
+                }
+            }
         }
         ffi::SQLITE_OK
     })
@@ -1197,8 +1360,9 @@ unsafe extern "C" fn x_open(
     guard(|| {
         let c = Box::new(Cursor {
             base: ffi::sqlite3_vtab_cursor::default(),
-            rows: vec![],
-            pos: 0,
+            rows: None,
+            eof: true,
+            rowid: 0,
         });
         // SAFETY: out pointer from SQLite; freed in x_close.
         unsafe { *pp = Box::into_raw(c) as *mut ffi::sqlite3_vtab_cursor };
@@ -1234,9 +1398,13 @@ unsafe extern "C" fn x_filter(
                     j += 1;
                 }
             }
-            let rows = f.run(&a)?;
-            c.rows = rows;
-            c.pos = 0;
+            // Drop the previous stream before building the next one (its scratch goes
+            // back to the pool and can be reused right away).
+            c.rows = None;
+            let mut rows = f.open(&a)?;
+            c.eof = !rows.advance();
+            c.rows = Some(rows);
+            c.rowid = 0;
             Ok::<_, Error>(())
         }
     }));
@@ -1251,20 +1419,44 @@ unsafe extern "C" fn x_filter(
 }
 
 unsafe extern "C" fn x_next(cur: *mut ffi::sqlite3_vtab_cursor) -> c_int {
-    // SAFETY: cur is our Cursor.
     guard(|| {
-        unsafe { (*(cur as *mut Cursor)).pos += 1 };
+        // SAFETY: cur is our Cursor; SQLite never calls xNext on two cursors' behalf at once.
+        let c = unsafe { &mut *(cur as *mut Cursor) };
+        c.eof = !c.rows.as_mut().is_some_and(|r| r.advance());
+        c.rowid += 1;
         ffi::SQLITE_OK
     })
 }
 
 unsafe extern "C" fn x_eof(cur: *mut ffi::sqlite3_vtab_cursor) -> c_int {
-    // SAFETY: cur is our Cursor.
     catch_unwind(|| {
-        let c = unsafe { &*(cur as *const Cursor) };
-        (c.pos >= c.rows.len()) as c_int
+        // SAFETY: cur is our Cursor.
+        let eof = unsafe { (*(cur as *const Cursor)).eof };
+        eof as c_int
     })
     .unwrap_or(1)
+}
+
+/// # Safety
+/// `ctx` must be the live context of the current `xColumn` call.
+unsafe fn set_cell(ctx: *mut ffi::sqlite3_context, cell: Cell<'_>) {
+    // SAFETY: caller guarantees ctx; SQLITE_TRANSIENT makes SQLite copy the text before
+    // the stream moves on.
+    unsafe {
+        match cell {
+            Cell::Null => ffi::sqlite3_result_null(ctx),
+            Cell::Int(n) => ffi::sqlite3_result_int64(ctx, n),
+            Cell::Text(s) => match len_c(s.len()) {
+                Ok(n) => ffi::sqlite3_result_text(
+                    ctx,
+                    s.as_ptr() as *const c_char,
+                    n,
+                    ffi::SQLITE_TRANSIENT(),
+                ),
+                Err(_) => ffi::sqlite3_result_error_toobig(ctx),
+            },
+        }
+    }
 }
 
 unsafe extern "C" fn x_column(
@@ -1276,9 +1468,9 @@ unsafe extern "C" fn x_column(
         // SAFETY: cur is our Cursor on a valid row (SQLite checks xEof first); ctx is live.
         unsafe {
             let c = &*(cur as *const Cursor);
-            match c.rows.get(c.pos).and_then(|r| r.get(i as usize)) {
-                Some(v) => set_result(ctx, v),
-                None => ffi::sqlite3_result_null(ctx),
+            match (&c.rows, usize::try_from(i)) {
+                (Some(r), Ok(i)) => set_cell(ctx, r.cell(i)),
+                _ => ffi::sqlite3_result_null(ctx),
             }
         }
         ffi::SQLITE_OK
@@ -1291,7 +1483,7 @@ unsafe extern "C" fn x_rowid(
 ) -> c_int {
     guard(|| {
         // SAFETY: cur is our Cursor; out is SQLite's out pointer.
-        unsafe { *out = (*(cur as *const Cursor)).pos as i64 };
+        unsafe { *out = (*(cur as *const Cursor)).rowid };
         ffi::SQLITE_OK
     })
 }
