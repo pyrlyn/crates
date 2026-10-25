@@ -29,5 +29,11 @@ thiserror = "2"
 # on extism's wasmtime major, or a second wasmtime resolves that extism never sees.
 wasmtime = { version = "49", default-features = false, features = ["anyhow"] }
 
+[features]
+# wasmtime's Pulley interpreter instead of native code, for iOS and other
+# platforms that refuse executable memory at run time. Every plugin the host
+# loads runs interpreted while it is on.
+pulley = ["wasmtime/pulley"]
+
 [dev-dependencies]
 tempfile = "3"

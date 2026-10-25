@@ -1,5 +1,11 @@
 # crates — completed tasks
 
+### T2. `{changed}` silently expands to empty in full mode
+
+`rust/scoped-check/src/plan.rs:87-91` sets `changed: String::new()` for `--all`, unmatched-path fallback, and error fallbacks, while `paths` is usually already known (`plan.rs:58-63`). A gate `run = "gofmt -w {changed}"` becomes `gofmt -w` (reads stdin, hangs CI); test `cli.rs:176-180` pins the trailing-empty behavior. Done means: the full quoted path list is substituted whenever paths are known, and a forced plan that still contains `{changed}` with unknown paths warns or refuses.
+
+Done: when every gate runs (`--all`, an unmatched path, the opt-in fallback after a `cargo metadata` error) `{changed}` is every changed path, shell-quoted. When there is no path to substitute (nothing changed, or the change set is unknown under `--all` or the fallback after a git error) a gate using `{changed}` is skipped with the reason `{changed} has no paths: ...`, shown by `plan`, `run` and `plan --json`. The scoped value is unchanged. Tests: `all_flag_substitutes_every_changed_path`, `all_flag_ignores_the_change_set` (now pins the skip), `unmatched_path_selects_every_gate`, `all_flag_refuses_changed_when_the_change_set_is_unknown`, `fallback_substitutes_changed_when_the_paths_are_known`, `fallback_refuses_changed_when_the_change_set_is_unknown`.
+
 ### T20.2. wasm-plugin-host: package layout
 
 Plugin packages on disk, generic over the application's manifest type and home directory. `discover` finds user plugins under `<home>/plugins/<id>/versions/<digest12>/` (following `current`, with `link` winning for a development tree) and project plugins under `<project>/.<app>/plugins/<id>/`. A user plugin shadows a project plugin of the same id. `package_digest` is SHA-256 over the package tree. `layout` stages through a temp directory, swaps `current`/`previous`, writes `link`, and `remove`s only a path that canonicalizes inside `<home>/plugins/`. The manifest parse is the application's [`Manifest`]; this crate checks the id and refuses a wasm path that leaves the package. Tree copy, directory fsync and confined delete stay local until roadmap T16 `dir-ops`.
@@ -16,11 +22,29 @@ rtok's agent SDK keeps its own copy of the folder mode (`BACKUP_DIR`, `backup`, 
 
 `Folder { name, keep }` with `backup`, `backup_at`, `prune` and `stale`, plus `DEFAULT_FOLDER = "_backup"`; `backup`/`backup_at` beside the file are unchanged. Both modes share one `create_new` copy loop and one byte-equality dedup check (symlinks and hard links to the source are not backups). A folder name that is not one plain path component is `InvalidInput`. Check: fmt, clippy `-D warnings` and `cargo test --workspace --locked` green (105 tests, 20 in `file-backup`).
 
+### T4. file-backup: name-probe race and symlink-following overwrite
+
+`rust/file-backup/src/lib.rs:39-45` does `while bak.exists()` then `fs::copy` — two concurrent backups can pick the same name and the second silently truncates the first (exactly what the comment claims to prevent), and a planted `<name>.bak-<ts>` dangling symlink is followed by `fs::copy`. Done means: the destination is created with `OpenOptions::create_new(true)` + `io::copy`, bumping the suffix on `AlreadyExists`.
+
+The `create_new` loop with the suffix bump and the planted-symlink tests landed with T12 (`3313567`). Closing it added: the copy is opened with the source's mode on Unix, so a 0600 file is never readable by others while the bytes go in; a failed write or chmod removes the partial copy instead of leaving a truncated file under a backup name; a test races 16 writers with distinct bytes into one name and second, and fails with a non-exclusive open. The bytes checked by the identical-copy skip are the bytes written (`write_all` of the one read), not a second `io::copy` read of a file that may have changed in between.
+
 ### T11. Add the required project files
 
 The project was missing `AGENTS.md`, `done.md`, `roadmap.md`, `ideas.md`, and `toolchain.md`. Done means: all files exist, and `toolchain.md` lists the workspace crates per the rulebook (also update `rust.md` then).
 
 Those files are in the workspace root. `toolchain.md` lists `cargo-changed-packages`, `file-backup`, `git-changed-paths`, `path-gates`, and `scoped-check`. `rust.md` names the same five under shared crates. `file-backup` tests already live in `src/lib.rs`; the other four crates already have `tests/`.
+
+### T1. Windows: POSIX quoting handed to cmd.exe in scoped-check
+
+`rust/scoped-check/src/plan.rs:139,155-157` builds `{changed}`/`{packages}` with `shlex::try_join`/`try_quote` (POSIX single quotes), but `rust/scoped-check/src/main.rs:146-149` runs commands via `cmd /C` on Windows, which does not honor them. A file named `docs/x & calc & .md` executes `calc`; plain spaces break arguments. Tests are `#![cfg(unix)]` (`rust/scoped-check/tests/cli.rs:4`), so the path is untested. Done means: Windows-appropriate quoting (or raw argument passing) with tests covering it.
+
+`src/quote.rs` quotes substituted values for the platform shell: `shlex` for `sh`, double quotes for `cmd.exe` (trailing backslashes doubled for the MSVC argument parser). `%`, `"` and control characters have no cmd.exe escape inside quotes, so such a value is a planning error (exit 3). Windows passes `cmd /D /V:OFF /S /C "<command>"` through `raw_arg`, because std's MSVC quoting of a single argument is not what cmd.exe parses; `/V:OFF` keeps `!` literal and `/D` skips AutoRun. Unit tests cover the cmd.exe quoter on every host; `tests/quoting.rs` runs a gate on paths with spaces, `&`, `'`, `^`, `;`, `!` and parentheses under the platform shell, plus a Windows-only `%` refusal test.
+
+### T3. `--config` outside the repository top mixes path bases
+
+`git-changed-paths` returns repo-top-relative paths, but `Config::parse` sets `dir` to the config file's parent (`rust/scoped-check/src/config.rs:96-99`) and `plan::build` uses that dir both for git and as the cargo root (`plan.rs:58,174`), so `--config sub/scoped-check.toml` feeds determinator wrong relative paths and gates get wrong package sets. Done means: `dir` is resolved via `git rev-parse --show-toplevel` from the config parent, with a test.
+
+`Config::load` replaces `dir` with the git top level of the config's directory (kept as is outside git, where planning still fails with exit 3), so `workspace`, `paths` globs and `{changed}` are relative to the repository top and gates run there. The top-level lookup is one `config::toplevel` helper, also used for the default config path. Test `config_below_the_repository_top_plans_from_the_top` runs `--config ci/scoped-check.toml` from the top and from `ci/`; without the fix it exits 3 (`ci/ is not the workspace root`).
 
 ### T11. atomic-replace: one atomic file write for every project
 
@@ -33,6 +57,12 @@ Plan:
 4. Check: `cargo test -p atomic-replace`, clippy `-D warnings`, fmt, `cargo +1.86 check -p atomic-replace`.
 
 Delivered as the `write` module of `fs-kit` instead of a crate of its own (creator's call, 2026-10-12): `fs_kit::write::{atomic, Options, write_with, if_changed, sync_dir}`, ported from branch `t11-atomic-file` with its tests. Consumers migrate in their own tasks.
+
+### T49. fs-kit: copy-on-write tree clone
+
+rtok seeds a new git worktree's ignored build caches (`target/`, `node_modules/`) from a sibling checkout. Doing that by hand (`cp -c -R`) is macOS-only and leaves copied artifacts newer than the fresh checkout's sources, so cargo trusts stale outputs. Done means `fs_kit::tree::clone_tree(src, dest)` behind an opt-in `clone` feature: each file is cloned where the file system shares blocks (APFS `clonefile`, Linux `FICLONE` on btrfs/XFS/bcachefs, Windows ReFS/Dev Drive block cloning, via `reflink-copy`) and copied where it cannot, symlinks are kept, each file keeps its source mtime, and the result says how many files were cloned and how many copied. The default feature set stays std plus `dunce`, so ketch's dependency tree does not change.
+
+Delivered: `fs_kit::tree::{clone_tree, Cloned}` behind the `clone` feature, with `copy_tree`'s walk taking the per-file step as a parameter. Check: `cargo test -p fs-kit --features clone` (macOS asserts both files cloned), clippy `-D warnings` with and without the feature and for `x86_64-unknown-linux-gnu` and `x86_64-pc-windows-msvc`, `cargo +1.86 check -p fs-kit --all-targets` with and without it.
 
 ### T26. Classify Git output and external diff flags by their effects
 
@@ -54,6 +84,10 @@ The `single_thread_is_not_sync` trybuild diagnostic depended on whether standard
 ### T20.4. wasm-plugin-host: synchronize patched Extism and Wasmtime
 
 Updated the shared WASM host and cox to Extism 1.41.0 / Wasmtime 49, removing the four now-fixed Wasmtime advisory ignores. The host API remains unchanged. Verified focused and workspace tests, clippy, fmt, and CI on pyrlyn/crates#74; no crate was manually published.
+
+### T20.6. wasm-plugin-host and plugwright-extism: Pulley interpreter feature
+
+Kerf's mobile plugin backend (kerf T15): iOS forbids executable memory at run time, so a host there cannot run wasmtime's native code. Feature `pulley` on both crates passes extism a `wasmtime::Config` whose target is Pulley (`pulley64`, or `pulley32` on 32-bit), wasmtime's own interpreter; extism keeps the target. The host API is unchanged. Done when both crates' full test suites pass with the feature on, a test checks that the engine built from the config is Pulley, and CI runs them.
 
 ### T20.5. abi-drift: permit Extism-compatible cbindgen patch
 
@@ -94,6 +128,12 @@ Validation: mise renders the macOS wrapper and empty Linux flags correctly; the 
 Added the existing pinned sccache tool to publish-crates mise installation. The cargo backend requires its configured compiler wrapper even when installing cargo-workspaces; the restricted tool list omitted it and failed before any publish command (main run 39146935615). Publication gates and pinned versions are unchanged.
 
 Workflow lint and diff checks pass locally. The existing pull-request publish job exercises a clean Linux bootstrap and dry-run publication as integration regression proof; it uploads no crates on pull requests.
+
+### T37. Move plugwright under rust/ and onto the release path
+
+plugwright lived in its own workspace at `plugwright/`, which bump.yml, release.yml and release-crate.sh never see, so none of its crates could reach crates.io and rtok's CI could not depend on it. Moved it to `rust/plugwright/` and made its 18 publishable crates and 4 examples members of the root workspace: one `Cargo.lock`, the root toolchain (1.99.0), the root `[workspace.dependencies]`. Each crate's metadata is explicit, because inheriting the root's GPL license would have changed plugwright's MIT OR Apache-2.0. Each crate has a release-plz `CHANGELOG.md`, and the README lists the release order. `plugwright-wasmer` stays outside the workspace (wasmer 7.5 and wasmtime 49 pin incompatible cranelift versions) and is `publish = false`. The separate `plugwright` CI job folded into the root `rust` job on all four targets; the wasm32 target is added there and in release.yml's gate.
+
+Validation: workspace fmt, all-target clippy -D warnings and `cargo test --workspace --locked` pass on 1.99.0, as do the loader's native-only clippy, the SDK's wasm32 clippy, the bench smoke run and publish dry-runs for the first release step. The one test that failed on 1.99 asserted std's `TryFromIntError` wording, which changed in that release; it now compares against the error's own `Display`, which fails on 1.99 before the change and passes after it. The 19 crate names returned 404 from the crates.io API on 2026-10-19. Nothing is published here: the first release is a `Bump and release` run per crate.
 
 ### T31. Publish shell-completions through the managed release pipeline
 

@@ -2,7 +2,7 @@
 //! file and walks a tree the same way.
 //!
 //! - [`path`]: path identity without the Windows `\\?\` prefix, case-folded on Windows, and
-//!   a lexical join that needs no disk.
+//!   a lexical join and clean that need no disk.
 //! - [`write`]: atomic replace through a sibling temp file, following symlinks and keeping
 //!   permissions; write only when the bytes differ.
 //! - [`read`]: read text where a missing file is empty.

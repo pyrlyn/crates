@@ -14,6 +14,7 @@ Small, focused Rust crates shared by the creator's projects (`ketch`, `rtok`, `s
 | [`cargo-changed-packages`](rust/cargo-changed-packages) | Workspace packages a set of changed paths affects, including reverse dependencies |
 | [`change-preview`](rust/change-preview) | Preview what a command would change: diff or `--stat` of edits, size and file count of removals, totals |
 | [`operation-icons`](rust/operation-icons) | Emoji icons for the verb of a status line and the fixed-width gutter they sit in |
+| [`owner-listener`](rust/owner-listener) | Owner-only Unix socket and Windows named pipe for a local gRPC agent, with tonic `Connected` peer info and login-service install (not published) |
 | [`config-schema`](rust/config-schema) | Schema-checked TOML config: stale JSON Schema check, figment layering with per-key provenance, comment-preserving key edits (not published yet) |
 | [`d2-render`](rust/d2-render) | Render D2 diagrams to SVG/PNG in pure Rust, with an optional d2 CLI backend, structured diagnostics and freshness checks |
 | [`fs-kit`](rust/fs-kit) | One entry point for file and directory work: `\\?\`-free paths, atomic writes, tree usage, copy and removal, backups |
@@ -30,10 +31,11 @@ Small, focused Rust crates shared by the creator's projects (`ketch`, `rtok`, `s
 | [`injecta`](rust/injecta) | Compile-time dependency injection: one `container!` declaration, derive `Injectable`, no runtime registry |
 | [`injecta-macros`](rust/injecta-macros) | Procedural macros behind `injecta` (`container!`, `#[derive(Injectable)]`, `#[injectable]`) |
 | [`path-gates`](rust/path-gates) | Map changed paths to named gates by glob rules from a TOML config |
-| [`plugwright`](plugwright) | Plugin manager for Rust hosts: native (in-process or isolated) and Wasm (wasmtime, wasmi, wasmer) plugins from one manifest, cached builds, `#[plugin]`/`#[interface]` macros (separate workspace, not published yet) |
+| [`plugwright`](rust/plugwright) | Plugin manager for Rust hosts: native (in-process or isolated) and Wasm (wasmtime, wasmi, wasmer) plugins from one manifest, cached builds, `#[plugin]`/`#[interface]` macros (crates under `rust/plugwright/crates`; `plugwright-wasmer` stays outside the workspace and unpublished) |
 | [`perm-rules`](rust/perm-rules) | Permission rules for tool calls: `Tool(subject)` grammar, deny/allow/ask decision order, risk fallback |
 | [`sccache-r2`](rust/sccache-r2) | Wire sccache to a Cloudflare R2 bucket from env vars: validate, export (GitHub Actions or shell), check the bucket, print stats; off without the secrets |
 | [`proc-sandbox`](rust/proc-sandbox) | Confine a child process: Seatbelt on macOS, bubblewrap or Landlock plus seccomp on Linux, and a path guard for workspace roots |
+| [`rgba-png`](rust/rgba-png) | RGBA8 frames and PNG files: encode, decode any PNG to RGBA under an allocation cap, per-pixel comparison with a threshold, diff images (not published) |
 | [`scoped-check`](rust/scoped-check) | Run only the check commands a change touches (binary) |
 | [`telemetry-setup`](rust/telemetry-setup) | `tracing` setup: rotating JSON log, stderr log, optional OTLP traces, secrets masked before they leave the process |
 | [`sqlite-change-feed`](rust/sqlite-change-feed) | Change feed for a SQLite database shared between processes: `PRAGMA data_version` through Diesel |
@@ -113,6 +115,19 @@ in this repository: crates.io resolves the dependencies when a crate is
 published. Both workflows check it and stop before a pull request or a publish.
 The rest of the order is free, so release the crates others wait for first.
 
+plugwright's crates, a step at a time (any order inside a step; the steps follow
+from their normal, build and versioned dev-dependencies):
+
+1. `plugwright-abi`, `plugwright-macros`, `plugwright-packages`, `plugwright-sandbox`
+2. `plugwright-core`, `plugwright-sdk`
+3. `plugwright-build`, `plugwright-extism`, `plugwright-native`, `plugwright-trust`, `plugwright-wasm`
+4. `plugwright-isolate`, `plugwright-wasmi`, `plugwright-wasmtime`
+5. `plugwright-loader`, `plugwright-runner`
+6. `plugwright`
+7. `cargo-plugwright`
+
+That is 18 new crates: past the burst of 5 below, a new crate every 10 minutes.
+
 crates.io limits how fast new crates appear: a burst of 5 new crates, then one
 every 10 minutes; new versions of existing crates have a burst of 30 and one per
 minute (`default_burst` and `default_rate_seconds` in
@@ -148,7 +163,7 @@ Licensed under the [GNU General Public License v3.0 or later](LICENSE)
 (`GPL-3.0-or-later`).
 
 The crates shared with cox and aulo (`agent-ext`, `agent-host-config`,
-`agent-loop`, `config-schema`, `llm-*`, `mcp-client-host`, `perm-rules`,
+`agent-loop`, `config-schema`, `llm-*`, `mcp-client-host`, `owner-listener`, `perm-rules`,
 `proc-sandbox`, `shell-classify`, `speech-capture`, `text-sanitize`) are
 offered under `GPL-3.0-or-later OR LicenseRef-Royalty-Free`: the second option
 is [`LICENSE-ROYALTY-FREE.md`](LICENSE-ROYALTY-FREE.md). Each package ships

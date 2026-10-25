@@ -12,8 +12,14 @@ categories = ["filesystem"]
 [lints.rust]
 unsafe_code = "forbid"
 
+[features]
+# Copy-on-write clones for `tree::clone_tree`; off by default so the default build stays std
+# plus dunce.
+clone = ["dep:reflink-copy"]
+
 [dependencies]
 dunce = "1"
+reflink-copy = { version = "0.1.30", optional = true }
 
 [dev-dependencies]
 tempfile = "3"

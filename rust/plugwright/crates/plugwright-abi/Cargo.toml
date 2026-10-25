@@ -1,0 +1,11 @@
+[package]
+name = "plugwright-abi"
+description = "Binary contract (native C ABI + core-Wasm ABI) shared by plugwright hosts and plugins"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.89"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/pyrlyn/crates"
+
+[lints]
+workspace = true

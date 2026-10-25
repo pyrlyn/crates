@@ -15,7 +15,7 @@ scoped-check run    # run it
 ```toml
 base = "origin/main"   # default; --base overrides
 unmatched = "all"      # path-gates key: a path no gate claims selects every gate
-workspace = "."        # cargo workspace root, relative to this file
+workspace = "."        # cargo workspace root, relative to the repository top
 
 [[gate]]
 name = "fmt"
@@ -34,7 +34,7 @@ run = "just docs-check"
 ```
 
 `paths`, `always` and `unmatched` are read by [`path-gates`](../path-gates). `run` is
-executed with `sh -c` (`cmd /C` on Windows) from the config file's directory. A gate
+executed with `sh -c` (`cmd /C` on Windows) from the repository top level. A gate
 without `run`, or a `run` with an unknown `{placeholder}`, is a config error (exit 2).
 Only `{identifier}` is a placeholder; `${VAR}`, `awk '{print}'` and `{a,b}` stay literal.
 
@@ -42,10 +42,13 @@ Only `{identifier}` is a placeholder; `${VAR}`, `awk '{print}'` and `{a,b}` stay
 | --- | --- | --- |
 | `{packages}` | `-p a -p b` (sorted, affected packages incl. reverse dependencies) | `--workspace` |
 | `{nextest_filter}` | `-E 'package(=a) \| package(=b)'` | empty |
-| `{changed}` | the paths the gate claims, shell-quoted | empty |
+| `{changed}` | the paths the gate claims, shell-quoted | every changed path, shell-quoted |
 
 Values are POSIX shell-quoted, so avoid `{changed}` on Windows. A gate using `{packages}` or
-`{nextest_filter}` whose affected set is empty is skipped: nothing it covers changed.
+`{nextest_filter}` whose affected set is empty is skipped: nothing it covers changed. When
+every gate runs, a gate using `{changed}` is skipped if there is no path to substitute
+(nothing changed, or `--all` / the fallback could not compute the change set), so a command
+like `gofmt -w {changed}` never runs with an empty argument list.
 
 ## Commands
 
@@ -58,7 +61,10 @@ Values are POSIX shell-quoted, so avoid `{changed}` on Windows. A gate using `{p
 
 Shared flags: `--fallback-all` (see below), `--no-cache` (do not read or write the cargo
 metadata cache), `-v/--verbose` (say on stderr whether `cargo metadata` ran). `--config`
-defaults to `scoped-check.toml` at the git top level of the current directory.
+defaults to `scoped-check.toml` at the git top level of the current directory. A config
+kept elsewhere in the repository (`--config ci/scoped-check.toml`) still plans from the git
+top level of its directory: `paths` globs, `workspace` and `{changed}` are relative to it,
+and gates run there.
 
 ## Exit codes
 

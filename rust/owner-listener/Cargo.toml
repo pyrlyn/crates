@@ -1,0 +1,51 @@
+[package]
+name = "owner-listener"
+version = "0.1.0"
+edition = "2024"
+# cofre's MSRV, its first consumer.
+rust-version = "1.99"
+description = "Owner-only Unix socket and Windows named-pipe listeners for a local gRPC server, plus login-service install"
+license = "GPL-3.0-or-later OR LicenseRef-Royalty-Free"
+repository = "https://github.com/pyrlyn/crates"
+publish = false
+exclude = ["AGENTS.md"]
+readme = "README.md"
+keywords = ["unix-socket", "named-pipe", "grpc", "tonic", "listener"]
+categories = ["network-programming", "os"]
+
+[dependencies]
+thiserror = "2"
+tokio = { version = "1", features = ["io-util", "macros", "net", "rt", "sync", "time"] }
+tokio-stream = "0.1"
+tokio-util = { version = "0.7", features = ["rt"] }
+tonic = { version = "0.14.6", default-features = false, features = ["server"] }
+tracing = "0.1"
+
+[target.'cfg(unix)'.dependencies]
+rustix = { version = "1", features = ["process"] }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_Security",
+    "Win32_Security_Authorization",
+    "Win32_System_Pipes",
+    "Win32_System_Threading",
+] }
+
+[dev-dependencies]
+tempfile = "3"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+
+[lints.rust]
+unsafe_code = "deny"
+missing_docs = "deny"
+missing_debug_implementations = "warn"
+
+[lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+todo = "deny"
+unimplemented = "deny"
+dbg_macro = "deny"

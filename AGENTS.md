@@ -14,8 +14,11 @@ Cargo workspace of five small Rust crates shared by ketch and rtok:
 | `gettext-catalog` | gettext `.po` catalogs for an application's own strings: plural rules, named placeholders, language negotiation and per-message fallback |
 | `git-changed-paths` | Paths a git working tree changed relative to a base ref |
 | `keychain-secret` | Application secrets from an environment variable or the OS keychain, never a config file, with a test guard against the real keychain |
+| `lockstep` | Locks that cannot deadlock: one global acquisition order or lock-free structures; skeleton with its own `AGENTS.md` and plan, not published |
+| `owner-listener` | Owner-only Unix socket and Windows named pipe for a local gRPC agent, peer uid/pid through tonic `Connected`, login-service install; first used by cofre |
+| `rgba-png` | RGBA8 frames and PNG files shared by scull (image decoding) and slint-bindings (screenshot tests); Apache-2.0, not published, consumed by git rev |
 | `path-gates` | Map changed paths to named gates by glob rules from a TOML config |
-| `plugwright` | Plugin manager for Rust hosts (native and Wasm); a separate workspace excluded from this one, with its own `Cargo.lock`, `rust-toolchain.toml` (1.97.1) and `AGENTS.md`; CI job `plugwright` |
+| `plugwright` | Plugin manager for Rust hosts (native and Wasm): the `plugwright-*` crates under `rust/plugwright/crates` (with its own `AGENTS.md`, design and plan), members of this workspace; `plugwright-wasmer` stays outside it (own `Cargo.lock`, not published) |
 | `scoped-check` | Binary that runs only the check commands a change touches |
 | `telemetry-setup` | `tracing` setup with rotating JSON logs, optional OTLP traces and secret redaction, shared by aulo and Mailune |
 | `sqlite-change-feed` | Change feed for a SQLite database shared between processes: `PRAGMA data_version` through Diesel |

@@ -6,6 +6,7 @@
 
 mod config;
 mod plan;
+mod quote;
 
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -191,14 +192,9 @@ fn append_line(file: &Path, line: &str) {
 fn default_config() -> PathBuf {
     // Outside git the current directory is the best guess; a missing config is then a
     // config error (exit 2), and with a config, planning fails with exit 3.
-    let top = Command::new("git")
-        .args(["rev-parse", "--show-toplevel"])
-        .output()
-        .ok()
-        .filter(|o| o.status.success())
-        .and_then(|o| String::from_utf8(o.stdout).ok())
-        .map(|s| PathBuf::from(s.trim_end_matches('\n')));
-    top.unwrap_or_default().join("scoped-check.toml")
+    config::toplevel(Path::new("."))
+        .unwrap_or_default()
+        .join("scoped-check.toml")
 }
 
 fn print_plan(plan: &Plan) {
@@ -252,15 +248,24 @@ fn execute_plan(cfg: &Config, plan: &Plan, keep_going: bool) -> ExitCode {
 
 /// Exit code of `command` under the platform shell; 1 when it has none (killed by a signal).
 fn shell(command: &str, cfg: &Config) -> std::io::Result<u8> {
-    let (program, flag) = if cfg!(windows) {
-        ("cmd", "/C")
-    } else {
-        ("sh", "-c")
-    };
-    let status = Command::new(program)
-        .arg(flag)
-        .arg(command)
-        .current_dir(&cfg.dir)
-        .status()?;
+    let status = shell_command(command).current_dir(&cfg.dir).status()?;
     Ok(status.code().map_or(1, |c| u8::try_from(c).unwrap_or(1)))
+}
+
+#[cfg(not(windows))]
+fn shell_command(command: &str) -> Command {
+    let mut cmd = Command::new("sh");
+    cmd.arg("-c").arg(command);
+    cmd
+}
+
+/// std quotes arguments by the MSVC rules, which cmd.exe does not parse, so the command goes
+/// in raw: `/S /C "<command>"` runs the text between the outer quotes verbatim. `/D` skips
+/// AutoRun and `/V:OFF` keeps `!` literal, as `quote` assumes.
+#[cfg(windows)]
+fn shell_command(command: &str) -> Command {
+    use std::os::windows::process::CommandExt;
+    let mut cmd = Command::new("cmd");
+    cmd.raw_arg(format!("/D /V:OFF /S /C \"{command}\""));
+    cmd
 }

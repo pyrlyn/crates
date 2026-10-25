@@ -1,0 +1,2 @@
+- T2. Adopt rgba-png in scull
+- T3. Adopt rgba-png in slint-bindings

@@ -139,6 +139,30 @@ pub fn normalize(root: &Path, path: &Path) -> PathBuf {
     out
 }
 
+/// `path` with `.` dropped and each `..` folded into the name before it; no disk access, so a
+/// missing path still cleans. A leading `..` of a relative path is kept (`../a` stays), and
+/// `..` at the root is dropped, as the OS resolves it.
+///
+/// Lexical, so `link/..` is not the target's parent: callers that need that canonicalize
+/// first and fall back to this for a path that does not exist.
+pub fn clean(path: &Path) -> PathBuf {
+    let mut out = PathBuf::new();
+    for c in path.components() {
+        match c {
+            Component::CurDir => {}
+            Component::ParentDir => match out.components().next_back() {
+                Some(Component::Normal(_)) => {
+                    out.pop();
+                }
+                Some(Component::RootDir | Component::Prefix(_)) => {}
+                _ => out.push(".."),
+            },
+            c => out.push(c.as_os_str()),
+        }
+    }
+    out
+}
+
 fn components_match(a: Component, b: Component) -> bool {
     match (a, b) {
         (Component::Normal(x), Component::Normal(y)) => x.eq_ignore_ascii_case(y),
@@ -217,6 +241,30 @@ mod tests {
             Path::new("/main/.git")
         );
         assert_eq!(normalize(root, Path::new("/etc/x")), Path::new("/etc/x"));
+    }
+
+    #[test]
+    fn clean_folds_parents_but_keeps_the_leading_ones() {
+        assert_eq!(clean(Path::new("a/./sub/../../c")), Path::new("c"));
+        assert_eq!(clean(Path::new("../a/../../b")), Path::new("../../b"));
+        assert_eq!(clean(Path::new("/x/../../y")), Path::new("/y"));
+        assert_eq!(clean(Path::new("a/..")), Path::new(""));
+        assert_eq!(clean(Path::new("a/../..")), Path::new(".."));
+        assert_eq!(clean(Path::new("./..")), Path::new(".."));
+        assert_eq!(clean(Path::new(".")), Path::new(""));
+        assert_eq!(clean(Path::new("")), Path::new(""));
+        assert_eq!(clean(Path::new("/")), Path::new("/"));
+        // No disk access: a path that does not exist still cleans.
+        let missing = std::env::temp_dir().join("fs-kit-clean-missing/x/../y");
+        assert_eq!(
+            clean(&missing),
+            std::env::temp_dir().join("fs-kit-clean-missing/y")
+        );
+        #[cfg(windows)]
+        {
+            assert_eq!(clean(Path::new(r"C:\a\..\..\b")), Path::new(r"C:\b"));
+            assert_eq!(clean(Path::new(r"\\?\C:\a\.\..\b")), Path::new(r"\\?\C:\b"));
+        }
     }
 
     #[test]
