@@ -119,6 +119,20 @@ jobs:
             echo "llm-http --no-default-features links a crate its features gate" >&2
             exit 1
           fi
+          # sqlitex-compress (rust/sqlitex/sqlitex-compress/plan.md): every algorithm is an
+          # opt-in feature, so all 8 combinations must test and lint, and the no-feature build
+          # must link none of the codecs.
+          for f in "" brotli zstd lz4 brotli,zstd brotli,lz4 zstd,lz4 brotli,zstd,lz4; do
+            echo "::group::sqlitex-compress features=[$f]"
+            cargo test -p sqlitex-compress --no-default-features --features "$f" --locked
+            cargo clippy -p sqlitex-compress --no-default-features --features "$f" --all-targets --locked -- -D warnings
+            echo "::endgroup::"
+          done
+          if cargo tree -p sqlitex-compress --no-default-features -e normal --target all --prefix none --locked \
+            | grep -E '^(brotli|zstd|lz4_flex) v'; then
+            echo "sqlitex-compress without features links a codec" >&2
+            exit 1
+          fi
           # Mailune's browser build: llm-wire and the slim llm-http must compile for wasm.
           cargo build -p llm-wire --target wasm32-unknown-unknown --locked
           cargo build -p llm-http --no-default-features --target wasm32-unknown-unknown --locked

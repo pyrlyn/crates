@@ -7,6 +7,9 @@
 //!
 //! Every compressed blob starts with a one-byte [`Algorithm`] tag, so
 //! [`decompress`] can pick the right algorithm without extra metadata.
+//!
+//! Tests for all feature combinations and the criterion and SQLite benchmarks are
+//! described in the crate README (`## Testing`, `## Benchmarks`).
 
 use std::fmt;
 
