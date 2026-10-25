@@ -1,1 +1,0 @@
-../../LICENSE-ROYALTY-FREE.md
