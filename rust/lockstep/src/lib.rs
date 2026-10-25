@@ -15,7 +15,7 @@
 //! invisible to the order, and the order can break. See [`detect`] for how
 //! such locks are meant to be found.
 //!
-//! Status: skeleton. Modules hold only their intended design; see `PLAN.md`.
+//! Status: skeleton. Modules hold only their intended design; see `plan.md`.
 
 pub mod detect;
 pub mod guard;

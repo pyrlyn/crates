@@ -1,7 +1,7 @@
 # lockstep
 
 Locks that cannot deadlock: one global acquisition order, or lock-free
-structures. **Skeleton only; nothing is implemented yet.** See `PLAN.md`.
+structures. **Skeleton only; nothing is implemented yet.** See `plan.md`.
 
 ## How it works
 
@@ -31,7 +31,7 @@ cannot be disabled.
 cargo test -p lockstep
 ```
 
-Planned: loom model tests and stress tests (see `PLAN.md`).
+Planned: loom model tests and stress tests (see `plan.md`).
 
 ## Limitations
 
