@@ -2,7 +2,7 @@
 //! LIMIT returns the prefix of the full result, columns that are never read cost nothing,
 //! `graph_impact_many`, and cursors that are re-filtered or interleaved.
 #![cfg(not(feature = "loadable"))]
-use sqlite_csr_graph::{Connection, DefRow, FileSymbols, RefRow, Store, Value};
+use sqlitex_graph::{Connection, DefRow, FileSymbols, RefRow, Store, Value};
 
 const R: &str = "/s";
 const N: usize = 20;

@@ -4,12 +4,12 @@
 
 #[test]
 fn memstatus_can_be_turned_off_only_before_the_first_connection() {
-    assert!(sqlite_csr_graph::disable_sqlite_memstatus());
-    let c = sqlite_csr_graph::Connection::open_in_memory().unwrap();
+    assert!(sqlitex_graph::disable_sqlite_memstatus());
+    let c = sqlitex_graph::Connection::open_in_memory().unwrap();
     let n: i64 = c.query_row("SELECT 1", [], |r| r.get(0)).unwrap();
     assert_eq!(n, 1);
     assert!(
-        !sqlite_csr_graph::disable_sqlite_memstatus(),
+        !sqlitex_graph::disable_sqlite_memstatus(),
         "SQLite is initialised now; the call must report it had no effect"
     );
 }

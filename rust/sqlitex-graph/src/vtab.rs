@@ -299,7 +299,7 @@ pub fn register(conn: &Connection) -> Result<()> {
     let p = conn
         .path()
         .filter(|p| !p.is_empty())
-        .ok_or_else(|| Error::Module("sqlite-csr-graph needs a file database".into()))?;
+        .ok_or_else(|| Error::Module("sqlitex-graph needs a file database".into()))?;
     let p = PathBuf::from(p);
     let slot = store::slot_for(&p);
     register_impl(conn, GraphRef::Lazy(p, slot))

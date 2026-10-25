@@ -1,4 +1,4 @@
-//! sqlite-csr-graph: a code-symbol store in SQLite with a native call/reference graph kept in
+//! sqlitex-graph: a code-symbol store in SQLite with a native call/reference graph kept in
 //! compact CSR segments, queried through table-valued functions.
 //! See README.md.
 

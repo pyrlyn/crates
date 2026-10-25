@@ -1,6 +1,6 @@
 //! The SQL surface on a small fixture graph built through `Store`: impact, neighbors,
 //! callers, callees, stats, merge and the lazily loaded graph of `register`.
-use sqlite_csr_graph::{DefRow, FileSymbols, RefRow, Store};
+use sqlitex_graph::{DefRow, FileSymbols, RefRow, Store};
 use std::collections::BTreeSet;
 
 const R: &str = "/fixture";
@@ -72,16 +72,16 @@ fn fixture(dir: &std::path::Path) -> (std::path::PathBuf, Store) {
 }
 
 fn strings(
-    conn: &sqlite_csr_graph::Connection,
+    conn: &sqlitex_graph::Connection,
     sql: &str,
-    p: impl sqlite_csr_graph::sqlite::Params,
+    p: impl sqlitex_graph::sqlite::Params,
 ) -> BTreeSet<String> {
     let mut st = conn.prepare(sql).unwrap();
     let n = st.column_count();
     st.query_map(p, |r| {
         let v: Vec<String> = (0..n)
             .map(|i| {
-                r.get::<_, sqlite_csr_graph::Value>(i)
+                r.get::<_, sqlitex_graph::Value>(i)
                     .map(|v| format!("{v:?}"))
             })
             .collect::<Result<_, _>>()?;
@@ -191,8 +191,8 @@ fn merge_keeps_results_and_register_loads_the_persisted_graph() {
     );
     drop((c, store));
     // A plain connection with `register` (the loadable extension's path) sees the same graph.
-    let plain = sqlite_csr_graph::Connection::open(&path).unwrap();
-    sqlite_csr_graph::register(&plain).unwrap();
+    let plain = sqlitex_graph::Connection::open(&path).unwrap();
+    sqlitex_graph::register(&plain).unwrap();
     plain
         .query_row("SELECT graph_reload()", [], |r| r.get::<_, i64>(0))
         .unwrap();
@@ -217,6 +217,6 @@ fn unknown_names_and_roots_return_no_rows() {
 
 #[test]
 fn register_refuses_in_memory_databases() {
-    let c = sqlite_csr_graph::Connection::open_in_memory().unwrap();
-    assert!(sqlite_csr_graph::register(&c).is_err());
+    let c = sqlitex_graph::Connection::open_in_memory().unwrap();
+    assert!(sqlitex_graph::register(&c).is_err());
 }

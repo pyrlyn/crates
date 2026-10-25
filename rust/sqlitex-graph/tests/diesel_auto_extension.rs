@@ -3,7 +3,7 @@
 #![cfg(not(feature = "loadable"))]
 use diesel::prelude::*;
 use diesel::sql_types::{BigInt, Text};
-use sqlite_csr_graph::{DefRow, FileSymbols, RefRow, Store};
+use sqlitex_graph::{DefRow, FileSymbols, RefRow, Store};
 
 #[derive(QueryableByName, Debug, PartialEq)]
 struct Caller {
@@ -47,7 +47,7 @@ fn diesel_connections_get_the_functions_through_auto_extension() {
             })
             .unwrap();
     }
-    sqlite_csr_graph::register_auto_extension().unwrap();
+    sqlitex_graph::register_auto_extension().unwrap();
     let mut conn = SqliteConnection::establish(path.to_str().unwrap()).unwrap();
     diesel::sql_query("SELECT graph_reload()")
         .execute(&mut conn)
@@ -68,5 +68,5 @@ fn diesel_connections_get_the_functions_through_auto_extension() {
     assert_eq!(n.n, 1);
     // In-memory connections are skipped, not failed.
     SqliteConnection::establish(":memory:").unwrap();
-    assert!(sqlite_csr_graph::cancel_auto_extension());
+    assert!(sqlitex_graph::cancel_auto_extension());
 }

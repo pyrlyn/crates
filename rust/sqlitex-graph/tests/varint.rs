@@ -1,6 +1,6 @@
 //! The unrolled varint decoder and the per-encoding CSR loops: round trips at every byte
 //! length boundary, malformed input, and random adjacency lists against a sorted reference.
-use sqlite_csr_graph::segment::{
+use sqlitex_graph::segment::{
     Csr, ENC_EDGES, ENC_IDS, Edge, KIND_IMPORT, KIND_REF, get_varint, put_varint,
 };
 

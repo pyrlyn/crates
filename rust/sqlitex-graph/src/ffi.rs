@@ -813,7 +813,7 @@ impl Connection {
                 match r {
                     Ok(Ok(v)) => set_result(ctx, &v),
                     Ok(Err(e)) => set_error(ctx, &e.to_string()),
-                    Err(_) => set_error(ctx, "panic in sqlite-csr-graph function"),
+                    Err(_) => set_error(ctx, "panic in sqlitex-graph function"),
                 }
             }
         }
@@ -1411,7 +1411,7 @@ unsafe extern "C" fn x_filter(
     let msg = match r {
         Ok(Ok(())) => return ffi::SQLITE_OK,
         Ok(Err(e)) => e.to_string(),
-        Err(_) => "panic in sqlite-csr-graph table function".into(),
+        Err(_) => "panic in sqlitex-graph table function".into(),
     };
     // SAFETY: as above.
     unsafe { set_vtab_error((*cur).pVtab, &msg) };
@@ -1514,7 +1514,7 @@ unsafe fn init_on(db: *mut ffi::sqlite3, err: *mut *mut c_char, skip_memory: boo
     })
 }
 
-/// SQLite loadable-extension entry point (`.load libsqlite_csr_graph` / `load_extension`).
+/// SQLite loadable-extension entry point (`.load libsqlitex_graph` / `load_extension`).
 /// Built with `--no-default-features --features loadable`.
 ///
 /// # Safety

@@ -1,14 +1,14 @@
 //! Equivalence against rtok's schema and semantics on a real rtok index.
 //! Needs the `rtok-import` feature and a copy of rtok's database (`RTOK_OLD_DB`, default
 //! `data/old.db`), so it is ignored by default:
-//! `RTOK_OLD_DB=... cargo test -p sqlite-csr-graph --features rtok-import --test equivalence -- --ignored`.
+//! `RTOK_OLD_DB=... cargo test -p sqlitex-graph --features rtok-import --test equivalence -- --ignored`.
 mod common;
 use common::*;
-use sqlite_csr_graph::store::{fts_table, sql};
-use sqlite_csr_graph::{Connection, Value};
+use sqlitex_graph::store::{fts_table, sql};
+use sqlitex_graph::{Connection, Value};
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
-fn rows(c: &Connection, q: &str, p: &[&dyn sqlite_csr_graph::sqlite::ToSql]) -> Vec<Vec<Value>> {
+fn rows(c: &Connection, q: &str, p: &[&dyn sqlitex_graph::sqlite::ToSql]) -> Vec<Vec<Value>> {
     let mut st = c.prepare_cached(q).unwrap();
     let n = st.column_count();
     st.query_map(p, |r| (0..n).map(|i| r.get::<_, Value>(i)).collect())
@@ -80,13 +80,13 @@ fn equivalent_to_rtok() {
     };
     let dir = tempfile::tempdir().unwrap();
     let new_path = dir.path().join("new.db");
-    sqlite_csr_graph::import_rtok(&old_path, &new_path).unwrap();
+    sqlitex_graph::import_rtok(&old_path, &new_path).unwrap();
     let old = Connection::open_with_flags(
         &old_path,
-        sqlite_csr_graph::sqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        sqlitex_graph::sqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
     )
     .unwrap();
-    let store = sqlite_csr_graph::Store::open(&new_path).unwrap();
+    let store = sqlitex_graph::Store::open(&new_path).unwrap();
     let new = store.reader().unwrap();
     let rid: i64 = new
         .query_row("SELECT id FROM roots WHERE path=?1", [root()], |r| r.get(0))

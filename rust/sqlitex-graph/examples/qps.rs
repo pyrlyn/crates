@@ -1,7 +1,7 @@
 //! Multi-thread read QPS: rtok's current layout (one Mutex<Connection>, or one WAL connection
-//! per thread) vs sqlite-csr-graph (connection per thread + shared lock-free graph).
+//! per thread) vs sqlitex-graph (connection per thread + shared lock-free graph).
 //! `cargo run --release --example qps -- data/old.db data/new.db`
-use sqlite_csr_graph::sqlite::{Connection, OpenFlags};
+use sqlitex_graph::sqlite::{Connection, OpenFlags};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -21,7 +21,7 @@ const OLD: [&str; 5] = [
 ];
 
 fn new_sql() -> [String; 5] {
-    use sqlite_csr_graph::store::sql;
+    use sqlitex_graph::store::sql;
     [
         sql::DEFS.into(),
         sql::REFS.into(),
@@ -35,7 +35,7 @@ fn new_sql() -> [String; 5] {
 fn run_ops(
     c: &Connection,
     sqls: &[String],
-    root: &dyn sqlite_csr_graph::sqlite::ToSql,
+    root: &dyn sqlitex_graph::sqlite::ToSql,
     names: &[String],
     i: &mut usize,
 ) -> u64 {
@@ -44,7 +44,7 @@ fn run_ops(
         let n = &names[*i % names.len()];
         *i += 1;
         let mut st = c.prepare_cached(q).unwrap();
-        let mut r = st.query(sqlite_csr_graph::params![root, n]).unwrap();
+        let mut r = st.query(sqlitex_graph::params![root, n]).unwrap();
         while r.next().unwrap().is_some() {
             rows += 1;
         }
@@ -57,7 +57,7 @@ fn bench(
     mk: &(dyn Fn() -> Connection + Sync),
     shared: Option<Arc<Mutex<Connection>>>,
     sqls: &[String],
-    root: sqlite_csr_graph::Value,
+    root: sqlitex_graph::Value,
     names: &[String],
 ) -> f64 {
     let stop = AtomicBool::new(false);
@@ -109,7 +109,7 @@ fn main() {
     // (not in the loadable build, where the host owns SQLite)
     #[cfg(not(feature = "loadable"))]
     if std::env::var("QPS_MEMSTATUS0").is_ok() {
-        assert!(sqlite_csr_graph::disable_sqlite_memstatus());
+        assert!(sqlitex_graph::disable_sqlite_memstatus());
     }
     let a: Vec<String> = std::env::args().collect();
     let (old, new) = (a[1].clone(), a[2].clone());
@@ -141,8 +141,8 @@ fn main() {
             },
         )
         .unwrap();
-        sqlite_csr_graph::store::tune(&c).unwrap();
-        sqlite_csr_graph::register(&c).unwrap();
+        sqlitex_graph::store::tune(&c).unwrap();
+        sqlitex_graph::register(&c).unwrap();
         if let Ok(p) = std::env::var("QPS_PRAGMA") {
             c.execute_batch(&p).unwrap();
         }

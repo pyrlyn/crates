@@ -1,7 +1,7 @@
 #![allow(dead_code)]
-use sqlite_csr_graph::Connection;
-use sqlite_csr_graph::graph::{Base, Delta, Dict, FileOp, Graph, Snapshot};
-use sqlite_csr_graph::segment::{Edge, KIND_IMPORT, KIND_REF};
+use sqlitex_graph::Connection;
+use sqlitex_graph::graph::{Base, Delta, Dict, FileOp, Graph, Snapshot};
+use sqlitex_graph::segment::{Edge, KIND_IMPORT, KIND_REF};
 use std::collections::{BTreeSet, HashMap};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -121,7 +121,7 @@ pub fn random_graph(seed: u64, names: u32, files: u32, refs: usize) -> Graph {
 /// `(depth, path, scope)` rows as text.
 pub fn impact_text(
     g: &Graph,
-    rows: &[sqlite_csr_graph::graph::ImpactRow],
+    rows: &[sqlitex_graph::graph::ImpactRow],
 ) -> Vec<(u32, String, String)> {
     let d = g.dict.load();
     rows.iter()
@@ -156,18 +156,18 @@ pub fn old_db() -> Option<PathBuf> {
 
 /// Set-of-(node) comparison for an edge-graph built straight from SQL.
 pub fn base_edges(conn: &Connection, root: u32) -> Edges {
-    let b = sqlite_csr_graph::store::build_base(conn, root).unwrap();
-    dump(&sqlite_csr_graph::graph::Snapshot {
+    let b = sqlitex_graph::store::build_base(conn, root).unwrap();
+    dump(&sqlitex_graph::graph::Snapshot {
         base: b.into(),
         delta: Default::default(),
     })
 }
 
-pub fn dump(s: &sqlite_csr_graph::graph::Snapshot) -> Edges {
+pub fn dump(s: &sqlitex_graph::graph::Snapshot) -> Edges {
     let mut u = BTreeSet::new();
     let mut c = BTreeSet::new();
     let mut f = BTreeSet::new();
-    let keys = |csr: &sqlite_csr_graph::segment::Csr| {
+    let keys = |csr: &sqlitex_graph::segment::Csr| {
         (0..csr.len_keys()).map(|i| csr.key(i)).collect::<Vec<_>>()
     };
     let mut ukeys: BTreeSet<u32> = keys(&s.base.users).into_iter().collect();

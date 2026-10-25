@@ -3,7 +3,7 @@
 #![cfg(feature = "parallel")]
 mod common;
 use common::{Rng, random_graph};
-use sqlite_csr_graph::graph::DEFAULT_PARALLEL_MIN_FRONTIER;
+use sqlitex_graph::graph::DEFAULT_PARALLEL_MIN_FRONTIER;
 
 #[test]
 fn parallel_levels_equal_sequential_levels() {

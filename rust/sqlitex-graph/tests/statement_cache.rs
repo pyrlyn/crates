@@ -1,8 +1,8 @@
 //! The bounded prepared-statement cache: default capacity, least-recently-used eviction,
 //! capacity 0 turning it off, flush, and statements in use staying out of the count.
 #![cfg(not(feature = "loadable"))]
-use sqlite_csr_graph::Connection;
-use sqlite_csr_graph::sqlite::DEFAULT_STATEMENT_CACHE_CAPACITY;
+use sqlitex_graph::Connection;
+use sqlitex_graph::sqlite::DEFAULT_STATEMENT_CACHE_CAPACITY;
 
 fn one(c: &Connection, sql: &str) -> i64 {
     c.prepare_cached(sql)

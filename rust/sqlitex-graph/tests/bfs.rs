@@ -3,8 +3,8 @@
 //! multi-source `impact_many`, `neighbors`, repeated and interleaved walks on one thread.
 mod common;
 use common::{Rng, impact_text, random_graph};
-use sqlite_csr_graph::graph::{Graph, Snapshot};
-use sqlite_csr_graph::segment::{KIND_IMPORT, KIND_REF};
+use sqlitex_graph::graph::{Graph, Snapshot};
+use sqlitex_graph::segment::{KIND_IMPORT, KIND_REF};
 use std::collections::{HashMap, HashSet};
 
 /// The `impact` BFS as it was before the scratch pool, with several start names.

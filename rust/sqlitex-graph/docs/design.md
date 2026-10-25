@@ -1,4 +1,4 @@
-# How sqlite-csr-graph works
+# How sqlitex-graph works
 
 **SQLite stays the source of truth** for symbols, in a normalized schema (`src/store.rs`):
 

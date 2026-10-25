@@ -1,5 +1,5 @@
 """Latency + size benchmark: rtok's current graph (data/old.db, rtok query shapes and impact BFS,
-same harness as profile_old.py) vs sqlite-csr-graph (data/new.db + loadable extension).
+same harness as profile_old.py) vs sqlitex-graph (data/new.db + loadable extension).
 Usage: python3 scripts/bench.py <path to loadable dylib>  -> prints a report, writes data/bench.json"""
 import sqlite3, time, random, statistics, json, sys, os
 sys.path.insert(0, os.path.dirname(__file__))

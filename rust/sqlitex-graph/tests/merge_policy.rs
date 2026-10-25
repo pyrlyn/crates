@@ -2,8 +2,8 @@
 //! merge that finished second not overwriting the newer base of the one that finished first.
 #![cfg(not(feature = "loadable"))]
 mod common;
-use sqlite_csr_graph::store::DEFAULT_MERGE_THRESHOLD;
-use sqlite_csr_graph::{DefRow, FileSymbols, RefRow, Store, StoreOptions};
+use sqlitex_graph::store::DEFAULT_MERGE_THRESHOLD;
+use sqlitex_graph::{DefRow, FileSymbols, RefRow, Store, StoreOptions};
 use std::time::{Duration, Instant};
 
 const R: &str = "/m";
@@ -74,7 +74,7 @@ fn auto_merge_off_keeps_every_write_in_the_delta() {
     assert_eq!(delta_ops(&s), 40);
     s.merge_now(1).unwrap();
     assert_eq!(delta_ops(&s), 0);
-    let conn = sqlite_csr_graph::Connection::open(&path).unwrap();
+    let conn = sqlitex_graph::Connection::open(&path).unwrap();
     assert_eq!(
         common::dump(&s.graph.snapshot(1).unwrap()),
         common::base_edges(&conn, 1)
@@ -113,7 +113,7 @@ fn a_low_threshold_merges_in_the_background() {
     std::thread::sleep(Duration::from_millis(100));
     assert_eq!(delta_ops(&s), before + 10);
     s.merge_now(1).unwrap();
-    let conn = sqlite_csr_graph::Connection::open(&path).unwrap();
+    let conn = sqlitex_graph::Connection::open(&path).unwrap();
     assert_eq!(
         common::dump(&s.graph.snapshot(1).unwrap()),
         common::base_edges(&conn, 1)
@@ -143,7 +143,7 @@ fn the_merge_that_finishes_second_does_not_replace_a_newer_base() {
     assert!(s.graph.install_merged(1, &new, new.compact()));
     // Built from the older snapshot: it lacks files 5..8, which are no longer in the delta.
     assert!(!s.graph.install_merged(1, &old, old.compact()));
-    let conn = sqlite_csr_graph::Connection::open(&path).unwrap();
+    let conn = sqlitex_graph::Connection::open(&path).unwrap();
     assert_eq!(
         common::dump(&s.graph.snapshot(1).unwrap()),
         common::base_edges(&conn, 1)

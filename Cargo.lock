@@ -6007,17 +6007,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "sqlite-csr-graph"
-version = "0.1.0"
-dependencies = [
- "arc-swap",
- "diesel",
- "libsqlite3-sys",
- "rayon",
- "tempfile",
-]
-
-[[package]]
 name = "sqlite-wasm-rs"
 version = "0.5.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6027,6 +6016,17 @@ dependencies = [
  "js-sys",
  "rsqlite-vfs",
  "wasm-bindgen",
+]
+
+[[package]]
+name = "sqlitex-graph"
+version = "0.1.0"
+dependencies = [
+ "arc-swap",
+ "diesel",
+ "libsqlite3-sys",
+ "rayon",
+ "tempfile",
 ]
 
 [[package]]

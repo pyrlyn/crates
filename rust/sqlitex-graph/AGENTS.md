@@ -30,11 +30,11 @@ switched over. How it works: `docs/design.md`.
 ## Commands
 
 ```bash
-cargo test -p sqlite-csr-graph
-cargo clippy -p sqlite-csr-graph --all-targets -- -D warnings
-cargo clippy -p sqlite-csr-graph --no-default-features --features loadable --all-targets -- -D warnings
-cargo clippy -p sqlite-csr-graph --features rtok-import --all-targets -- -D warnings
-RTOK_OLD_DB=/path/to/rtok.db cargo test -p sqlite-csr-graph --release --features rtok-import --test equivalence -- --ignored
+cargo test -p sqlitex-graph
+cargo clippy -p sqlitex-graph --all-targets -- -D warnings
+cargo clippy -p sqlitex-graph --no-default-features --features loadable --all-targets -- -D warnings
+cargo clippy -p sqlitex-graph --features rtok-import --all-targets -- -D warnings
+RTOK_OLD_DB=/path/to/rtok.db cargo test -p sqlitex-graph --release --features rtok-import --test equivalence -- --ignored
 cargo fmt
 ```
 
