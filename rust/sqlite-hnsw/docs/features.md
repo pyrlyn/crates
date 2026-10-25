@@ -109,7 +109,11 @@ which writes all dirty pages and the meta row in one `BEGIN IMMEDIATE ...
 COMMIT` transaction. It returns the number of pages written. With the
 `parallel` feature the rows go through `rayon`'s `into_par_iter` on the
 global pool. That works because `insert` only locks the adjacency lists it
-rewrites (see [how-it-works.md](how-it-works.md)). Without the feature the rows
+rewrites (see [how-it-works.md](how-it-works.md)). Until the graph holds one
+page (1024 nodes), rows are inserted in order first. Many threads starting on
+a near-empty graph miss each other's nodes and link poorly: self-recall of a
+3000-vector batch varied from 180 to 200/200 without this step, and was
+200/200 in 25 of 25 runs with it. Without the feature the rows
 are inserted in order on the calling thread.
 
 **Enable.** Call `insert_batch` (always available). For multi-threaded

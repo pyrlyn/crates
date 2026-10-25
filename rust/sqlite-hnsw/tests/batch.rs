@@ -24,10 +24,12 @@ fn batch_inserts_saves_and_reopens() {
     }
     let db = common::open(&dir, DIM, Params::default());
     assert_eq!(db.len(), 3000);
+    // With `parallel`, a batch into an empty index used to link poorly (180/200 seen);
+    // the serial warm-up of the first page brings it back to the serial build's quality.
     let hits = (0..200)
         .filter(|&i| db.search(&data[i], 1)[0].0 == ids[i])
         .count();
-    assert!(hits >= 190, "{hits}/200");
+    assert!(hits >= 196, "{hits}/200");
 }
 
 #[test]

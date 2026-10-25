@@ -588,6 +588,15 @@ impl VecDb {
         out.into_iter().map(|(i, _)| i).collect()
     }
 
+    /// Runs `f` on every item: in order until the graph holds `PAGE` nodes (concurrent
+    /// inserts into a near-empty graph miss each other and link poorly), then via `each`.
+    fn add_many<T: Send>(&self, mut items: Vec<T>, f: impl Fn(T) + Send + Sync) {
+        let warm = PAGE.saturating_sub(self.len()).min(items.len());
+        let rest = items.split_off(warm);
+        items.into_iter().for_each(&f);
+        each(rest, f);
+    }
+
     fn greedy(&self, q: &[f32], ep: u32, from: usize, to: usize) -> D {
         let mut best = D(self.node(ep).vec.dist(q), ep);
         for l in (to..=from).rev() {
@@ -623,7 +632,7 @@ impl VecDb {
             .enumerate()
             .map(|(i, &id)| (id, &vectors[i * self.dim..(i + 1) * self.dim]))
             .collect();
-        each(rows, |(id, v)| self.add_raw(id, v));
+        self.add_many(rows, |(id, v)| self.add_raw(id, v));
         self.save()
     }
 
