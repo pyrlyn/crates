@@ -64,3 +64,10 @@ unsafe_op_in_unsafe_fn = "deny"
 # plugwright hashes every artifact on a cold lookup; unoptimised sha2 is ~10x slower.
 [profile.dev.package.sha2]
 opt-level = 3
+
+[profile.dev]
+split-debuginfo = "unpacked"
+
+[profile.dev.build-override]
+opt-level = 3
+debug = false
