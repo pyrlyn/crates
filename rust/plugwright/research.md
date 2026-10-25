@@ -110,7 +110,7 @@ cache + native and multi-engine Wasm loading + process isolation (the search is 
 * The component model + WIT give typed interfaces, but work **only in wasmtime** → an abstraction
   over engines would be a fiction.
 * **Decision (D3, D4):** a core module with a minimal ABI (like extism): exports `pw_abi_version`,
-  `pw_alloc`, `pw_free`, `pw_meta`, `pw_init`, `pw_call`; the only import is `plugwright.log`.
+  `pw_alloc`, `pw_free`, `pw_meta`, `pw_init`, `pw_call`; imports are `plugwright.log` and, since T48, `plugwright.host_call`/`host_take` (D13).
   The engine adapter implements only primitives: compile, instantiate, `call(name, i32/i64 args)`,
   memory `read/write`, `begin_call` (fuel refill, deadline). All ABI logic and bounds checks live
   once in the core. The component model is a future option for wasmtime only (F4).

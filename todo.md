@@ -13,3 +13,16 @@
 - T24. abi-drift: drift tests for generated bindings
 - T25. keychain-secret: secrets from the environment or the OS keychain
 - T36. Publish MIT-licensed shell-completions 0.1.1
+- T50.1. build-dir-kit: crate skeleton, model, errors, known dirs
+- T50.2. build-dir-kit: platform layer for Windows and the shared API
+- T50.3. build-dir-kit: platform layer for Unix and macOS
+- T50.4. build-dir-kit: content-hash index and temp dirs
+- T50.5. build-dir-kit: compress, dedupe and seed passes
+- T50.6. build-dir-kit: planner and apply engine
+- T50.7. build-dir-kit: session
+- T50.8. build-dir-kit: Cargo target passes
+- T50.9. build-dir-kit: evict, orphans, inventory and advise
+- T51. buildx-cli: crate skeleton and `buildx build`
+- T52. buildx-cli: `buildx clean` keeps the last three builds
+- T53. buildx-cli: `buildx install`
+- T54. Deprecate dunnage, move swarfr onto build-dir-kit
