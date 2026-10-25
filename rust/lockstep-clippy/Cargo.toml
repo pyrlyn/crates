@@ -1,0 +1,36 @@
+[package]
+name = "lockstep-clippy"
+version = "0.1.0"
+edition = "2024"
+description = "dylint lints: logging only through Lockstep, no explicit threads or locks"
+license = "GPL-3.0-or-later"
+repository = "https://github.com/pyrlyn/crates"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+clippy_utils = "=0.1.101"
+dylint_linting = "6.2.0"
+serde = { version = "1.0.229", features = ["derive"] }
+
+# The examples are UI tests that need real crates, so their paths resolve to the actual
+# definitions (tests/ui.rs runs them through dylint_testing).
+[dev-dependencies]
+crossbeam = "0.8.5"
+dylint_testing = "6.2.0"
+env_logger = { version = "0.11.11", default-features = false }
+log = "0.4.34"
+parking_lot = "0.13.0"
+rayon = "1.12.0"
+slog = "2.8.2"
+spin = "0.12.3"
+tokio = { version = "1.54.1", default-features = false, features = ["sync"] }
+tracing = "0.1.44"
+
+# Not a member of the repository workspace: that one stays on stable Rust.
+[workspace]
+
+[package.metadata.rust-analyzer]
+rustc_private = true

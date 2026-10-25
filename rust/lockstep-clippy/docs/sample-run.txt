@@ -1,0 +1,116 @@
+# Produced by `cargo dylint` on a scratch crate outside the repository (sample-app, depends on log),
+# with the pinned nightly and RUSTUP_TOOLCHAIN unset. Home directory shortened to ~.
+
+$ cat src/main.rs
+use std::sync::Mutex;
+
+fn main() {
+    println!("starting");
+    log::info!("started");
+
+    let counter = Mutex::new(0);
+    std::thread::spawn(|| {}).join().unwrap();
+    *counter.lock().unwrap() += 1;
+    quiet();
+}
+
+#[allow(lockstep_logging_only)]
+fn quiet() {
+    eprintln!("allowed here");
+}
+
+$ cargo dylint --path rust/lockstep-clippy --all     # no dylint.toml: default config
+Building workspace metadata entry `lockstep-clippy`
+   Compiling lockstep-clippy v0.1.0 (~/grok/worktrees/crates-dylint-lints/rust/lockstep-clippy)
+    Finished `release` profile [optimized] target(s) in 3.67s
+Checking with toolchain `nightly-2026-10-01-aarch64-apple-darwin`
+    Checking sample-app v0.1.0 (~/Grok/target/crates-lints/sample-app)
+warning: logging through `println!`; only Lockstep may log
+ --> src/main.rs:4:5
+  |
+4 |     println!("starting");
+  |     ^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: log through Lockstep instead
+  = note: `#[warn(lockstep_logging_only)]` on by default
+
+warning: logging through `info!`; only Lockstep may log
+ --> src/main.rs:5:5
+  |
+5 |     log::info!("started");
+  |     ^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: log through Lockstep instead
+
+warning: explicit concurrency through `std::sync::Mutex`
+ --> src/main.rs:7:19
+  |
+7 |     let counter = Mutex::new(0);
+  |                   ^^^^^
+  |
+  = help: take threads and locks through Lockstep instead
+  = note: `#[warn(lockstep_explicit_concurrency)]` on by default
+
+warning: explicit concurrency through `std::thread::spawn`
+ --> src/main.rs:8:5
+  |
+8 |     std::thread::spawn(|| {}).join().unwrap();
+  |     ^^^^^^^^^^^^^^^^^^
+  |
+  = help: take threads and locks through Lockstep instead
+
+warning: `sample-app` (bin "sample-app") generated 4 warnings
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.17s
+
+$ cat dylint.toml
+[lockstep_clippy]
+allowed_logging_crates = ["lockstep", "logstep", "log"]
+$ cargo dylint --path rust/lockstep-clippy --all     # `log` is now part of the facade
+Building workspace metadata entry `lockstep-clippy`
+    Finished `release` profile [optimized] target(s) in 0.10s
+Checking with toolchain `nightly-2026-10-01-aarch64-apple-darwin`
+    Checking sample-app v0.1.0 (~/Grok/target/crates-lints/sample-app)
+warning: logging through `println!`; only Lockstep may log
+ --> src/main.rs:4:5
+  |
+4 |     println!("starting");
+  |     ^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: log through Lockstep instead
+  = note: `#[warn(lockstep_logging_only)]` on by default
+
+warning: explicit concurrency through `std::sync::Mutex`
+ --> src/main.rs:7:19
+  |
+7 |     let counter = Mutex::new(0);
+  |                   ^^^^^
+  |
+  = help: take threads and locks through Lockstep instead
+  = note: `#[warn(lockstep_explicit_concurrency)]` on by default
+
+warning: explicit concurrency through `std::thread::spawn`
+ --> src/main.rs:8:5
+  |
+8 |     std::thread::spawn(|| {}).join().unwrap();
+  |     ^^^^^^^^^^^^^^^^^^
+  |
+  = help: take threads and locks through Lockstep instead
+
+warning: `sample-app` (bin "sample-app") generated 3 warnings
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.10s
+
+$ cat dylint.toml
+[lockstep_clippy]
+allowed_logging_crates = ["lockstep", "log step"]
+$ cargo dylint --path rust/lockstep-clippy --all     # invalid entry
+Building workspace metadata entry `lockstep-clippy`
+    Finished `release` profile [optimized] target(s) in 0.13s
+Checking with toolchain `nightly-2026-10-01-aarch64-apple-darwin`
+    Checking sample-app v0.1.0 (~/Grok/target/crates-lints/sample-app)
+error: dylint.toml `[lockstep_clippy]`: `log step` in `allowed_logging_crates` is not a crate name
+
+error: could not compile `sample-app` (bin "sample-app") due to 1 previous error
+Error: Error: Compilation failed with toolchain `nightly-2026-10-01-aarch64-apple-darwin`
+
+Caused by:
+    command failed: env -u CARGO -u RUSTC CLIPPY_DISABLE_DOCS_LINKS="null" DYLINT_LIBS="[\"~/Grok/target/crates-lints/dylint/libraries/nightly-2026-10-01-aarch64-apple-darwin/release/liblockstep_clippy@nightly-2026-10-01-aarch64-apple-darwin.dylib\"]" DYLINT_METADATA="null" DYLINT_NO_DEPS="0" DYLINT_TOML_DIGEST="f72db7cbeb1685f1" RUSTC_WORKSPACE_WRAPPER="~/.dylint_drivers/nightly-2026-10-01-aarch64-apple-darwin/dylint-driver" RUSTUP_TOOLCHAIN="nightly-2026-10-01-aarch64-apple-darwin" "cargo" "check" "--target-dir" "~/Grok/target/crates-lints/dylint/target/nightly-2026-10-01-aarch64-apple-darwin" "--manifest-path" "~/Grok/target/crates-lints/sample-app/Cargo.toml"

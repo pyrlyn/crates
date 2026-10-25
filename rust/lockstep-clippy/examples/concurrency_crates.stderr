@@ -1,0 +1,166 @@
+warning: explicit concurrency through `rayon::iter::IntoParallelRefIterator::par_iter`
+  --> $DIR/concurrency_crates.rs:9:24
+   |
+LL |     let total: i32 = v.par_iter().map(|x| x * 2).sum();
+   |                        ^^^^^^^^^^
+   |
+   = help: take threads and locks through Lockstep instead
+   = note: `#[warn(lockstep_explicit_concurrency)]` on by default
+
+warning: explicit concurrency through `rayon::iter::IntoParallelIterator::into_par_iter`
+  --> $DIR/concurrency_crates.rs:10:33
+   |
+LL |     let _: Vec<i32> = v.clone().into_par_iter().filter(|x| *x > 1).collect();
+   |                                 ^^^^^^^^^^^^^^^
+   |
+   = help: take threads and locks through Lockstep instead
+
+warning: explicit concurrency through `rayon::iter::ParallelBridge::par_bridge`
+  --> $DIR/concurrency_crates.rs:11:22
+   |
+LL |     let _ = v.iter().par_bridge().count();
+   |                      ^^^^^^^^^^^^
+   |
+   = help: take threads and locks through Lockstep instead
+
+warning: explicit concurrency through `rayon::join`
+  --> $DIR/concurrency_crates.rs:12:13
+   |
+LL |     let _ = rayon::join(|| 1, || 2);
+   |             ^^^^^^^^^^^
+   |
+   = help: take threads and locks through Lockstep instead
+
+warning: explicit concurrency through `rayon::scope`
+  --> $DIR/concurrency_crates.rs:13:5
+   |
+LL |     rayon::scope(|s| s.spawn(|_| {}));
+   |     ^^^^^^^^^^^^
+   |
+   = help: take threads and locks through Lockstep instead
+
+warning: explicit concurrency through `rayon::spawn`
+  --> $DIR/concurrency_crates.rs:14:5
+   |
+LL |     rayon::spawn(|| {});
+   |     ^^^^^^^^^^^^
+   |
+   = help: take threads and locks through Lockstep instead
+
+warning: explicit concurrency through `crossbeam::crossbeam_channel::unbounded`
+  --> $DIR/concurrency_crates.rs:17:20
+   |
+LL |     let (tx, rx) = crossbeam::channel::unbounded::<i32>();
+   |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: take threads and locks through Lockstep instead
+
+warning: explicit concurrency through `crossbeam::scope`
+  --> $DIR/concurrency_crates.rs:20:13
+   |
+LL |     let _ = crossbeam::scope(|s| {
+   |             ^^^^^^^^^^^^^^^^
+   |
+   = help: take threads and locks through Lockstep instead
+
+warning: explicit concurrency through `crossbeam::scope`
+  --> $DIR/concurrency_crates.rs:23:13
+   |
+LL |     let _ = crossbeam::thread::scope(|_| {});
+   |             ^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: take threads and locks through Lockstep instead
+
+warning: explicit concurrency through `crossbeam::sync::WaitGroup`
+  --> $DIR/concurrency_crates.rs:24:13
+   |
+LL |     let _ = crossbeam::sync::WaitGroup::new();
+   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: take threads and locks through Lockstep instead
+
+warning: explicit concurrency through `select!`
+  --> $DIR/concurrency_crates.rs:25:5
+   |
+LL | /     crossbeam::select! {
+LL | |         recv(rx) -> _ => {},
+LL | |         default => {},
+LL | |     }
+   | |_____^
+   |
+   = help: take threads and locks through Lockstep instead
+
+warning: explicit concurrency through `parking_lot::Mutex`
+  --> $DIR/concurrency_crates.rs:31:16
+   |
+LL |     let lock = parking_lot::Mutex::new(0);
+   |                ^^^^^^^^^^^^^^^^^^
+   |
+   = help: take threads and locks through Lockstep instead
+
+warning: explicit concurrency through `parking_lot::RwLock`
+  --> $DIR/concurrency_crates.rs:33:13
+   |
+LL |     let _ = parking_lot::RwLock::new(0);
+   |             ^^^^^^^^^^^^^^^^^^^
+   |
+   = help: take threads and locks through Lockstep instead
+
+warning: explicit concurrency through `tokio::sync::Mutex`
+  --> $DIR/concurrency_crates.rs:36:13
+   |
+LL |     let _ = tokio::sync::Mutex::new(0);
+   |             ^^^^^^^^^^^^^^^^^^
+   |
+   = help: take threads and locks through Lockstep instead
+
+warning: explicit concurrency through `tokio::sync::RwLock`
+  --> $DIR/concurrency_crates.rs:37:13
+   |
+LL |     let _ = tokio::sync::RwLock::new(0);
+   |             ^^^^^^^^^^^^^^^^^^^
+   |
+   = help: take threads and locks through Lockstep instead
+
+warning: explicit concurrency through `tokio::sync::Semaphore`
+  --> $DIR/concurrency_crates.rs:38:13
+   |
+LL |     let _ = tokio::sync::Semaphore::new(1);
+   |             ^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: take threads and locks through Lockstep instead
+
+warning: explicit concurrency through `tokio::sync::Barrier`
+  --> $DIR/concurrency_crates.rs:39:13
+   |
+LL |     let _ = tokio::sync::Barrier::new(1);
+   |             ^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: take threads and locks through Lockstep instead
+
+warning: explicit concurrency through `tokio::sync::Notify`
+  --> $DIR/concurrency_crates.rs:40:13
+   |
+LL |     let _ = tokio::sync::Notify::new();
+   |             ^^^^^^^^^^^^^^^^^^^
+   |
+   = help: take threads and locks through Lockstep instead
+
+warning: explicit concurrency through `spin::Mutex`
+  --> $DIR/concurrency_crates.rs:45:13
+   |
+LL |     let _ = spin::Mutex::new(0);
+   |             ^^^^^^^^^^^
+   |
+   = help: take threads and locks through Lockstep instead
+
+warning: explicit concurrency through `spin::RwLock`
+  --> $DIR/concurrency_crates.rs:46:13
+   |
+LL |     let _ = spin::RwLock::new(0);
+   |             ^^^^^^^^^^^^
+   |
+   = help: take threads and locks through Lockstep instead
+
+warning: 20 warnings emitted
+
