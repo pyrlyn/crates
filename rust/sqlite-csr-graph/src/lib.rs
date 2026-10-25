@@ -21,10 +21,6 @@ pub use ffi::{Connection, Error, Value};
 pub use graph::Graph;
 pub use store::{DefRow, FileSymbols, RefRow, Store};
 
-#[cfg(feature = "rtok-import")]
-pub mod rtok;
-#[cfg(feature = "rtok-import")]
-pub use rtok::import_rtok;
 pub use vtab::{register, register_with};
 
 #[cfg(feature = "loadable")]

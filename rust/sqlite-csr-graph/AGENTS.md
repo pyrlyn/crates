@@ -10,8 +10,7 @@ per-root FTS5) with the reference/call graph kept in immutable CSR segments and
 queried through table-valued functions (`graph_impact`, `graph_neighbors`,
 `graph_callers`, `graph_callees`). One crate, two shapes: an rlib (`Store`,
 `register`) and a SQLite loadable extension (cdylib, `loadable` feature).
-Extracted from the rtok graph experiment (`~/Grok/rtok-graph-ext`); rtok is not
-switched over. How it works: `docs/design.md`.
+How it works: `docs/design.md`.
 
 ## Rules
 
@@ -23,9 +22,7 @@ switched over. How it works: `docs/design.md`.
 - `unsafe` only in `src/ffi.rs` (the libsqlite3-sys wrapper, vtab callbacks, entry
   points), each block with a `SAFETY` note; every SQLite callback in `catch_unwind`.
 - No rusqlite: depend on `libsqlite3-sys` directly, at the workspace's (diesel's) version.
-- rtok-specific code (its schema, its paths) stays behind the `rtok-import`
-  feature: `src/rtok.rs`, `examples/import_rtok.rs`, `examples/qps.rs`,
-  `tests/equivalence.rs`, `scripts/`.
+- No consumer-specific code (foreign schemas, importers, local paths) in this crate.
 
 ## Commands
 
@@ -33,8 +30,6 @@ switched over. How it works: `docs/design.md`.
 cargo test -p sqlite-csr-graph
 cargo clippy -p sqlite-csr-graph --all-targets -- -D warnings
 cargo clippy -p sqlite-csr-graph --no-default-features --features loadable --all-targets -- -D warnings
-cargo clippy -p sqlite-csr-graph --features rtok-import --all-targets -- -D warnings
-RTOK_OLD_DB=/path/to/rtok.db cargo test -p sqlite-csr-graph --release --features rtok-import --test equivalence -- --ignored
 cargo fmt
 ```
 

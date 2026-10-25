@@ -1,4 +1,4 @@
-//! A diesel host (how rtok consumes the crate): `register_auto_extension` once, then every
+//! A diesel host: `register_auto_extension` once, then every
 //! `SqliteConnection` diesel opens on the store's file has the graph functions.
 #![cfg(not(feature = "loadable"))]
 use diesel::prelude::*;

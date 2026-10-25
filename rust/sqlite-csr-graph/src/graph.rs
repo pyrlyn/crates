@@ -351,7 +351,7 @@ impl Graph {
         }));
     }
 
-    /// rtok `impact` semantics with a global visited set (frontier dedup):
+    /// Impact (transitive users) with a global visited set (frontier dedup):
     /// level-by-level BFS from `name`; every (file, owner) reached gets its minimal level.
     pub fn impact(&self, root: u32, name: &str, depth: u32) -> Vec<ImpactRow> {
         let dict = self.dict.load();

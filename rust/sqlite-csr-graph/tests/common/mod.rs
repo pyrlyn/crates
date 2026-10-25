@@ -1,7 +1,6 @@
 #![allow(dead_code)]
 use sqlite_csr_graph::Connection;
 use std::collections::BTreeSet;
-use std::path::PathBuf;
 
 /// Every edge of a snapshot: (users, callees, filedefs).
 pub type Edges = (
@@ -9,18 +8,6 @@ pub type Edges = (
     BTreeSet<(u32, u32, u32)>,
     BTreeSet<(u32, u32)>,
 );
-
-/// Root path inside the rtok fixture database (`RTOK_ROOT`, default: rtok's own checkout).
-pub fn root() -> String {
-    std::env::var("RTOK_ROOT").unwrap_or_else(|_| "/Users/listepo/GitHub/listepo/apps/rtok".into())
-}
-
-pub fn old_db() -> Option<PathBuf> {
-    let p = std::env::var_os("RTOK_OLD_DB")
-        .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("data/old.db"));
-    p.exists().then_some(p)
-}
 
 /// Set-of-(node) comparison for an edge-graph built straight from SQL.
 pub fn base_edges(conn: &Connection, root: u32) -> Edges {

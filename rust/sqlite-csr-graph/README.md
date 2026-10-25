@@ -36,9 +36,7 @@ let n: i64 = conn.query_row("SELECT count(*) FROM graph_callers('run', '/repo')"
 - Readers never block: they load an `Arc` snapshot (base segments + delta).
 - Writes replace a file's symbols in one SQLite transaction and publish a small delta;
   a background merge folds it into new segments.
-- ≈3.8 bytes per edge; on a 317k-symbol index the database is 3.4× smaller than the
-  denormalized one it replaced, and `impact` at depth 3 on hot names takes ~14 ms
-  instead of ~11 s. Full numbers: [docs/benchmarks.md](docs/benchmarks.md).
+- ≈3.8 bytes per edge in the CSR segments.
 
 ## Enable
 
@@ -47,7 +45,6 @@ let n: i64 = conn.query_row("SELECT count(*) FROM graph_callers('run', '/repo')"
 | Rust library, bundled SQLite (default) | `sqlite-csr-graph = "0.1"` |
 | Rust library, your own SQLite / SQLCipher | `default-features = false`, choose the `libsqlite3-sys` link feature yourself |
 | SQLite loadable extension | `cargo build --release --no-default-features --features loadable --lib` |
-| rtok index importer and benchmarks | `--features rtok-import` |
 
 Load the extension: `.load target/release/libsqlite_csr_graph sqlite3_extension_init` in the
 `sqlite3` shell, `conn.load_extension(path, entrypoint="sqlite3_extension_init")` in Python,
@@ -76,8 +73,6 @@ from `refs`/`defs` on the next load.
 
 ```sh
 cargo test -p sqlite-csr-graph                 # unit, SQL functions on a fixture, concurrency + merge
-RTOK_OLD_DB=/path/to/rtok.db cargo test -p sqlite-csr-graph --release \
-  --features rtok-import --test equivalence -- --ignored   # row-for-row against a real rtok index
 ```
 
 ## Limitations
@@ -98,9 +93,8 @@ RTOK_OLD_DB=/path/to/rtok.db cargo test -p sqlite-csr-graph --release \
 - `graph_impact` visits each owner once (global visited set). Compared with a per-path
   traversal it returns the same reachable set but may add cycle-closing rows; see
   [docs/design.md](docs/design.md#impact-semantics).
-- Full-text search is plain FTS5 and is ~10–15 % slower than a single global FTS index on the
-  benchmark (per-root external-content index).
+- Full-text search is plain FTS5 over a per-root external-content index.
 
-More: [docs/design.md](docs/design.md) (how it works), [docs/benchmarks.md](docs/benchmarks.md).
+More: [docs/design.md](docs/design.md) (how it works).
 
 Licensed under either of MIT or Apache-2.0 at your option.

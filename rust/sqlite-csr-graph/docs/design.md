@@ -17,7 +17,7 @@
 `users` (name → referencing (file, owner scope) / importing file), `callees` (owner → (file, callee)),
 `filedefs` (file → defined names). Layout: sorted `u32` keys + `u32` offsets + LEB128 varint
 payload with delta-coded file ids and the edge kind packed into the low bit. Readers decode
-directly from the blob (≈3.8 bytes per edge on the rtok index).
+directly from the blob (≈3.8 bytes per edge on a real 317k-symbol code index).
 
 **Writes** (`Store::upsert_file` / `delete_file`) go to SQLite in one transaction, then publish a
 `FileOp` into a small in-memory **delta** (per-file replacement + tombstone bitmap of superseded
@@ -44,26 +44,19 @@ SELECT graph_reload();         -- re-read the graph (after another process wrote
 ```
 
 `graph_impact` uses level-by-level BFS with a **global visited set** (frontier dedup) instead of
-rtok's per-path visited sets, so its cost is bounded by the number of reachable edges.
+per-path visited sets, so its cost is bounded by the number of reachable edges.
 
 ## Impact semantics
 
-rtok skips an edge whose owner already appears on the *current path* and enumerates every path.
-`graph_impact` visits each owner once. Verified on the rtok index (`tests/equivalence.rs`, 713 queries):
-every (path, scope) row rtok returns is returned, at the same or a smaller depth; the set of
-reachable symbols is identical; the only extra rows are cycle-closing edges to an owner already
-reached at a smaller depth (4,877 such rows across the sample). `defs`, `refs`, `callers`
-(ref groups), `callees`, `outline` and FTS match rtok row-for-row.
-
-## rtok import
-
-`import_rtok` (feature `rtok-import`) converts rtok's denormalized `symbols` + `file_rank`
-tables into this schema, then builds the FTS indexes and the segments and runs `ANALYZE`.
-It is the only code that knows rtok's schema.
+A per-path traversal skips an edge whose owner already appears on the *current path* and
+enumerates every path. `graph_impact` visits each owner once: the set of reachable symbols is the
+same, and every (path, scope) row a per-path traversal returns is returned at the same or a
+smaller depth; the only extra rows are cycle-closing edges to an owner already reached at a
+smaller depth.
 
 ## Why libsqlite3-sys, not rusqlite
 
-The consumers (rtok, cox) talk to SQLite through diesel, which links `libsqlite3-sys`. Only one
+Typical hosts talk to SQLite through diesel, which links `libsqlite3-sys`. Only one
 crate in a build may link `sqlite3`, so depending on rusqlite forced its `libsqlite3-sys` line on
 every host and pulled a second wrapper into diesel programs. The crate now depends on
 `libsqlite3-sys` 0.38 (the workspace's version) and carries its own minimal wrapper in

@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS graph_segments(root_id INTEGER NOT NULL, part TEXT NO
 "#;
 
 /// Per-root FTS5 index (external content over a per-root view): a search touches only
-/// its own root's postings, unlike rtok's single global index filtered after matching.
+/// its own root's postings, unlike a single global index filtered after matching.
 pub fn ensure_root_fts(conn: &Connection, root: u32) -> Result<()> {
     conn.execute_batch(&format!(
         "CREATE VIEW IF NOT EXISTS fts_src_{root} AS SELECT d.id AS id, n.name AS name, d.signature AS signature, d.doc AS doc \
@@ -54,7 +54,7 @@ pub fn fts_table(root: i64) -> String {
     format!("defs_fts_{root}")
 }
 
-/// Query shapes equivalent to rtok's (used by tests and the benchmark). `?1` root id, `?2` name/path.
+/// Reference query shapes over the normalized schema (used by tests). `?1` root id, `?2` name/path.
 pub mod sql {
     pub const DEFS: &str = "SELECT f.path, k.kind, d.line, d.end_line FROM defs d JOIN files f ON f.id=d.file_id JOIN kinds k ON k.id=d.kind \
         WHERE d.name_id=(SELECT id FROM names WHERE name=?2) AND f.root_id=?1 ORDER BY f.path, d.line";
@@ -120,7 +120,7 @@ pub fn build_base(conn: &Connection, root: u32) -> Result<Base> {
     Ok(Base::from_pairs(users, callees, fdefs, generation))
 }
 
-/// Edge derivation for one ref row (mirrors rtok's impact/callees predicates).
+/// Edge derivation for one ref row (the impact/callees predicates).
 #[inline]
 fn push_ref_edges(
     users: &mut Vec<(u32, Edge)>,
