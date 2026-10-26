@@ -89,6 +89,8 @@ Fixtures are synthetic target dirs created under `./tmp/` and removed after each
 `bench/bench.sh A|B` is the rtok benchmark (only for a scratch worktree).
 
 ## Limitations
+
+- Unix only (Linux, macOS). On Windows the binary builds but exits with an error.
 - Cargo's on-disk layout is unstable; unknown layouts end in the fail-safe skip.
 - A unit cargo found fresh is not re-stamped; it stays alive only through the closure from a
   kept run. Alternating between configurations (features, RUSTFLAGS, profiles) more than N
@@ -107,3 +109,8 @@ Fixtures are synthetic target dirs created under `./tmp/` and removed after each
 
 ## Benchmark results
 See [bench/RESULTS.md](bench/RESULTS.md) (rtok, 10 runs with and without pruning).
+
+## History
+
+Imported from [pyrlyn/target-prune](https://github.com/pyrlyn/target-prune) (branch
+`feat/smart-prune`, `487814a`) with its git history via `git subtree`.

@@ -41,6 +41,7 @@ Small, focused Rust crates shared by the creator's projects (`ketch`, `rtok`, `s
 | [`sqlite-change-feed`](rust/sqlite-change-feed) | Change feed for a SQLite database shared between processes: `PRAGMA data_version` through Diesel |
 | [`wasm-plugin-host`](rust/wasm-plugin-host) | Run WebAssembly plugins with extism: a worker thread per plugin, memory cap, per-call deadlines, control lane before events |
 | [`workspace-graph`](rust/workspace-graph) | Load a workspace's direct dependency graph and assert rules over it in tests (not published) |
+| [`target-prune`](rust/target-prune) | Keep the last N cargo build runs in `target/` plus their dependencies, drop the rest; per-dir and total size budgets, incremental cleanup (binary) |
 | [`atomic-replace`](atomic-replace) | Replace a file atomically: sibling temp file, kept permissions and symlinks, optional fsync, rename |
 | [`cargo-changed-packages`](cargo-changed-packages) | Workspace packages a set of changed paths affects, including reverse dependencies |
 | [`change-preview`](change-preview) | Preview what a command would change: diff or `--stat` of edits, size and file count of removals, totals |
