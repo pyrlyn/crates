@@ -6005,6 +6005,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "sqlitex-vector"
+version = "0.1.0"
+dependencies = [
+ "libsqlite3-sys",
+ "parking_lot",
+ "rayon",
+ "serde_json",
+ "tempfile",
+]
+
+[[package]]
 name = "sse-stream"
 version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
