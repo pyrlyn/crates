@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "abi-drift"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "cbindgen",
  "csbindgen",
@@ -822,7 +822,7 @@ dependencies = [
 
 [[package]]
 name = "change-preview"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "owo-colors",
  "serde",
@@ -2066,7 +2066,7 @@ dependencies = [
 
 [[package]]
 name = "fs-kit"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "dunce",
  "reflink-copy",
@@ -2259,7 +2259,7 @@ dependencies = [
 
 [[package]]
 name = "gettext-catalog"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "polib",
  "sys-locale",
@@ -3050,7 +3050,7 @@ dependencies = [
 
 [[package]]
 name = "keychain-secret"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "keyring",
  "thiserror 2.0.21",
@@ -3937,7 +3937,7 @@ dependencies = [
 
 [[package]]
 name = "operation-icons"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "unicode-width 0.2.0",
 ]
@@ -5986,7 +5986,7 @@ checksum = "3763264f6b73151db08c50ff20d7d8a0b8796e021cdea7ceedad07b80155fa0e"
 
 [[package]]
 name = "sqlite-change-feed"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "diesel",
  "libsqlite3-sys",
@@ -6417,7 +6417,7 @@ checksum = "876fef147edbcbddc8ac5cbbba92c7b86519e314e86638596c09673b2ed01e7f"
 
 [[package]]
 name = "telemetry-setup"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "opentelemetry",
  "opentelemetry-otlp",

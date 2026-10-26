@@ -1,6 +1,6 @@
 [package]
 name = "change-preview"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 rust-version = "1.86"
 description = "Preview what a command would change: unified diff or --stat of file edits, size and file count of removals, and a totals line"

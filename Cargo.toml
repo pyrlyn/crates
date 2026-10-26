@@ -26,7 +26,7 @@ plugwright-core = { path = "rust/plugwright/crates/plugwright-core", version = "
 plugwright-sandbox = { path = "rust/plugwright/crates/plugwright-sandbox", version = "0.1.0" }
 plugwright-trust = { path = "rust/plugwright/crates/plugwright-trust", version = "0.1.0" }
 plugwright-build = { path = "rust/plugwright/crates/plugwright-build", version = "0.1.0" }
-fs-kit = { path = "rust/fs-kit", version = "0.1.0" }
+fs-kit = { path = "rust/fs-kit", version = "0.2.0" }
 plugwright-native = { path = "rust/plugwright/crates/plugwright-native", version = "0.1.0" }
 plugwright-isolate = { path = "rust/plugwright/crates/plugwright-isolate", version = "0.1.0" }
 plugwright-wasm = { path = "rust/plugwright/crates/plugwright-wasm", version = "0.1.0" }
