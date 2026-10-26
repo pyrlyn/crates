@@ -1,0 +1,35 @@
+[package]
+name = "sqlitex-compress"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.86"
+description = "Algorithm-agnostic compression for SQLite BLOB data, with brotli, zstd and lz4 behind optional features"
+license.workspace = true
+repository = "https://github.com/pyrlyn/crates"
+keywords = ["sqlite", "compression", "blob", "zstd", "lz4"]
+categories = ["compression", "database"]
+
+[lints.rust]
+unsafe_code = "forbid"
+
+# No algorithm is enabled by default: pick the ones you need.
+[features]
+default = []
+brotli = ["dep:brotli"]
+zstd = ["dep:zstd"]
+lz4 = ["dep:lz4_flex"]
+
+[dependencies]
+brotli = { version = "8", optional = true }
+zstd = { version = "0.13", optional = true }
+lz4_flex = { version = "0.11", optional = true }
+
+[dev-dependencies]
+criterion = { version = "0.5", default-features = false }
+
+[[bench]]
+name = "throughput"
+harness = false
+
+[[example]]
+name = "dbbench"
