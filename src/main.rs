@@ -56,9 +56,6 @@ struct Opts {
     /// fewer runs are kept, down to 1. The newest run is never dropped to meet the budget.
     #[arg(long, value_parser = parse_size)]
     max_size: Option<u64>,
-    /// Turn off smart pruning: keep superseded test/bin executables of kept runs.
-    #[arg(long)]
-    no_smart: bool,
 }
 
 /// `12G`, `1.5GB`, `800M`, `4096` (bytes). Powers of 1024.
@@ -328,42 +325,6 @@ struct Plan {
     keep_runs: usize,
     unresolved: usize,
     doomed: Vec<PathBuf>,
-    /// Kept-run executables dropped by the smart rule.
-    superseded: usize,
-}
-
-/// An executable cargo linked for a unit: `deps/<name>-<hash>` without an extension
-/// (`.exe` on Windows). Test harnesses and bins; libs always carry an extension.
-fn is_exe(p: &Path) -> bool {
-    let n = file_name(p);
-    let in_deps = p.parent().is_some_and(|d| file_name(d) == "deps");
-    in_deps && !n.starts_with("lib") && (!n.contains('.') || n.ends_with(".exe")) && p.is_file()
-}
-
-/// Smart rule: kept units that only produce an executable nothing depends on (test binaries,
-/// bins), when a newer kept unit of the same name exists. Their old links are dead weight:
-/// cargo reruns the newest one, and relinks an old configuration if it ever comes back.
-fn superseded(units: &HashMap<String, Unit>, kept: &HashSet<String>) -> HashSet<String> {
-    let mut needed: HashSet<u64> = HashSet::new();
-    for h in kept {
-        needed.extend(units[h].deps.iter().map(|d| d.1));
-    }
-    let mut leaves: HashMap<Vec<String>, Vec<&Unit>> = HashMap::new();
-    for h in kept {
-        let u = &units[h];
-        if u.files.iter().any(|f| is_exe(f)) && u.fps.iter().all(|fp| !needed.contains(fp)) {
-            let mut k: Vec<String> = u.names.iter().cloned().collect();
-            k.sort();
-            leaves.entry(k).or_default().push(u);
-        }
-    }
-    let mut out = HashSet::new();
-    for mut v in leaves.into_values() {
-        v.sort_by(|a, b| a.started.total_cmp(&b.started));
-        v.pop(); // the newest stays
-        out.extend(v.into_iter().map(|u| u.hash.clone()));
-    }
-    out
 }
 
 fn plan(profile: &Path, o: &Opts) -> Plan {
@@ -398,7 +359,7 @@ fn plan_keep(
 ) -> Plan {
     let gap = o.gap;
     let roots: Vec<String> = runs[runs.len().saturating_sub(keep_runs)..].concat();
-    let (mut kept, unresolved) = closure(units, &roots);
+    let (kept, unresolved) = closure(units, &roots);
     let mut p = Plan {
         units: units.len(),
         runs: runs.len(),
@@ -406,17 +367,10 @@ fn plan_keep(
         keep_runs,
         unresolved,
         doomed: vec![],
-        superseded: 0,
     };
     if unresolved > 0 {
         p.kept = units.len();
         return p; // fail safe: a kept unit needs something we cannot map
-    }
-    if !o.no_smart {
-        let old = superseded(units, &kept);
-        p.superseded = old.len();
-        kept.retain(|h| !old.contains(h));
-        p.kept = kept.len();
     }
     let mut claimed: HashSet<PathBuf> = HashSet::new();
     for (h, u) in units {
@@ -491,8 +445,15 @@ fn prune(o: &Opts) -> (u64, u64) {
             );
         }
         println!(
-            "{}: units {}, runs {}, kept runs {}, kept units {}, superseded exes {}; total {}, {verb} {}, kept {}",
-            profile.display(), p.units, p.runs, p.keep_runs.min(p.runs), p.kept, p.superseded, human(total), human(free), human(total - free.min(total))
+            "{}: units {}, runs {}, kept runs {}, kept units {}; total {}, {verb} {}, kept {}",
+            profile.display(),
+            p.units,
+            p.runs,
+            p.keep_runs.min(p.runs),
+            p.kept,
+            human(total),
+            human(free),
+            human(total - free.min(total))
         );
         for d in &p.doomed {
             if o.verbose {

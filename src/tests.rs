@@ -87,7 +87,6 @@ fn opts(fx: &Fx, keep: usize, apply: bool) -> Opts {
         apply,
         verbose: false,
         max_size: None,
-        no_smart: false,
     }
 }
 
@@ -239,72 +238,6 @@ fn keep_0_and_empty_dir() {
         .next()
         .is_none());
     assert_eq!(find_profile_dirs(&[fx.root.join("nope")]).len(), 0);
-}
-
-/// A test binary unit: like `unit`, plus the linked executable `deps/<name>-<hash>`.
-fn test_exe(profile: &Path, name: &str, h: &str, fp: u64, deps: &[(&str, u64)], t: f64) {
-    unit(profile, name, h, fp, deps, t);
-    let exe = profile.join("deps").join(format!("{name}-{h}"));
-    fs::write(&exe, vec![b'x'; 50_000]).unwrap();
-    set_mtime(&exe, t);
-}
-
-#[test]
-fn smart_drops_superseded_test_exe_but_keeps_its_libs() {
-    let fx = fixture();
-    test_exe(
-        &fx.p,
-        "it",
-        "1111111111111111",
-        21,
-        &[("b", 3)],
-        BASE + 1002.0,
-    );
-    test_exe(
-        &fx.p,
-        "it",
-        "2222222222222222",
-        22,
-        &[("b", 4)],
-        BASE + 2001.0,
-    );
-    prune(&opts(&fx, 2, true));
-    assert!(fp(&fx, "it-2222222222222222"));
-    assert!(
-        !fp(&fx, "it-1111111111111111"),
-        "older test exe of a kept run goes"
-    );
-    assert!(!fx.p.join("deps/it-1111111111111111").exists());
-    assert!(
-        fp(&fx, "b-b1b1b1b1b1b1b1b1"),
-        "its libs stay: switching back only relinks"
-    );
-}
-
-#[test]
-fn no_smart_keeps_superseded_test_exe() {
-    let fx = fixture();
-    test_exe(
-        &fx.p,
-        "it",
-        "1111111111111111",
-        21,
-        &[("b", 3)],
-        BASE + 1002.0,
-    );
-    test_exe(
-        &fx.p,
-        "it",
-        "2222222222222222",
-        22,
-        &[("b", 4)],
-        BASE + 2001.0,
-    );
-    prune(&Opts {
-        no_smart: true,
-        ..opts(&fx, 2, true)
-    });
-    assert!(fp(&fx, "it-1111111111111111"));
 }
 
 #[test]
