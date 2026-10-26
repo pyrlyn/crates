@@ -1,0 +1,229 @@
+   Compiling workspace-hack v0.1.0 (/Users/listepo/grok/worktrees/rtok-prune-bench2/workspace-hack)
+   Compiling rtok-agent-sdk v0.0.1 (/Users/listepo/grok/worktrees/rtok-prune-bench2/crates/rtok-agent-sdk)
+   Compiling rtok-plugin-sdk v0.0.1 (/Users/listepo/grok/worktrees/rtok-prune-bench2/crates/rtok-plugin-sdk)
+   Compiling rtok-hook v0.0.1 (/Users/listepo/grok/worktrees/rtok-prune-bench2/crates/rtok-hook)
+   Compiling rtok-store v0.0.1 (/Users/listepo/grok/worktrees/rtok-prune-bench2/crates/rtok-store)
+   Compiling rtok v0.17.0-alpha.3 (/Users/listepo/grok/worktrees/rtok-prune-bench2)
+   Compiling rtok-sys v0.0.1 (/Users/listepo/grok/worktrees/rtok-prune-bench2/crates/rtok-sys)
+   Compiling rtok-mcp v0.0.1 (/Users/listepo/grok/worktrees/rtok-prune-bench2/crates/rtok-mcp)
+   Compiling rtok-log v0.0.1 (/Users/listepo/grok/worktrees/rtok-prune-bench2/crates/rtok-log)
+   Compiling rtok-config v0.0.1 (/Users/listepo/grok/worktrees/rtok-prune-bench2/crates/rtok-config)
+warning: use of deprecated method `std::sync::atomic::Atomic::<u64>::fetch_update`: renamed to `try_update` for consistency
+   --> crates/rtok-sys/src/proc/mod.rs:455:14
+    |
+455 |             .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |left| {
+    |              ^^^^^^^^^^^^
+    |
+    = note: `#[warn(deprecated)]` on by default
+help: replace the use of the deprecated method
+    |
+455 -             .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |left| {
+455 +             .try_update(Ordering::Relaxed, Ordering::Relaxed, |left| {
+    |
+
+warning: `rtok-sys` (lib) generated 1 warning (run `cargo fix --lib -p rtok-sys` to apply 1 suggestion)
+warning: use of deprecated method `std::sync::atomic::Atomic::<usize>::fetch_update`: renamed to `try_update` for consistency
+  --> src/plugins/compress/queue.rs:84:14
+   |
+84 |             .fetch_update(Ordering::AcqRel, Ordering::Acquire, |n| {
+   |              ^^^^^^^^^^^^
+   |
+   = note: `#[warn(deprecated)]` on by default
+help: replace the use of the deprecated method
+   |
+84 -             .fetch_update(Ordering::AcqRel, Ordering::Acquire, |n| {
+84 +             .try_update(Ordering::AcqRel, Ordering::Acquire, |n| {
+   |
+
+warning: `rtok` (lib) generated 1 warning (run `cargo fix --lib -p rtok` to apply 1 suggestion)
+    Finished `dev` profile [unoptimized] target(s) in 56.55s
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+warning: use of deprecated method `std::sync::atomic::Atomic::<u64>::fetch_update`: renamed to `try_update` for consistency
+   --> crates/rtok-sys/src/proc/mod.rs:455:14
+    |
+455 |             .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |left| {
+    |              ^^^^^^^^^^^^
+    |
+    = note: `#[warn(deprecated)]` on by default
+help: replace the use of the deprecated method
+    |
+455 -             .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |left| {
+455 +             .try_update(Ordering::Relaxed, Ordering::Relaxed, |left| {
+    |
+
+   Compiling rtok-store v0.0.1 (/Users/listepo/grok/worktrees/rtok-prune-bench2/crates/rtok-store)
+warning: `rtok-sys` (lib) generated 1 warning (run `cargo fix --lib -p rtok-sys` to apply 1 suggestion)
+   Compiling rtok-config v0.0.1 (/Users/listepo/grok/worktrees/rtok-prune-bench2/crates/rtok-config)
+   Compiling rtok-sys v0.0.1 (/Users/listepo/grok/worktrees/rtok-prune-bench2/crates/rtok-sys)
+   Compiling rtok-agent-sdk v0.0.1 (/Users/listepo/grok/worktrees/rtok-prune-bench2/crates/rtok-agent-sdk)
+   Compiling rtok-mcp v0.0.1 (/Users/listepo/grok/worktrees/rtok-prune-bench2/crates/rtok-mcp)
+   Compiling rtok-plugin-sdk v0.0.1 (/Users/listepo/grok/worktrees/rtok-prune-bench2/crates/rtok-plugin-sdk)
+   Compiling rtok-log v0.0.1 (/Users/listepo/grok/worktrees/rtok-prune-bench2/crates/rtok-log)
+   Compiling workspace-hack v0.1.0 (/Users/listepo/grok/worktrees/rtok-prune-bench2/workspace-hack)
+   Compiling rtok-wasm-demo-guest v0.0.0 (/Users/listepo/grok/worktrees/rtok-prune-bench2/crates/rtok-wasm-demo-guest)
+   Compiling rtok-hook v0.0.1 (/Users/listepo/grok/worktrees/rtok-prune-bench2/crates/rtok-hook)
+warning: `rtok-sys` (lib test) generated 1 warning (1 duplicate)
+   Compiling rtok v0.17.0-alpha.3 (/Users/listepo/grok/worktrees/rtok-prune-bench2)
+warning: use of deprecated method `std::sync::atomic::Atomic::<usize>::fetch_update`: renamed to `try_update` for consistency
+  --> src/plugins/compress/queue.rs:84:14
+   |
+84 |             .fetch_update(Ordering::AcqRel, Ordering::Acquire, |n| {
+   |              ^^^^^^^^^^^^
+   |
+   = note: `#[warn(deprecated)]` on by default
+help: replace the use of the deprecated method
+   |
+84 -             .fetch_update(Ordering::AcqRel, Ordering::Acquire, |n| {
+84 +             .try_update(Ordering::AcqRel, Ordering::Acquire, |n| {
+   |
+
+warning: `rtok` (lib) generated 1 warning (run `cargo fix --lib -p rtok` to apply 1 suggestion)
+warning: `rtok` (lib test) generated 1 warning (1 duplicate)
+    Finished `test` profile [unoptimized] target(s) in 1m 44s
+  Executable unittests src/lib.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/rtok-b6117dc57dae87ea)
+  Executable unittests src/main.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/rtok-126931c8ef329380)
+  Executable unittests src/bin/rtok-hook.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/rtok_hook-88a37ab8f321be51)
+  Executable tests/agent_remove.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/agent_remove-83e53a852f6a8b7a)
+  Executable tests/agents.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/agents-83a77c161105deb9)
+  Executable tests/agents_doc.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/agents_doc-6649bd71b198a17c)
+  Executable tests/agents_install.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/agents_install-f093dacdf99d4ea3)
+  Executable tests/agents_junk.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/agents_junk-466cce0a2895bd13)
+  Executable tests/agents_list_content.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/agents_list_content-867cc66d9b993838)
+  Executable tests/agents_messages.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/agents_messages-bbf91a19f47bcee7)
+  Executable tests/agents_plugin_version.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/agents_plugin_version-c61743bea300f3a7)
+  Executable tests/agents_post_create.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/agents_post_create-2a8bc00e7ffc83ee)
+  Executable tests/agents_real_config.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/agents_real_config-c97028187d60995e)
+  Executable tests/agents_update.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/agents_update-49ce24d72ecb51e7)
+  Executable tests/agents_whoami.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/agents_whoami-984d2832389c83f8)
+  Executable tests/agents_worktrees.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/agents_worktrees-602d15950faff96d)
+  Executable tests/antigravity_plugin.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/antigravity_plugin-e9925ff09bde9ab8)
+  Executable tests/archive_rewrite.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/archive_rewrite-4c39106cbbffaa7f)
+  Executable tests/batch_cli.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/batch_cli-6569bd1987b527e0)
+  Executable tests/bench_fixtures.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/bench_fixtures-2b1de486ea64a695)
+  Executable tests/build_git_sha.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/build_git_sha-403a13ab63a05a0b)
+  Executable tests/claude_plugin.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/claude_plugin-08abbff06a5ee48f)
+  Executable tests/cli_trycmd.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/cli_trycmd-e9a947f33201e181)
+  Executable tests/cline_plugin.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/cline_plugin-69304f3eb946afd0)
+  Executable tests/cmd_rules.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/cmd_rules-5e99db5e043ceaa4)
+  Executable tests/codebuddy_host.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/codebuddy_host-8d1ab1095b6af9bf)
+  Executable tests/codebuddy_plugin.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/codebuddy_plugin-37a3173d0965e498)
+  Executable tests/codex_plugin.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/codex_plugin-289ec6cf3f22f7a3)
+  Executable tests/codex_plugin_install.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/codex_plugin_install-34ffd0a969b1d579)
+  Executable tests/commandcode_plugin.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/commandcode_plugin-b7da56ef04800a24)
+  Executable tests/commands_e2e.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/commands_e2e-571985b5db27b679)
+  Executable tests/completions.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/completions-279751ec67a670e1)
+  Executable tests/completions_picker_pty.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/completions_picker_pty-e6df48a4b58e4701)
+  Executable tests/completions_shells.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/completions_shells-2602628c8830986f)
+  Executable tests/compress_live.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/compress_live-870b71b640e4fa79)
+  Executable tests/compress_llm.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/compress_llm-ca9b4205e2578377)
+  Executable tests/compress_snapshot.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/compress_snapshot-a20d3c984c6086ef)
+  Executable tests/config_coverage.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/config_coverage-5527a807fb501c10)
+  Executable tests/copilot_plugin.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/copilot_plugin-2ab9611d24314077)
+  Executable tests/cursor_plugin.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/cursor_plugin-a34de30b41176fb3)
+  Executable tests/demon.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/demon-d98e5097b0e5220d)
+  Executable tests/deps.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/deps-1dacdbd39c857aec)
+  Executable tests/devin_plugin.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/devin_plugin-895660a1c6276d32)
+  Executable tests/diagrams.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/diagrams-382b8ed3c96f60fd)
+  Executable tests/docs_structure.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/docs_structure-eacaad62f23ed4ea)
+  Executable tests/doctor_checklist_pty.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/doctor_checklist_pty-74c79fa109cad85e)
+  Executable tests/dry_run.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/dry_run-9bff9d54d39a0d47)
+  Executable tests/extra_cover.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/extra_cover-fd8100351d5903bf)
+  Executable tests/filter.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/filter-477af04f1993a6b3)
+  Executable tests/gemini_plugin.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/gemini_plugin-75422726954ad492)
+  Executable tests/graph_alerts.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/graph_alerts-1c7fed02b2312cfd)
+  Executable tests/graph_backend_bench.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/graph_backend_bench-121aaff19e4e1233)
+  Executable tests/graph_bench.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/graph_bench-06d63e6db6f1392d)
+  Executable tests/graph_contract.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/graph_contract-b7035dca8de81f72)
+  Executable tests/graph_export_image.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/graph_export_image-47ee85380c07979e)
+  Executable tests/graph_lsp_gate.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/graph_lsp_gate-5a1f15bcc520a37d)
+  Executable tests/graph_model.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/graph_model-0a784843c07ed619)
+  Executable tests/graph_projects.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/graph_projects-4ef7d9ba2298e106)
+  Executable tests/graph_scope.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/graph_scope-7248250138404755)
+  Executable tests/graph_truth.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/graph_truth-60f7e00408a6c368)
+  Executable tests/grok_plugin.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/grok_plugin-6ffb59e3725c2639)
+  Executable tests/guard_check.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/guard_check-36f28d8446a8c5db)
+  Executable tests/hook_deadline.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/hook_deadline-5cc7a11bdbb5a059)
+  Executable tests/hook_fail_open.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/hook_fail_open-f075efda2534dffa)
+  Executable tests/hook_manifests.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/hook_manifests-96381c3dc6cc0f22)
+  Executable tests/hook_resident.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/hook_resident-36b3ee5a817fd713)
+  Executable tests/hook_session_end_lock.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/hook_session_end_lock-b00716004db1f9bc)
+  Executable tests/hook_spawn_brief.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/hook_spawn_brief-844d90cba98dd14a)
+  Executable tests/host_docs.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/host_docs-652a39c900064aa6)
+  Executable tests/hosts_model.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/hosts_model-50242e3516c00c08)
+  Executable tests/ideas_md.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/ideas_md-fa3ef0851b5d7071)
+  Executable tests/import_index_e2e.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/import_index_e2e-c2e2088d97714b18)
+  Executable tests/kimi_plugin.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/kimi_plugin-6e53ee727983078d)
+  Executable tests/latency.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/latency-06c824e37db2ce2b)
+  Executable tests/logs.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/logs-78986a99d3cb8cb8)
+  Executable tests/lossless_roundtrip.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/lossless_roundtrip-a1147768b54085a5)
+  Executable tests/mcp.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/mcp-5d21dc09572f99bb)
+  Executable tests/mcp_agent_messages.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/mcp_agent_messages-2c007ef9bdffe7b3)
+  Executable tests/mcp_agents.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/mcp_agents-f87ea2c565d33b91)
+  Executable tests/mcp_call_lsp_orphan.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/mcp_call_lsp_orphan-c5269c8685bd74cd)
+  Executable tests/mcp_http.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/mcp_http-e6a867b24db977a1)
+  Executable tests/mcp_ping.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/mcp_ping-7a3ec11896256546)
+  Executable tests/mcp_wrap.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/mcp_wrap-7bb318166b53488d)
+  Executable tests/memory_bench.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/memory_bench-662dafab2e84d851)
+  Executable tests/memory_status.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/memory_status-239ccd8d40059f4d)
+  Executable tests/mode_bench.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/mode_bench-f6fdbf34a6d0b427)
+  Executable tests/module_graph.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/module_graph-0f2b74a1bd7c3b8b)
+  Executable tests/no_plan_ids.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/no_plan_ids-06c60a002474f15c)
+  Executable tests/one_call_once.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/one_call_once-434b4ccbd920cc74)
+  Executable tests/opencode_plugin.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/opencode_plugin-05f028fe3bc493ba)
+  Executable tests/otel.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/otel-bf433f4b05ef873d)
+  Executable tests/p28_must_keep.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/p28_must_keep-ca7edfb448ec15bb)
+  Executable tests/p29_memory.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/p29_memory-047fd55ad0adc98f)
+  Executable tests/pi_plugin.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/pi_plugin-4b26878f9938d820)
+  Executable tests/plan_dir.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/plan_dir-9caaae95cae2ef89)
+  Executable tests/plugin_plans.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/plugin_plans-6bc0b02e224ed8b0)
+  Executable tests/plugin_scripts.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/plugin_scripts-d23068c0427e32e1)
+  Executable tests/plugin_versions.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/plugin_versions-af2dca7ce4690d34)
+  Executable tests/plugins_e2e.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/plugins_e2e-61b77bccebc56861)
+  Executable tests/project_auto_add.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/project_auto_add-0282060fb5b3178a)
+  Executable tests/proxy.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/proxy-a12c90c8cd4dbc89)
+  Executable tests/proxy_batch_results.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/proxy_batch_results-47c10d4f061970b0)
+  Executable tests/proxy_bench.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/proxy_bench-94a1588ef74b9aac)
+  Executable tests/proxy_cache_replay.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/proxy_cache_replay-d35aee43ec6a4ffe)
+  Executable tests/proxy_flex.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/proxy_flex-ec07c385d79a6106)
+  Executable tests/proxy_lane_gate.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/proxy_lane_gate-b2cd844b6395c85c)
+  Executable tests/proxy_lane_policy.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/proxy_lane_policy-94faaebfeac62b56)
+  Executable tests/proxy_lanes.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/proxy_lanes-f415735d795902be)
+  Executable tests/proxy_routing.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/proxy_routing-cb56dc2e1a7d1ad4)
+  Executable tests/proxy_service_tier.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/proxy_service_tier-17394bea079db6cc)
+  Executable tests/public_numbers.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/public_numbers-f8425261358de107)
+  Executable tests/pypi_publish.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/pypi_publish-27900d459e6ae59e)
+  Executable tests/release_bundle.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/release_bundle-3f1bdaade8f5e190)
+  Executable tests/replay_bench.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/replay_bench-247663b3642637c6)
+  Executable tests/report.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/report-52ad6145d8ae050d)
+  Executable tests/report_ai.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/report_ai-880421b14c3e9738)
+  Executable tests/report_pdf.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/report_pdf-fd5ee5ee5d1513d5)
+  Executable tests/singleton.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/singleton-8e540f0bc2a6e3df)
+  Executable tests/skill.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/skill-fcc43b810c2936e7)
+  Executable tests/skill_listing.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/skill_listing-9752048d22b8dc65)
+  Executable tests/stats_model.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/stats_model-f901b0e340c433d5)
+  Executable tests/stats_price.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/stats_price-7217606642871d76)
+  Executable tests/surface_parity.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/surface_parity-93c6ddb59748b41b)
+  Executable tests/task_allocator.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/task_allocator-72fee6887c3bda87)
+  Executable tests/task_cli.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/task_cli-78e5e54862a4120f)
+  Executable tests/toolchain_rows.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/toolchain_rows-167ef788dac02dfb)
+  Executable tests/tui_tty.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/tui_tty-3a24028ba8337fcb)
+  Executable tests/ui_style.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/ui_style-95f631634ef38928)
+  Executable tests/web.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/web-324b60686fc22026)
+  Executable tests/web_e2e.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/web_e2e-d95def19738dea59)
+  Executable tests/web_live.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/web_live-084036037d18d6ff)
+  Executable tests/web_token.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/web_token-cff72353eff65c26)
+  Executable tests/windows_ci.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/windows_ci-ea42ddcf787c709e)
+  Executable tests/worktree.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/worktree-a762b01a42a50393)
+  Executable tests/worktree_pending.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/worktree_pending-95edbc97f906ccb2)
+  Executable unittests src/lib.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/rtok_agent_sdk-372bd8129158e47e)
+  Executable unittests src/lib.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/rtok_config-f8cc213e0dd905fc)
+  Executable unittests src/lib.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/rtok_hook-e0dcb9e6d5ebcd51)
+  Executable unittests src/lib.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/rtok_log-eb2c6e732e6a02e7)
+  Executable unittests src/lib.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/rtok_mcp-40e81d887f01c075)
+  Executable unittests src/lib.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/rtok_plugin_sdk-1ec8d7b68980abcd)
+  Executable unittests src/lib.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/rtok_store-edccbf78a0bdd3a2)
+  Executable unittests src/lib.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/rtok_sys-7b3947b9ffb229e9)
+  Executable unittests src/lib.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/rtok_wasm_demo_guest-40cdac3fa1787114)
+  Executable unittests src/lib.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/workspace_hack-9ab888e3b842c7ea)
