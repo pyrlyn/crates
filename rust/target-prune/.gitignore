@@ -1,0 +1,4 @@
+/target
+/tmp
+/bench/out-A-try1
+/bench/*.log

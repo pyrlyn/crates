@@ -1,0 +1,764 @@
+   Compiling proc-macro2 v1.0.107
+   Compiling unicode-ident v1.0.24
+   Compiling libc v0.2.190
+   Compiling quote v1.0.47
+   Compiling serde_core v1.0.229
+   Compiling shlex v2.0.1
+   Compiling find-msvc-tools v0.1.14
+   Compiling serde v1.0.229
+   Compiling cfg-if v1.0.4
+   Compiling log v0.4.34
+   Compiling memchr v2.8.3
+   Compiling itoa v1.0.18
+   Compiling bitflags v2.13.2
+   Compiling foldhash v0.2.0
+   Compiling equivalent v1.0.2
+   Compiling allocator-api2 v0.2.21
+   Compiling version_check v0.9.5
+   Compiling typenum v1.20.1
+   Compiling tree-sitter-language v0.1.8
+   Compiling strsim v0.11.1
+   Compiling pin-project-lite v0.2.17
+   Compiling once_cell v1.21.4
+   Compiling futures-core v0.3.34
+   Compiling zmij v1.0.23
+   Compiling pkg-config v0.3.34
+   Compiling hashbrown v0.17.1
+   Compiling heck v0.5.0
+   Compiling futures-sink v0.3.34
+   Compiling slab v0.4.12
+   Compiling fnv v1.0.7
+   Compiling either v1.19.0
+   Compiling futures-channel v0.3.34
+   Compiling rustversion v1.0.23
+   Compiling simd-adler32 v0.3.10
+   Compiling futures-task v0.3.34
+   Compiling crc32fast v1.5.2
+   Compiling futures-io v0.3.34
+   Compiling rustix v1.1.5
+   Compiling tracing-core v0.1.36
+   Compiling hybrid-array v0.4.15
+   Compiling aho-corasick v1.1.5
+   Compiling regex-syntax v0.8.11
+   Compiling ident_case v1.0.1
+   Compiling thiserror v2.0.21
+   Compiling serde_json v1.0.154
+   Compiling const-oid v0.10.2
+   Compiling crypto-common v0.2.2
+   Compiling block-buffer v0.12.1
+   Compiling dunce v1.0.5
+   Compiling anstyle v1.0.14
+   Compiling percent-encoding v2.3.2
+   Compiling digest v0.11.3
+   Compiling winnow v0.7.15
+   Compiling stable_deref_trait v1.2.1
+   Compiling regex-automata v0.4.18
+   Compiling httparse v1.10.1
+   Compiling same-file v1.0.6
+   Compiling utf8parse v0.2.2
+   Compiling base64 v0.23.1
+   Compiling scopeguard v1.2.0
+   Compiling winnow v1.0.4
+   Compiling tower-service v0.3.3
+   Compiling anstyle-parse v1.0.0
+   Compiling walkdir v2.5.0
+   Compiling autocfg v1.5.1
+   Compiling anstyle-query v1.1.5
+   Compiling getrandom v0.4.3
+   Compiling colorchoice v1.0.5
+   Compiling is_terminal_polyfill v1.70.2
+   Compiling rand_core v0.10.1
+   Compiling proc-macro2-diagnostics v0.10.1
+   Compiling unicode-segmentation v1.13.3
+   Compiling try-lock v0.2.5
+   Compiling anstream v1.0.0
+   Compiling unicode-width v0.2.2
+   Compiling num-traits v0.2.19
+   Compiling atomic-waker v1.1.2
+   Compiling want v0.3.2
+   Compiling form_urlencoded v1.2.2
+   Compiling crossbeam-utils v0.8.23
+   Compiling static_assertions v1.1.0
+   Compiling yansi v1.0.1
+   Compiling adler2 v2.0.1
+   Compiling syn v3.0.4
+   Compiling jobserver v0.1.35
+   Compiling syn v2.0.119
+   Compiling errno v0.3.14
+   Compiling mio v1.2.4
+   Compiling socket2 v0.6.5
+   Compiling cpufeatures v0.3.1
+   Compiling toml_parser v1.1.5+spec-1.1.0
+   Compiling clap_lex v1.1.0
+   Compiling cc v1.8.0
+   Compiling signal-hook-registry v1.4.8
+   Compiling sha2 v0.11.1
+   Compiling httpdate v1.0.3
+   Compiling fs_extra v1.3.0
+   Compiling indexmap v2.14.2
+   Compiling semver v1.0.28
+   Compiling serde_spanned v1.1.2
+   Compiling tinyvec_macros v0.1.1
+   Compiling chacha20 v0.10.2
+   Compiling tinyvec v1.12.0
+   Compiling rust-embed-utils v8.13.0
+   Compiling roxmltree v0.21.1
+   Compiling ref-cast v1.0.27
+   Compiling ipnet v2.12.1
+   Compiling rand v0.10.2
+   Compiling toml_datetime v1.1.2+spec-1.1.0
+   Compiling encoding_rs v0.8.41
+   Compiling cmake v0.1.58
+   Compiling miniz_oxide v0.9.1
+   Compiling zeroize v1.9.0
+   Compiling writeable v0.6.4
+   Compiling dyn-clone v1.0.20
+   Compiling terminal_size v0.4.4
+   Compiling toml_writer v1.1.3+spec-1.1.0
+   Compiling litemap v0.8.3
+   Compiling aws-lc-sys v0.45.0
+   Compiling rustc_version v0.4.1
+   Compiling flate2 v1.1.10
+   Compiling bstr v1.13.1
+   Compiling generic-array v0.14.7
+   Compiling clap_builder v4.6.7
+   Compiling serde_derive_internals v0.30.0
+   Compiling darling_core v0.24.1
+   Compiling toml_edit v0.25.17+spec-1.1.0
+   Compiling simdutf8 v0.1.5
+   Compiling icu_properties_data v2.3.0
+   Compiling icu_normalizer_data v2.3.0
+   Compiling synstructure v0.13.2
+   Compiling aws-lc-rs v1.18.1
+   Compiling utf8_iter v1.0.4
+   Compiling multiversion_no_op v1.0.0
+   Compiling arrayvec v0.7.8
+   Compiling pathfinder_simd v0.5.6
+   Compiling rustls-pki-types v1.15.1
+   Compiling slotmap v1.1.1
+   Compiling getrandom v0.3.4
+   Compiling similar v3.2.0
+   Compiling serde_derive v1.0.229
+   Compiling tokio-macros v2.7.2
+   Compiling futures-macro v0.3.34
+   Compiling thiserror-impl v2.0.21
+   Compiling zerovec-derive v0.11.6
+   Compiling displaydoc v0.2.7
+   Compiling tracing-attributes v0.1.31
+   Compiling zerofrom-derive v0.1.7
+   Compiling yoke-derive v0.8.2
+   Compiling strum_macros v0.28.0
+   Compiling clap_derive v4.6.7
+   Compiling ref-cast-impl v1.0.27
+   Compiling bytemuck_derive v1.12.1
+   Compiling schemars_derive v1.2.3
+   Compiling darling_macro v0.24.1
+   Compiling futures-util v0.3.34
+   Compiling tracing v0.1.44
+   Compiling zerofrom v0.1.8
+   Compiling ryu v1.0.23
+   Compiling zerocopy v0.8.56
+   Compiling fst v0.4.7
+   Compiling strum v0.28.0
+   Compiling bytemuck v1.25.2
+   Compiling darling v0.24.1
+   Compiling clap v4.6.7
+   Compiling yoke v0.8.3
+   Compiling darling_core v0.21.3
+   Compiling block-padding v0.4.2
+   Compiling lru v0.18.4
+   Compiling unicode-canonical-combining-class v1.0.0
+   Compiling unicode-general-category v1.1.0
+   Compiling unicode-joining-type v1.0.0
+   Compiling parking_lot_core v0.9.12
+   Compiling anyhow v1.0.104
+   Compiling alloc-no-stdlib v2.0.4
+   Compiling heck v0.4.1
+   Compiling signal-hook v0.3.18
+   Compiling alloc-stdlib v0.2.4
+   Compiling smallvec v1.16.3
+   Compiling bytes v1.12.1
+   Compiling chrono v0.4.45
+   Compiling workspace-hack v0.1.0 (/Users/listepo/grok/worktrees/rtok-prune-bench2/workspace-hack)
+   Compiling jsonc-parser v0.34.0
+   Compiling zerovec v0.11.8
+   Compiling zerotrie v0.2.5
+   Compiling ouroboros_macro v0.18.5
+   Compiling http v1.5.0
+   Compiling tokio v1.53.3
+   Compiling schemars v1.2.3
+   Compiling inout v0.2.2
+   Compiling http-body v1.1.0
+   Compiling tinystr v0.8.4
+   Compiling potential_utf v0.1.6
+   Compiling icu_collections v2.3.0
+   Compiling icu_locale_core v2.3.0
+   Compiling enumflags2_derive v0.7.12
+   Compiling castaway v0.2.4
+   Compiling darling_macro v0.21.3
+   Compiling convert_case v0.10.0
+   Compiling itertools v0.14.0
+   Compiling hashbrown v0.16.1
+   Compiling instability v0.3.13
+   Compiling libm v0.2.16
+   Compiling unicode-bidi v0.3.18
+   Compiling vcpkg v0.2.15
+   Compiling aliasable v0.1.3
+   Compiling rustls v0.23.46
+   Compiling untrusted v0.9.0
+   Compiling ouroboros v0.18.5
+   Compiling derive_more-impl v2.1.1
+   Compiling icu_provider v2.3.1
+   Compiling kasuari v0.4.12
+   Compiling libsqlite3-sys v0.38.2
+   Compiling hyphenation_commons v0.8.4
+   Compiling icu_properties v2.3.0
+   Compiling icu_normalizer v2.3.0
+   Compiling darling v0.21.3
+   Compiling enumflags2 v0.7.12
+   Compiling unicode-truncate v2.0.1
+   Compiling rand_core v0.9.5
+   Compiling compact_str v0.9.1
+   Compiling http-body-util v0.1.5
+   Compiling cipher v0.5.2
+   Compiling pathfinder_geometry v0.5.1
+   Compiling brotli-decompressor v5.0.3
+   Compiling bincode v1.3.3
+   Compiling block-buffer v0.10.4
+   Compiling crypto-common v0.1.7
+   Compiling font-types v0.12.6
+   Compiling idna_adapter v1.2.2
+   Compiling zstd-sys v2.1.2+zstd.1.5.7
+   Compiling toml_datetime v0.7.5+spec-1.1.0
+   Compiling regex v1.13.1
+   Compiling num_threads v0.1.7
+   Compiling lock_api v0.4.14
+   Compiling sync_wrapper v1.0.2
+   Compiling reflink-copy v0.1.30
+   Compiling time-core v0.1.9
+   Compiling glyph-names v0.2.0
+   Compiling core-foundation-sys v0.8.7
+   Compiling pocket-resources v0.3.2
+   Compiling tower-layer v0.3.3
+   Compiling ppv-lite86 v0.2.21
+   Compiling option-ext v0.2.0
+   Compiling deranged v0.5.8
+   Compiling rustc-hash v2.1.3
+   Compiling subtle v2.6.1
+   Compiling indoc v2.0.7
+   Compiling mime v0.3.17
+   Compiling powerfmt v0.2.0
+   Compiling ucd-trie v0.1.7
+   Compiling is_ci v1.2.0
+   Compiling critical-section v1.2.0
+   Compiling float-cmp v0.9.0
+   Compiling unicase v2.9.0
+   Compiling litrs v1.0.0
+   Compiling diesel_derives v2.3.9
+   Compiling num-conv v0.2.2
+   Compiling strict-num v0.1.1
+   Compiling ratatui-core v0.1.2
+   Compiling allsorts-azul v0.17.2
+   Compiling rand_chacha v0.9.0
+   Compiling read-fonts v0.41.0
+   Compiling hyphenation v0.8.4
+   Compiling dirs-sys v0.5.0
+   Compiling mime_guess v2.0.5
+   Compiling fs-kit v0.1.0 (https://github.com/pyrlyn/crates?rev=afa651209f2b99b03058ed63bd4e62477737dbdb#afa65120)
+   Compiling time v0.3.55
+   Compiling parking_lot v0.12.5
+   Compiling toml v0.9.12+spec-1.1.0
+   Compiling tokio-util v0.7.20
+   Compiling document-features v0.2.12
+   Compiling idna v1.1.0
+   Compiling digest v0.10.7
+   Compiling signal-hook-mio v0.2.5
+   Compiling derive_more v2.1.1
+   Compiling h2 v0.4.19
+   Compiling dsl_auto_type v0.2.0
+   Compiling serde_spanned v0.6.9
+   Compiling toml_datetime v0.6.11
+   Compiling polycool v0.4.0
+   Compiling tree-sitter v0.25.10
+   Compiling diesel_table_macro_syntax v0.3.0
+   Compiling unicode-normalization v0.1.25
+   Compiling is-terminal v0.4.17
+   Compiling cpufeatures v0.2.17
+   Compiling mmapio v0.9.1
+   Compiling uncased v0.9.10
+   Compiling objc2 v0.6.5
+   Compiling xmlparser v0.13.6
+   Compiling arrayref v0.3.9
+   Compiling azul-simplecss v0.2.1
+   Compiling crossbeam-epoch v0.9.20
+   Compiling portable-atomic v1.15.0
+   Compiling toml_write v0.1.2
+   Compiling xmlwriter v0.1.0
+   Compiling toml_edit v0.22.27
+   Compiling tiny-skia-path v0.12.0
+   Compiling azul-css v0.0.16
+   Compiling sha1 v0.10.7
+   Compiling supports-color v2.1.0
+   Compiling crossterm v0.29.0
+   Compiling kurbo v0.13.1
+   Compiling migrations_internals v2.3.0
+   Compiling url v2.5.8
+   Compiling tower v0.5.3
+   Compiling rand v0.9.5
+   Compiling dirs v6.0.0
+   Compiling supports-color v3.0.2
+   Compiling core-foundation v0.10.1
+   Compiling security-framework-sys v2.17.0
+   Compiling pear_codegen v0.2.9
+   Compiling hyper v1.12.0
+   Compiling miniz_oxide v0.8.9
+   Compiling fdeflate v0.3.7
+   Compiling figment v0.10.19
+   Compiling line-clipping v0.3.8
+   Compiling unicode-properties v0.1.4
+   Compiling grid v1.0.1
+   Compiling data-encoding v2.11.1
+   Compiling cpubits v0.1.1
+   Compiling inlinable_string v0.1.15
+   Compiling zstd-safe v8.2.0
+   Compiling gl-context-loader v0.1.10
+   Compiling siphasher v1.0.3
+   Compiling objc2-encode v4.1.0
+   Compiling base64 v0.22.1
+   Compiling downcast-rs v2.0.2
+   Compiling crossbeam-deque v0.8.7
+   Compiling hyper-util v0.1.21
+   Compiling pear v0.2.9
+   Compiling svgtypes v0.16.1
+   Compiling tungstenite v0.29.0
+   Compiling harfrust v0.12.0
+   Compiling skrifa v0.44.0
+   Compiling aes v0.9.3
+   Compiling taffy v0.10.1
+   Compiling stringprep v0.1.5
+   Compiling png v0.18.1
+   Compiling ratatui-widgets v0.3.2
+   Compiling rtok-agent-sdk v0.0.1 (/Users/listepo/grok/worktrees/rtok-prune-bench2/crates/rtok-agent-sdk)
+   Compiling security-framework v3.7.0
+   Compiling toml v0.8.23
+   Compiling owo-colors v4.4.0
+   Compiling shellexpand v3.1.2
+   Compiling diesel v2.3.14
+   Compiling migrations_macros v2.3.0
+   Compiling cbc v0.2.1
+   Compiling ecb v0.2.1
+   Compiling rtok-plugin-sdk v0.0.1 (/Users/listepo/grok/worktrees/rtok-prune-bench2/crates/rtok-plugin-sdk)
+   Compiling fontdb v0.24.0
+   Compiling futures-executor v0.3.34
+   Compiling globset v0.4.20
+   Compiling tree-sitter-typescript v0.23.2
+   Compiling tree-sitter-php v0.25.1
+   Compiling tree-sitter-python v0.25.0
+   Compiling rust-fontconfig v5.0.0
+   Compiling tree-sitter-ruby v0.23.1
+   Compiling tree-sitter-c v0.24.2
+   Compiling tree-sitter-rust v0.24.2
+   Compiling tree-sitter-c-sharp v0.23.5
+   Compiling tree-sitter-swift v0.7.4
+   Compiling tree-sitter-dart v0.2.0
+   Compiling tree-sitter-go v0.25.0
+   Compiling tree-sitter-java v0.23.5
+   Compiling tree-sitter-javascript v0.25.0
+   Compiling tree-sitter-kotlin-ng v1.1.0
+   Compiling uuid v1.28.0
+   Compiling console v0.16.4
+   Compiling md-5 v0.11.0
+   Compiling nom v8.0.0
+   Compiling simplecss v0.2.2
+   Compiling objc2-core-foundation v0.3.2
+   Compiling rmcp v3.5.1
+   Compiling regex-lite v0.1.9
+   Compiling imagesize v0.15.0
+   Compiling pico-args v0.5.0
+   Compiling streaming-iterator v0.1.9
+   Compiling unicode-script v0.5.8
+   Compiling data-url v0.3.2
+   Compiling unit-prefix v0.5.2
+   Compiling rangemap v1.8.0
+   Compiling notify v9.0.0-rc.5
+   Compiling jiff-core v0.1.1
+   Compiling unicode-vo v0.1.0
+   Compiling arraydeque v0.5.1
+   Compiling weezl v0.2.1
+   Compiling usvg v0.48.1
+   Compiling indicatif v0.18.6
+   Compiling granit-parser v1.3.0
+   Compiling objc2-core-services v0.3.2
+   Compiling azul-core v0.0.16
+   Compiling jiff v0.2.38
+   Compiling lopdf v0.44.0
+   Compiling futures v0.3.34
+   Compiling diesel_migrations v2.3.2
+   Compiling ratatui-macros v0.7.2
+   Compiling rust-embed-impl v8.13.0
+   Compiling change-preview v0.1.0
+   Compiling tiny-skia v0.12.0
+   Compiling objc2-foundation v0.3.2
+   Compiling tokio-tungstenite v0.29.0
+   Compiling ratatui-crossterm v0.1.2
+   Compiling tower-http v0.6.11
+   Compiling tokio-stream v0.1.19
+   Compiling axum-core v0.5.6
+   Compiling env_filter v2.0.0
+   Compiling sse-stream v0.2.6
+   Compiling serde_urlencoded v0.7.1
+   Compiling rgb v0.8.53
+   Compiling rmcp-macros v3.5.1
+   Compiling clap_complete v4.6.11
+   Compiling encoding_rs_io v0.1.8
+   Compiling async-trait v0.1.92
+   Compiling serde_path_to_error v0.1.20
+   Compiling annotate-snippets v0.12.16
+   Compiling notify-types v2.1.0
+   Compiling azul-layout v0.0.16
+   Compiling rtok-hook v0.0.1 (/Users/listepo/grok/worktrees/rtok-prune-bench2/crates/rtok-hook)
+   Compiling xxhash-rust v0.8.18
+   Compiling rtok v0.17.0-alpha.3 (/Users/listepo/grok/worktrees/rtok-prune-bench2)
+   Compiling nohash-hasher v0.2.0
+   Compiling humantime v2.4.0
+   Compiling matchit v0.8.4
+   Compiling roff v1.1.1
+   Compiling dotenvy v0.15.7
+   Compiling pastey v0.2.3
+   Compiling axum v0.8.9
+   Compiling rtok-store v0.0.1 (/Users/listepo/grok/worktrees/rtok-prune-bench2/crates/rtok-store)
+   Compiling rtok-config v0.0.1 (/Users/listepo/grok/worktrees/rtok-prune-bench2/crates/rtok-config)
+   Compiling clap_mangen v0.3.3
+   Compiling serde-saphyr v1.3.0
+   Compiling shell-completions v0.1.0
+   Compiling resvg v0.48.1
+   Compiling rust-embed v8.13.0
+   Compiling env_logger v0.11.11
+   Compiling trash v5.2.9
+   Compiling ratatui v0.30.2
+   Compiling ignore v0.4.33
+   Compiling tree-sitter-tags v0.25.10
+   Compiling rtok-sys v0.0.1 (/Users/listepo/grok/worktrees/rtok-prune-bench2/crates/rtok-sys)
+   Compiling rtok-mcp v0.0.1 (/Users/listepo/grok/worktrees/rtok-prune-bench2/crates/rtok-mcp)
+   Compiling rtok-log v0.0.1 (/Users/listepo/grok/worktrees/rtok-prune-bench2/crates/rtok-log)
+   Compiling inquire v0.9.4
+warning: use of deprecated method `std::sync::atomic::Atomic::<u64>::fetch_update`: renamed to `try_update` for consistency
+   --> crates/rtok-sys/src/proc/mod.rs:455:14
+    |
+455 |             .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |left| {
+    |              ^^^^^^^^^^^^
+    |
+    = note: `#[warn(deprecated)]` on by default
+help: replace the use of the deprecated method
+    |
+455 -             .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |left| {
+455 +             .try_update(Ordering::Relaxed, Ordering::Relaxed, |left| {
+    |
+
+   Compiling webpki-roots v1.0.9
+   Compiling rustls-pemfile v2.2.0
+   Compiling operation-icons v0.1.0
+   Compiling pathdiff v0.2.3
+warning: `rtok-sys` (lib) generated 1 warning (run `cargo fix --lib -p rtok-sys` to apply 1 suggestion)
+   Compiling zstd v0.14.2
+   Compiling printpdf v0.12.8
+   Compiling rustls-webpki v0.103.15
+   Compiling tokio-rustls v0.26.4
+   Compiling rustls-platform-verifier v0.7.0
+   Compiling hyper-rustls v0.27.9
+   Compiling reqwest v0.13.5
+warning: use of deprecated method `std::sync::atomic::Atomic::<usize>::fetch_update`: renamed to `try_update` for consistency
+  --> src/plugins/compress/queue.rs:84:14
+   |
+84 |             .fetch_update(Ordering::AcqRel, Ordering::Acquire, |n| {
+   |              ^^^^^^^^^^^^
+   |
+   = note: `#[warn(deprecated)]` on by default
+help: replace the use of the deprecated method
+   |
+84 -             .fetch_update(Ordering::AcqRel, Ordering::Acquire, |n| {
+84 +             .try_update(Ordering::AcqRel, Ordering::Acquire, |n| {
+   |
+
+warning: `rtok` (lib) generated 1 warning (run `cargo fix --lib -p rtok` to apply 1 suggestion)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 3m 00s
+   Compiling rstest_macros v0.27.0
+   Compiling fastrand v2.5.0
+   Compiling glob v0.3.4
+   Compiling proc-macro-crate v3.5.0
+   Compiling tempfile v3.27.0
+   Compiling relative-path v1.9.3
+   Compiling futures-timer v3.0.4
+   Compiling num-integer v0.1.47
+   Compiling wait-timeout v0.2.1
+   Compiling num-bigint v0.4.8
+   Compiling ahash v0.8.12
+   Compiling rstest v0.27.0
+   Compiling parking v2.2.1
+   Compiling num-rational v0.4.2
+   Compiling num-iter v0.1.46
+warning: use of deprecated method `std::sync::atomic::Atomic::<u64>::fetch_update`: renamed to `try_update` for consistency
+   --> crates/rtok-sys/src/proc/mod.rs:455:14
+    |
+455 |             .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |left| {
+    |              ^^^^^^^^^^^^
+    |
+    = note: `#[warn(deprecated)]` on by default
+help: replace the use of the deprecated method
+    |
+455 -             .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |left| {
+455 +             .try_update(Ordering::Relaxed, Ordering::Relaxed, |left| {
+    |
+
+   Compiling rtok-store v0.0.1 (/Users/listepo/grok/worktrees/rtok-prune-bench2/crates/rtok-store)
+warning: `rtok-sys` (lib) generated 1 warning (run `cargo fix --lib -p rtok-sys` to apply 1 suggestion)
+   Compiling num-complex v0.4.6
+   Compiling thiserror v1.0.69
+   Compiling rayon-core v1.13.0
+   Compiling event-listener v5.4.2
+   Compiling bit-vec v0.10.1
+   Compiling bit-vec v0.8.0
+   Compiling cfg_aliases v0.1.1
+   Compiling quick-error v1.2.3
+   Compiling thiserror-impl v1.0.69
+   Compiling rand_xorshift v0.5.0
+   Compiling jsonschema-value v0.58.6
+   Compiling core_detect v1.0.0
+   Compiling nix v0.28.0
+   Compiling rusty-fork v0.3.1
+   Compiling bit-set v0.11.1
+   Compiling bit-set v0.8.0
+   Compiling event-listener-strategy v0.5.4
+   Compiling num v0.4.3
+   Compiling borrow-or-share v0.2.4
+   Compiling unarray v0.1.4
+   Compiling predicates-core v1.0.10
+   Compiling fluent-uri v0.4.1
+   Compiling async-lock v3.4.2
+   Compiling fraction v0.17.0
+   Compiling proptest v1.12.0
+   Compiling fancy-regex v0.19.2
+   Compiling headers-core v0.3.0
+   Compiling snapbox-macros v1.1.0
+   Compiling sha1 v0.11.0
+   Compiling os_pipe v1.2.3
+   Compiling filetime v0.2.29
+   Compiling content_inspector v0.2.4
+   Compiling normalize-line-endings v0.3.0
+   Compiling outref v0.5.2
+   Compiling pulldown-cmark v0.13.4
+   Compiling similar v2.7.0
+   Compiling difflib v0.4.0
+   Compiling termtree v0.5.1
+   Compiling bytecount v0.6.9
+   Compiling vsimd v0.8.0
+   Compiling micromap v0.3.0
+   Compiling num-cmp v0.1.0
+   Compiling assert_cmd v2.2.2
+   Compiling filedescriptor v0.8.3
+   Compiling uuid-simd v0.8.0
+   Compiling rayon v1.12.0
+   Compiling predicates-tree v1.0.13
+   Compiling predicates v3.1.4
+   Compiling snapbox v1.2.2
+   Compiling tungstenite v0.30.0
+   Compiling referencing v0.58.6
+   Compiling headers v0.4.1
+   Compiling async-object-pool v0.2.0
+   Compiling humantime-serde v1.1.1
+   Compiling sha2 v0.10.9
+   Compiling serde_regex v1.2.0
+   Compiling tabwriter v1.4.1
+   Compiling path-tree v0.8.3
+   Compiling email_address v0.2.9
+   Compiling assert-json-diff v2.0.2
+   Compiling divan-macros v0.1.21
+   Compiling serial2 v0.2.38
+   Compiling jsonschema-regex v0.58.6
+   Compiling condtype v1.3.0
+   Compiling downcast-rs v1.2.1
+   Compiling shell-words v1.1.1
+   Compiling shlex v1.3.0
+   Compiling stringmetrics v2.2.2
+   Compiling portable-pty v0.9.0
+   Compiling trycmd v1.2.1
+   Compiling httpmock v0.8.3
+   Compiling d2-render v0.1.0
+   Compiling tokio-tungstenite v0.30.0
+   Compiling insta v1.49.0
+   Compiling tiktoken-rs v0.12.1
+   Compiling rtok-config v0.0.1 (/Users/listepo/grok/worktrees/rtok-prune-bench2/crates/rtok-config)
+   Compiling rtok-agent-sdk v0.0.1 (/Users/listepo/grok/worktrees/rtok-prune-bench2/crates/rtok-agent-sdk)
+   Compiling jsonschema v0.58.6
+   Compiling rtok-sys v0.0.1 (/Users/listepo/grok/worktrees/rtok-prune-bench2/crates/rtok-sys)
+   Compiling divan v0.1.21
+   Compiling rtok-mcp v0.0.1 (/Users/listepo/grok/worktrees/rtok-prune-bench2/crates/rtok-mcp)
+   Compiling rtok-plugin-sdk v0.0.1 (/Users/listepo/grok/worktrees/rtok-prune-bench2/crates/rtok-plugin-sdk)
+   Compiling rtok-log v0.0.1 (/Users/listepo/grok/worktrees/rtok-prune-bench2/crates/rtok-log)
+   Compiling workspace-hack v0.1.0 (/Users/listepo/grok/worktrees/rtok-prune-bench2/workspace-hack)
+   Compiling rtok-wasm-demo-guest v0.0.0 (/Users/listepo/grok/worktrees/rtok-prune-bench2/crates/rtok-wasm-demo-guest)
+   Compiling rtok-hook v0.0.1 (/Users/listepo/grok/worktrees/rtok-prune-bench2/crates/rtok-hook)
+   Compiling rtok v0.17.0-alpha.3 (/Users/listepo/grok/worktrees/rtok-prune-bench2)
+warning: `rtok-sys` (lib test) generated 1 warning (1 duplicate)
+warning: use of deprecated method `std::sync::atomic::Atomic::<usize>::fetch_update`: renamed to `try_update` for consistency
+  --> src/plugins/compress/queue.rs:84:14
+   |
+84 |             .fetch_update(Ordering::AcqRel, Ordering::Acquire, |n| {
+   |              ^^^^^^^^^^^^
+   |
+   = note: `#[warn(deprecated)]` on by default
+help: replace the use of the deprecated method
+   |
+84 -             .fetch_update(Ordering::AcqRel, Ordering::Acquire, |n| {
+84 +             .try_update(Ordering::AcqRel, Ordering::Acquire, |n| {
+   |
+
+warning: `rtok` (lib) generated 1 warning (run `cargo fix --lib -p rtok` to apply 1 suggestion)
+warning: `rtok` (lib test) generated 1 warning (1 duplicate)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3m 46s
+  Executable unittests src/lib.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/rtok-5aa0ff5931eba76b)
+  Executable unittests src/main.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/rtok-8f470a1c9f7e15bf)
+  Executable unittests src/bin/rtok-hook.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/rtok_hook-6bf8f241ae70d476)
+  Executable tests/agent_remove.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/agent_remove-6da50d0e675abee1)
+  Executable tests/agents.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/agents-6da10665340208ce)
+  Executable tests/agents_doc.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/agents_doc-1c6272719297d0c5)
+  Executable tests/agents_install.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/agents_install-1d7afbf5d52026f0)
+  Executable tests/agents_junk.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/agents_junk-0372b8132145d1fb)
+  Executable tests/agents_list_content.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/agents_list_content-707869c02d848fe8)
+  Executable tests/agents_messages.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/agents_messages-c9cae1620cffd385)
+  Executable tests/agents_plugin_version.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/agents_plugin_version-a22e5070fc1eb198)
+  Executable tests/agents_post_create.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/agents_post_create-42ba9c622f894d42)
+  Executable tests/agents_real_config.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/agents_real_config-730123ef5dd6e06a)
+  Executable tests/agents_update.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/agents_update-6bf981d19f6e1953)
+  Executable tests/agents_whoami.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/agents_whoami-e9f119b07a4e3c81)
+  Executable tests/agents_worktrees.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/agents_worktrees-b4265b50529f2927)
+  Executable tests/antigravity_plugin.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/antigravity_plugin-0a49a4763bfc5778)
+  Executable tests/archive_rewrite.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/archive_rewrite-2d349ef445b73084)
+  Executable tests/batch_cli.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/batch_cli-8cb99f657499b33e)
+  Executable tests/bench_fixtures.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/bench_fixtures-9276d6a2d6642ce6)
+  Executable tests/build_git_sha.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/build_git_sha-a0b142ac0d39beef)
+  Executable tests/claude_plugin.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/claude_plugin-faef4bb847af7f4b)
+  Executable tests/cli_trycmd.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/cli_trycmd-5c4dabcae3b902e3)
+  Executable tests/cline_plugin.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/cline_plugin-0c7181238c797730)
+  Executable tests/cmd_rules.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/cmd_rules-bcc44b3c9f9a3808)
+  Executable tests/codebuddy_host.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/codebuddy_host-1527e4069cb27697)
+  Executable tests/codebuddy_plugin.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/codebuddy_plugin-eb2437b1e0f9c5da)
+  Executable tests/codex_plugin.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/codex_plugin-f0c60f94b899f693)
+  Executable tests/codex_plugin_install.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/codex_plugin_install-56bd2ccf8826a2b7)
+  Executable tests/commandcode_plugin.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/commandcode_plugin-a4da9654e82e44f3)
+  Executable tests/commands_e2e.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/commands_e2e-6fab40845740fcb3)
+  Executable tests/completions.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/completions-c64bb347daa9867f)
+  Executable tests/completions_picker_pty.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/completions_picker_pty-525e6196c97801cc)
+  Executable tests/completions_shells.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/completions_shells-d2d924e16260e865)
+  Executable tests/compress_live.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/compress_live-2392e424d9ade882)
+  Executable tests/compress_llm.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/compress_llm-09b4aaa7e750b1e4)
+  Executable tests/compress_snapshot.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/compress_snapshot-d59a3c7692a60bd3)
+  Executable tests/config_coverage.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/config_coverage-e91004a50db290bf)
+  Executable tests/copilot_plugin.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/copilot_plugin-7e79b6c9b1de2512)
+  Executable tests/cursor_plugin.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/cursor_plugin-94484963cdcb39df)
+  Executable tests/demon.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/demon-3fd950697f4af15c)
+  Executable tests/deps.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/deps-324d2d723f1ca94d)
+  Executable tests/devin_plugin.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/devin_plugin-00dcd64f897ea390)
+  Executable tests/diagrams.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/diagrams-52970e3bce74cd29)
+  Executable tests/docs_structure.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/docs_structure-c37c299f0ed7fe41)
+  Executable tests/doctor_checklist_pty.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/doctor_checklist_pty-580679d406e3b031)
+  Executable tests/dry_run.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/dry_run-878ec35c5ec5e41e)
+  Executable tests/extra_cover.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/extra_cover-930f19548c7f0b14)
+  Executable tests/filter.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/filter-9cbe48f21dcab492)
+  Executable tests/gemini_plugin.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/gemini_plugin-23cfc38e3a76f15b)
+  Executable tests/graph_alerts.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/graph_alerts-a03c422d4a36e6c8)
+  Executable tests/graph_backend_bench.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/graph_backend_bench-b8614143eae2a191)
+  Executable tests/graph_bench.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/graph_bench-c3fdab141f0fd90c)
+  Executable tests/graph_contract.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/graph_contract-24b8789fb6930843)
+  Executable tests/graph_export_image.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/graph_export_image-e4eb0812702393ba)
+  Executable tests/graph_lsp_gate.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/graph_lsp_gate-f84e783e7c07ae46)
+  Executable tests/graph_model.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/graph_model-78c2b45317584b1f)
+  Executable tests/graph_projects.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/graph_projects-8384f56e05510282)
+  Executable tests/graph_scope.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/graph_scope-6a11547b4cbcdf8b)
+  Executable tests/graph_truth.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/graph_truth-1e7bb44155fba289)
+  Executable tests/grok_plugin.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/grok_plugin-63e05e7f80ed562d)
+  Executable tests/guard_check.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/guard_check-1d82ec44ac21a52f)
+  Executable tests/hook_deadline.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/hook_deadline-7c4f46e1bfb2af9b)
+  Executable tests/hook_fail_open.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/hook_fail_open-3fae85a588e73e1a)
+  Executable tests/hook_manifests.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/hook_manifests-2808a8be89779451)
+  Executable tests/hook_resident.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/hook_resident-5b36b84d70b0053e)
+  Executable tests/hook_session_end_lock.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/hook_session_end_lock-feff8515cdaf6f5f)
+  Executable tests/hook_spawn_brief.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/hook_spawn_brief-0e9f0fbcf1defcb8)
+  Executable tests/host_docs.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/host_docs-a9e760d3a429e2d9)
+  Executable tests/hosts_model.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/hosts_model-bf98cf44875519a3)
+  Executable tests/ideas_md.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/ideas_md-6177938a17ca3503)
+  Executable tests/import_index_e2e.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/import_index_e2e-149dc3fd822460fd)
+  Executable tests/kimi_plugin.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/kimi_plugin-02e913d2e4d2f261)
+  Executable tests/latency.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/latency-6c5e3e10cea55387)
+  Executable tests/logs.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/logs-43dba1248bccd627)
+  Executable tests/lossless_roundtrip.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/lossless_roundtrip-f209681f608c619a)
+  Executable tests/mcp.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/mcp-402d5863a1b511e3)
+  Executable tests/mcp_agent_messages.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/mcp_agent_messages-f6e0964fd681383c)
+  Executable tests/mcp_agents.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/mcp_agents-3abe0dbe2bd74db9)
+  Executable tests/mcp_call_lsp_orphan.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/mcp_call_lsp_orphan-00b5feff33b38cd7)
+  Executable tests/mcp_http.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/mcp_http-721db434c0c21432)
+  Executable tests/mcp_ping.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/mcp_ping-e279bbd28e2a8b14)
+  Executable tests/mcp_wrap.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/mcp_wrap-f22a26f110635556)
+  Executable tests/memory_bench.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/memory_bench-ff7f2a87fc4ab629)
+  Executable tests/memory_status.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/memory_status-3a62514963344b5a)
+  Executable tests/mode_bench.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/mode_bench-da5301dbbb218387)
+  Executable tests/module_graph.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/module_graph-c8d4a71c07e120e3)
+  Executable tests/no_plan_ids.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/no_plan_ids-0940d9ba258e0199)
+  Executable tests/one_call_once.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/one_call_once-d437c17a2353dd6b)
+  Executable tests/opencode_plugin.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/opencode_plugin-4ba6131fb01c689c)
+  Executable tests/otel.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/otel-9a12ea49fa2974d4)
+  Executable tests/p28_must_keep.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/p28_must_keep-c9be46069a1288c5)
+  Executable tests/p29_memory.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/p29_memory-94ce3239c437adc1)
+  Executable tests/pi_plugin.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/pi_plugin-1d0ec196af3fd1f8)
+  Executable tests/plan_dir.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/plan_dir-201c408818788424)
+  Executable tests/plugin_plans.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/plugin_plans-d7340d3111b59443)
+  Executable tests/plugin_scripts.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/plugin_scripts-bcd2ff1a96749198)
+  Executable tests/plugin_versions.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/plugin_versions-a8d090fe0470ad0c)
+  Executable tests/plugins_e2e.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/plugins_e2e-7486115501062b87)
+  Executable tests/project_auto_add.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/project_auto_add-4fdf45e5170b4776)
+  Executable tests/proxy.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/proxy-49a2094147d7db5d)
+  Executable tests/proxy_batch_results.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/proxy_batch_results-ab9060b015f65dd5)
+  Executable tests/proxy_bench.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/proxy_bench-ebaac39d62124f23)
+  Executable tests/proxy_cache_replay.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/proxy_cache_replay-a1d3934a340d416b)
+  Executable tests/proxy_flex.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/proxy_flex-093593cc5f0a0fc6)
+  Executable tests/proxy_lane_gate.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/proxy_lane_gate-e25be8b831a13e82)
+  Executable tests/proxy_lane_policy.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/proxy_lane_policy-54847d47c87054a0)
+  Executable tests/proxy_lanes.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/proxy_lanes-715d66cfc8785fe6)
+  Executable tests/proxy_routing.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/proxy_routing-cb265608f609c9ff)
+  Executable tests/proxy_service_tier.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/proxy_service_tier-01b28ecd7af2ff2d)
+  Executable tests/public_numbers.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/public_numbers-8bb7144fbf45afeb)
+  Executable tests/pypi_publish.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/pypi_publish-789293ab079c664a)
+  Executable tests/release_bundle.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/release_bundle-8ed930bc9acb24ba)
+  Executable tests/replay_bench.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/replay_bench-e67e4cffacda800a)
+  Executable tests/report.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/report-d66187ae5d1882ae)
+  Executable tests/report_ai.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/report_ai-61dca41009d15ff8)
+  Executable tests/report_pdf.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/report_pdf-94126d3b2abcd08f)
+  Executable tests/singleton.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/singleton-4668e814e9aae93a)
+  Executable tests/skill.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/skill-cd78a6d74ea524fd)
+  Executable tests/skill_listing.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/skill_listing-56f5f52cbee1c714)
+  Executable tests/stats_model.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/stats_model-0264fe85f9d887bf)
+  Executable tests/stats_price.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/stats_price-f59679bd0b0ba324)
+  Executable tests/surface_parity.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/surface_parity-6f0aad73780a219a)
+  Executable tests/task_allocator.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/task_allocator-8a315bee24f53096)
+  Executable tests/task_cli.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/task_cli-ddaf28fcb310d4b3)
+  Executable tests/toolchain_rows.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/toolchain_rows-94c86e2bbef25b4e)
+  Executable tests/tui_tty.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/tui_tty-10fbd0dd449f8894)
+  Executable tests/ui_style.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/ui_style-c135f12cc62f49ab)
+  Executable tests/web.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/web-972b93c84db1b5e6)
+  Executable tests/web_e2e.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/web_e2e-b352dfbe84e26ac2)
+  Executable tests/web_live.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/web_live-fee62a386504188a)
+  Executable tests/web_token.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/web_token-ccb7f5abfda38d64)
+  Executable tests/windows_ci.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/windows_ci-7c8585daa6533f0e)
+  Executable tests/worktree.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/worktree-b84f437cefb66047)
+  Executable tests/worktree_pending.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/worktree_pending-02e90b9f780b5d60)
+  Executable unittests src/lib.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/rtok_agent_sdk-8885c73543fd5080)
+  Executable unittests src/lib.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/rtok_config-064dcf3c901c634d)
+  Executable unittests src/lib.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/rtok_hook-3ca2d3815c4e1360)
+  Executable unittests src/lib.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/rtok_log-78faf8e3e94b538a)
+  Executable unittests src/lib.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/rtok_mcp-0d8cb2a18a0210f0)
+  Executable unittests src/lib.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/rtok_plugin_sdk-5f64ff84ca662d63)
+  Executable unittests src/lib.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/rtok_store-227adcf79e4e4191)
+  Executable unittests src/lib.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/rtok_sys-6cee9d2f6bf63550)
+  Executable unittests src/lib.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/rtok_wasm_demo_guest-c639253d75dd33f8)
+  Executable unittests src/lib.rs (/Users/listepo/Grok/worktrees/rtok-prune-bench2/target/debug/deps/workspace_hack-510bbefa6b279bf1)
+target-prune: prune took 23.25s
