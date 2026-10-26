@@ -1,0 +1,8 @@
+run	variant	build_s	size_mb	freed_mb	prune_s
+1	code	424.1	10846		0	rc=0
+2	code+debug=false	161.4	18290		0	rc=0
+3	code+nofeat-graph	112.9	20994		0	rc=0
+4	code+rustflags	234.2	29168		0	rc=0
+5	code+debug=false	100.1	31525		0	rc=0
+6	code+nofeat-graph+add-dep	269.4	38915		0	rc=0
+STOP: free 28G < 30G
