@@ -12,6 +12,7 @@ Small, focused Rust crates shared by the creator's projects (`ketch`, `rtok`, `s
 | [`abi-drift`](rust/abi-drift) | Drift tests for generated bindings: regenerate a cbindgen header or csbindgen C# file, diff it against the committed copy, bless to rewrite |
 | [`app-home`](rust/app-home) | Resolve the user home, `$APP_HOME` or `~/.app`, and XDG config/data/cache/state dirs the same way on every OS |
 | [`cargo-changed-packages`](rust/cargo-changed-packages) | Workspace packages a set of changed paths affects, including reverse dependencies |
+| [`cargo-profile-check`](rust/cargo-profile-check) | Check Cargo.toml profiles against a shared template, inheritance resolved; one ADD/REMOVE line per difference (binary, `cargo profile-check`) |
 | [`change-preview`](rust/change-preview) | Preview what a command would change: diff or `--stat` of edits, size and file count of removals, totals |
 | [`operation-icons`](rust/operation-icons) | Emoji icons for the verb of a status line and the fixed-width gutter they sit in |
 | [`owner-listener`](rust/owner-listener) | Owner-only Unix socket and Windows named pipe for a local gRPC agent, with tonic `Connected` peer info and login-service install (not published) |

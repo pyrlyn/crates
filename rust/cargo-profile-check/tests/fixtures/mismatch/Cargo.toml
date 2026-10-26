@@ -1,0 +1,13 @@
+[package]
+name = "mismatch"
+version = "0.1.0"
+edition = "2021"
+
+[profile.dev]
+debug = true
+split-debuginfo = "unpacked"
+
+[profile.release]
+lto = "thin"
+strip = "debuginfo"
+codegen-units = 1

@@ -1,0 +1,30 @@
+# Bundled template for cargo-profile-check. Put these sections in the WORKSPACE ROOT Cargo.toml;
+# Cargo ignores [profile.*] in member crates. test inherits dev, bench inherits release.
+
+[profile.dev]
+opt-level = 0
+debug = "line-tables-only"
+incremental = true
+codegen-units = 256
+panic = "unwind"
+
+[profile.dev.package."*"]
+opt-level = 1
+debug = false
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 16
+panic = "unwind"
+strip = "debuginfo"
+
+[profile.dist]
+inherits = "release"
+lto = "fat"
+codegen-units = 1
+
+[profile.ci]
+inherits = "dev"
+debug = false
+incremental = false

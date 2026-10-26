@@ -1,0 +1,27 @@
+[workspace]
+members = []
+
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+opt-level = 1
+debug = false
+
+[profile.release]
+lto = "thin"
+strip = "debuginfo"
+
+[profile.fast]
+inherits = "release"
+lto = "fat"
+codegen-units = 1
+
+# dist inherits through fast, so lto and codegen-units come from there.
+[profile.dist]
+inherits = "fast"
+
+[profile.ci]
+inherits = "dev"
+debug = false
+incremental = false
