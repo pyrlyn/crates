@@ -113,4 +113,4 @@ See [bench/RESULTS.md](bench/RESULTS.md) (rtok, 10 runs with and without pruning
 ## History
 
 Imported from [pyrlyn/target-prune](https://github.com/pyrlyn/target-prune) (branch
-`feat/smart-prune`, `487814a`) with its git history via `git subtree`.
+`feat/smart-prune`, `487814a`); the earlier history stays in that (archived) repository.
