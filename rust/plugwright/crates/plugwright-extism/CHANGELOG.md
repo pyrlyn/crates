@@ -8,3 +8,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [0.1.0](https://github.com/pyrlyn/crates/releases/tag/plugwright-extism-v0.1.0) - 2026-10-26
+
+### Added
+
+- *(plugwright)* named host functions for Wasm guests (T48) ([#102](https://github.com/pyrlyn/crates/pull/102))
+- T20.6 Pulley interpreter feature for the extism hosts ([#107](https://github.com/pyrlyn/crates/pull/107))
+
+### Other
+
+- *(plugwright)* move plugwright into rust/ and the root workspace (T37) ([#101](https://github.com/pyrlyn/crates/pull/101))

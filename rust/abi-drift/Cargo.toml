@@ -1,6 +1,6 @@
 [package]
 name = "abi-drift"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 # ketch's MSRV, the lowest of its consumers (ketch 1.86, scull 1.99); similar 3.2 needs 1.85.
 rust-version = "1.86"

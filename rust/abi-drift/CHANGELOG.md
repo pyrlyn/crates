@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1](https://github.com/pyrlyn/crates/releases/tag/abi-drift-v0.1.1) - 2026-10-26
+
+### Fixed
+
+- T20.4 sync wasm plugin host runtime pins ([#74](https://github.com/pyrlyn/crates/pull/74))
+
+### Other
+
+- move the Rust crates into rust/ ([#72](https://github.com/pyrlyn/crates/pull/72))
+
 ## [0.1.0](https://github.com/pyrlyn/crates-packages/releases/tag/abi-drift-v0.1.0) - 2026-10-10
 
 ### Added

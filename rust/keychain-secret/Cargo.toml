@@ -1,6 +1,6 @@
 [package]
 name = "keychain-secret"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 # cox's and runa's MSRV, the lowest of its consumers (cox and runa 1.98, aulo and Mailune 1.99).
 rust-version = "1.98"

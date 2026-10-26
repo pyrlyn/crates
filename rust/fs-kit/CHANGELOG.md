@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0](https://github.com/pyrlyn/crates/releases/tag/fs-kit-v0.2.0) - 2026-10-26
+
+### Added
+
+- *(fs-kit)* T49 copy-on-write tree clone ([#112](https://github.com/pyrlyn/crates/pull/112))
+
+### Other
+
+- *(plugwright)* move plugwright into rust/ and the root workspace (T37) ([#101](https://github.com/pyrlyn/crates/pull/101))
+- move the Rust crates into rust/ ([#72](https://github.com/pyrlyn/crates/pull/72))
+
 ## [0.1.0](https://github.com/pyrlyn/crates-packages/releases/tag/fs-kit-v0.1.0) - 2026-10-11
 
 ### Added

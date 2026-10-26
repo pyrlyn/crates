@@ -1,6 +1,6 @@
 [package]
 name = "telemetry-setup"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 # The lowest MSRV of its candidate consumers (cox 1.98, aulo and Mailune 1.99).
 rust-version = "1.98"

@@ -1,6 +1,6 @@
 [package]
 name = "gettext-catalog"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 # cox's MSRV, the lowest of its consumers (cox 1.98, Mailune 1.99).
 rust-version = "1.98"
