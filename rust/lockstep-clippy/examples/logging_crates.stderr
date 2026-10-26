@@ -1,0 +1,131 @@
+warning: logging through `log::Log`; only Lockstep may log
+  --> $DIR/logging_crates.rs:8:6
+   |
+LL | impl Log for StderrLogger {
+   |      ^^^
+   |
+   = help: log through Lockstep instead
+   = note: `#[warn(lockstep_logging_only)]` on by default
+
+warning: logging through `log::Metadata`; only Lockstep may log
+  --> $DIR/logging_crates.rs:9:27
+   |
+LL |     fn enabled(&self, _: &Metadata) -> bool {
+   |                           ^^^^^^^^
+   |
+   = help: log through Lockstep instead
+
+warning: logging through `log::Record`; only Lockstep may log
+  --> $DIR/logging_crates.rs:13:23
+   |
+LL |     fn log(&self, _: &Record) {}
+   |                       ^^^^^^
+   |
+   = help: log through Lockstep instead
+
+warning: logging through `instrument!`; only Lockstep may log
+  --> $DIR/logging_crates.rs:18:1
+   |
+LL | #[tracing::instrument]
+   | ^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: log through Lockstep instead
+
+warning: logging through `info!`; only Lockstep may log
+  --> $DIR/logging_crates.rs:24:5
+   |
+LL |     log::info!("started");
+   |     ^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: log through Lockstep instead
+
+warning: logging through `warn!`; only Lockstep may log
+  --> $DIR/logging_crates.rs:25:5
+   |
+LL |     log::warn!(target: "app", "careful: {}", 1);
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: log through Lockstep instead
+
+warning: logging through `log::max_level`; only Lockstep may log
+  --> $DIR/logging_crates.rs:26:13
+   |
+LL |     let _ = log::max_level();
+   |             ^^^^^^^^^^^^^^
+   |
+   = help: log through Lockstep instead
+
+warning: logging through `log::set_logger`; only Lockstep may log
+  --> $DIR/logging_crates.rs:27:13
+   |
+LL |     let _ = log::set_logger(&StderrLogger);
+   |             ^^^^^^^^^^^^^^^
+   |
+   = help: log through Lockstep instead
+
+warning: logging through `info!`; only Lockstep may log
+  --> $DIR/logging_crates.rs:29:5
+   |
+LL |     tracing::info!(answer = 42, "traced");
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: log through Lockstep instead
+
+warning: logging through `span!`; only Lockstep may log
+  --> $DIR/logging_crates.rs:30:16
+   |
+LL |     let span = tracing::span!(tracing::Level::INFO, "work");
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: log through Lockstep instead
+
+warning: logging through `tracing::Level`; only Lockstep may log
+  --> $DIR/logging_crates.rs:30:31
+   |
+LL |     let span = tracing::span!(tracing::Level::INFO, "work");
+   |                               ^^^^^^^^^^^^^^
+   |
+   = help: log through Lockstep instead
+
+warning: logging through `env_logger::builder`; only Lockstep may log
+  --> $DIR/logging_crates.rs:34:13
+   |
+LL |     let _ = env_logger::builder().is_test(true).try_init();
+   |             ^^^^^^^^^^^^^^^^^^^
+   |
+   = help: log through Lockstep instead
+
+warning: logging through `slog::Discard`; only Lockstep may log
+  --> $DIR/logging_crates.rs:36:17
+   |
+LL |     let drain = slog::Discard;
+   |                 ^^^^^^^^^^^^^
+   |
+   = help: log through Lockstep instead
+
+warning: logging through `slog::Logger`; only Lockstep may log
+  --> $DIR/logging_crates.rs:37:16
+   |
+LL |     let root = slog::Logger::root(drain, slog::o!());
+   |                ^^^^^^^^^^^^
+   |
+   = help: log through Lockstep instead
+
+warning: logging through `o!`; only Lockstep may log
+  --> $DIR/logging_crates.rs:37:42
+   |
+LL |     let root = slog::Logger::root(drain, slog::o!());
+   |                                          ^^^^^^^^^^
+   |
+   = help: log through Lockstep instead
+
+warning: logging through `info!`; only Lockstep may log
+  --> $DIR/logging_crates.rs:38:5
+   |
+LL |     slog::info!(root, "slog message");
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: log through Lockstep instead
+
+warning: 16 warnings emitted
+

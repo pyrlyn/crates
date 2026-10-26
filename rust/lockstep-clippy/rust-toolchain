@@ -1,0 +1,5 @@
+# The nightly clippy_utils 0.1.101 is built against (its README names it). dylint lint
+# libraries link rustc's private crates, so this pin moves together with clippy_utils.
+[toolchain]
+channel = "nightly-2026-10-01"
+components = ["llvm-tools-preview", "rustc-dev"]

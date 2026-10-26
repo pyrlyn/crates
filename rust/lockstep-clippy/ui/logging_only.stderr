@@ -1,0 +1,64 @@
+warning: logging through `print!`; only Lockstep may log
+  --> $DIR/logging_only.rs:16:5
+   |
+LL |     print!("a");
+   |     ^^^^^^^^^^^
+   |
+   = help: log through Lockstep instead
+   = note: `#[warn(lockstep_logging_only)]` on by default
+
+warning: logging through `println!`; only Lockstep may log
+  --> $DIR/logging_only.rs:17:5
+   |
+LL |     println!("b");
+   |     ^^^^^^^^^^^^^
+   |
+   = help: log through Lockstep instead
+
+warning: logging through `eprint!`; only Lockstep may log
+  --> $DIR/logging_only.rs:18:5
+   |
+LL |     eprint!("c");
+   |     ^^^^^^^^^^^^
+   |
+   = help: log through Lockstep instead
+
+warning: logging through `eprintln!`; only Lockstep may log
+  --> $DIR/logging_only.rs:19:5
+   |
+LL |     eprintln!("d");
+   |     ^^^^^^^^^^^^^^
+   |
+   = help: log through Lockstep instead
+
+warning: logging through `dbg!`; only Lockstep may log
+  --> $DIR/logging_only.rs:20:13
+   |
+LL |     let x = dbg!(1 + 1);
+   |             ^^^^^^^^^^^
+   |
+   = help: log through Lockstep instead
+
+warning: logging through `println!`; only Lockstep may log
+  --> $DIR/logging_only.rs:5:9
+   |
+LL | macro_rules! say {
+LL |     ($msg:expr) => {
+LL |         println!("{}", $msg)
+   |         ^^^^^^^^^^^^^^^^^^^^
+...
+LL |     say!(x);
+   |     ------- in this macro invocation
+   |
+   = help: log through Lockstep instead
+
+warning: logging through `eprintln!`; only Lockstep may log
+  --> $DIR/logging_only.rs:43:5
+   |
+LL |     eprintln!("still reported");
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: log through Lockstep instead
+
+warning: 7 warnings emitted
+

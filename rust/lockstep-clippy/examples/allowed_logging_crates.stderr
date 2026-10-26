@@ -1,0 +1,19 @@
+warning: logging through `info!`; only Lockstep may log
+  --> $DIR/allowed_logging_crates.rs:21:5
+   |
+LL |     log::info!("not the facade");
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: log through Lockstep instead
+   = note: `#[warn(lockstep_logging_only)]` on by default
+
+warning: logging through `log::max_level`; only Lockstep may log
+  --> $DIR/allowed_logging_crates.rs:22:13
+   |
+LL |     let _ = log::max_level();
+   |             ^^^^^^^^^^^^^^
+   |
+   = help: log through Lockstep instead
+
+warning: 2 warnings emitted
+

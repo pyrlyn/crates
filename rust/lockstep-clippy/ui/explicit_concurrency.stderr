@@ -1,0 +1,99 @@
+warning: explicit concurrency through `std::sync::Mutex`
+  --> $DIR/explicit_concurrency.rs:5:27
+   |
+LL |     let shared = Arc::new(Mutex::new(0));
+   |                           ^^^^^
+   |
+   = help: take threads and locks through Lockstep instead
+   = note: `#[warn(lockstep_explicit_concurrency)]` on by default
+
+warning: explicit concurrency through `std::sync::RwLock`
+  --> $DIR/explicit_concurrency.rs:6:35
+   |
+LL |     let table: RwLock<Vec<i32>> = RwLock::new(Vec::new());
+   |                                   ^^^^^^
+   |
+   = help: take threads and locks through Lockstep instead
+
+warning: explicit concurrency through `std::sync::RwLock`
+  --> $DIR/explicit_concurrency.rs:6:16
+   |
+LL |     let table: RwLock<Vec<i32>> = RwLock::new(Vec::new());
+   |                ^^^^^^^^^^^^^^^^
+   |
+   = help: take threads and locks through Lockstep instead
+
+warning: explicit concurrency through `std::sync::Mutex`
+  --> $DIR/explicit_concurrency.rs:7:18
+   |
+LL |     let ready = (Mutex::new(false), Condvar::new());
+   |                  ^^^^^
+   |
+   = help: take threads and locks through Lockstep instead
+
+warning: explicit concurrency through `std::sync::Condvar`
+  --> $DIR/explicit_concurrency.rs:7:37
+   |
+LL |     let ready = (Mutex::new(false), Condvar::new());
+   |                                     ^^^^^^^
+   |
+   = help: take threads and locks through Lockstep instead
+
+warning: explicit concurrency through `std::sync::Barrier`
+  --> $DIR/explicit_concurrency.rs:8:19
+   |
+LL |     let barrier = Barrier::new(1);
+   |                   ^^^^^^^
+   |
+   = help: take threads and locks through Lockstep instead
+
+warning: explicit concurrency through `std::thread::spawn`
+  --> $DIR/explicit_concurrency.rs:10:18
+   |
+LL |     let handle = thread::spawn(|| 1);
+   |                  ^^^^^^^^^^^^^
+   |
+   = help: take threads and locks through Lockstep instead
+
+warning: explicit concurrency through `std::thread::scope`
+  --> $DIR/explicit_concurrency.rs:13:5
+   |
+LL |     thread::scope(|scope| {
+   |     ^^^^^^^^^^^^^
+   |
+   = help: take threads and locks through Lockstep instead
+
+warning: explicit concurrency through `std::thread::Builder`
+  --> $DIR/explicit_concurrency.rs:17:13
+   |
+LL |     let _ = thread::Builder::new().name("worker".into()).spawn(|| 3);
+   |             ^^^^^^^^^^^^^^^
+   |
+   = help: take threads and locks through Lockstep instead
+
+warning: explicit concurrency through `std::thread::spawn`
+  --> $DIR/explicit_concurrency.rs:19:13
+   |
+LL |     let _ = std::thread::spawn(|| 4);
+   |             ^^^^^^^^^^^^^^^^^^
+   |
+   = help: take threads and locks through Lockstep instead
+
+warning: explicit concurrency through `std::sync::Mutex`
+  --> $DIR/explicit_concurrency.rs:27:17
+   |
+LL |     takes_lock(&Mutex::new(1));
+   |                 ^^^^^
+   |
+   = help: take threads and locks through Lockstep instead
+
+warning: explicit concurrency through `std::sync::Mutex`
+  --> $DIR/explicit_concurrency.rs:31:22
+   |
+LL | fn takes_lock(lock: &Mutex<i32>) -> i32 {
+   |                      ^^^^^^^^^^
+   |
+   = help: take threads and locks through Lockstep instead
+
+warning: 12 warnings emitted
+

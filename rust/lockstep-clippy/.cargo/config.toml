@@ -1,0 +1,4 @@
+# dylint-link renames the cdylib to `liblockstep_clippy@<toolchain>.<ext>` so cargo-dylint
+# can match it to the driver built for the same nightly.
+[target.'cfg(all())']
+linker = "dylint-link"

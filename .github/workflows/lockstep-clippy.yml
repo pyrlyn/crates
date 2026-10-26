@@ -1,0 +1,52 @@
+name: lockstep-clippy
+
+# rust/lockstep-clippy is outside the workspace: dylint lint libraries link rustc's private crates,
+# so it builds on the nightly its rust-toolchain pins and ci.yml's stable jobs never see it. This
+# runs its UI tests (tests/ui.rs) when it or this file changes.
+on:
+  push:
+    branches: [main]
+    paths:
+      - rust/lockstep-clippy/**
+      - .github/workflows/lockstep-clippy.yml
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - rust/lockstep-clippy/**
+      - .github/workflows/lockstep-clippy.yml
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+permissions:
+  contents: read
+
+jobs:
+  ui-tests:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: rust/lockstep-clippy
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Without arguments rustup installs what rust-toolchain names: the nightly with rustc-dev and
+      # llvm-tools-preview.
+      - name: Toolchain
+        run: rustup toolchain install
+      # dylint-link is the linker .cargo/config.toml names; dylint_testing needs cargo-dylint's
+      # driver. Same version as dylint_linting and dylint_testing in Cargo.toml.
+      - name: dylint
+        run: cargo install cargo-dylint@6.2.0 dylint-link@6.2.0 --locked
+      - name: UI tests
+        run: cargo test --locked

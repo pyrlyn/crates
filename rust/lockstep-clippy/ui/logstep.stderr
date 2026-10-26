@@ -1,0 +1,11 @@
+warning: explicit concurrency through `std::sync::Mutex`
+  --> $DIR/logstep.rs:8:13
+   |
+LL |     let _ = Mutex::new(0);
+   |             ^^^^^
+   |
+   = help: take threads and locks through Lockstep instead
+   = note: `#[warn(lockstep_explicit_concurrency)]` on by default
+
+warning: 1 warning emitted
+
