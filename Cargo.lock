@@ -711,6 +711,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "cargo-profile-check"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "serde_json",
+ "tempfile",
+ "toml 1.1.8+spec-1.1.0",
+]
+
+[[package]]
 name = "cargo_metadata"
 version = "0.23.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
