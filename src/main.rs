@@ -52,6 +52,29 @@ struct Opts {
     /// List every path.
     #[arg(short, long)]
     verbose: bool,
+    /// Size budget per profile dir (e.g. `12G`, `800M`). If what `--keep N` keeps is larger,
+    /// fewer runs are kept, down to 1. The newest run is never dropped to meet the budget.
+    #[arg(long, value_parser = parse_size)]
+    max_size: Option<u64>,
+    /// Turn off smart pruning: keep superseded test/bin executables of kept runs.
+    #[arg(long)]
+    no_smart: bool,
+}
+
+/// `12G`, `1.5GB`, `800M`, `4096` (bytes). Powers of 1024.
+fn parse_size(s: &str) -> Result<u64, String> {
+    let t = s.trim().trim_end_matches(['B', 'b']);
+    let (num, mul) = match t.chars().last() {
+        Some('K' | 'k') => (&t[..t.len() - 1], 1u64 << 10),
+        Some('M' | 'm') => (&t[..t.len() - 1], 1 << 20),
+        Some('G' | 'g') => (&t[..t.len() - 1], 1 << 30),
+        Some('T' | 't') => (&t[..t.len() - 1], 1 << 40),
+        _ => (t, 1),
+    };
+    num.trim()
+        .parse::<f64>()
+        .map(|n| (n * mul as f64) as u64)
+        .map_err(|e| format!("bad size {s:?}: {e}"))
 }
 
 /// One `.fingerprint/<name>-<hash>` dir: a lib, bin, test, build script or its run.
@@ -74,12 +97,17 @@ fn mtime(p: &Path) -> f64 {
 }
 
 fn now() -> f64 {
-    SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs_f64()
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs_f64()
 }
 
 /// Bytes on disk (allocated blocks), not following symlinks.
 fn size_of(p: &Path) -> u64 {
-    let Ok(m) = fs::symlink_metadata(p) else { return 0 };
+    let Ok(m) = fs::symlink_metadata(p) else {
+        return 0;
+    };
     let own = m.blocks() * 512;
     if !m.is_dir() {
         return own;
@@ -88,7 +116,8 @@ fn size_of(p: &Path) -> u64 {
 }
 
 fn read_dir_sorted(p: &Path) -> Vec<PathBuf> {
-    let mut v: Vec<PathBuf> = fs::read_dir(p).map_or(vec![], |rd| rd.flatten().map(|e| e.path()).collect());
+    let mut v: Vec<PathBuf> =
+        fs::read_dir(p).map_or(vec![], |rd| rd.flatten().map(|e| e.path()).collect());
     v.sort();
     v
 }
@@ -128,7 +157,9 @@ fn find_profile_dirs(roots: &[PathBuf]) -> Vec<PathBuf> {
         }
         for e in read_dir_sorted(d) {
             let n = file_name(&e);
-            let is_dir = fs::symlink_metadata(&e).map(|m| m.is_dir()).unwrap_or(false);
+            let is_dir = fs::symlink_metadata(&e)
+                .map(|m| m.is_dir())
+                .unwrap_or(false);
             if is_dir && !n.starts_with('.') && n != "node_modules" {
                 walk(&e, out);
             }
@@ -149,13 +180,22 @@ fn load_units(profile: &Path) -> HashMap<String, Unit> {
             continue;
         }
         let h = name.rsplit('-').next().unwrap().to_string();
-        let mut u = Unit { hash: h.clone(), started: mtime(&d), files: vec![d.clone()], ..Default::default() };
+        let mut u = Unit {
+            hash: h.clone(),
+            started: mtime(&d),
+            files: vec![d.clone()],
+            ..Default::default()
+        };
         for f in read_dir_sorted(&d) {
             let n = file_name(&f).to_string();
             u.started = u.started.max(mtime(&f));
             if n.ends_with(".json") {
-                let Ok(text) = fs::read_to_string(&f) else { continue };
-                let Ok(v) = serde_json::from_str::<serde_json::Value>(&text) else { continue };
+                let Ok(text) = fs::read_to_string(&f) else {
+                    continue;
+                };
+                let Ok(v) = serde_json::from_str::<serde_json::Value>(&text) else {
+                    continue;
+                };
                 for dep in v["deps"].as_array().into_iter().flatten() {
                     let a = dep.as_array();
                     let name = a.and_then(|a| a.get(1)).and_then(|x| x.as_str());
@@ -164,7 +204,10 @@ fn load_units(profile: &Path) -> HashMap<String, Unit> {
                         u.deps.push((name.to_string(), fp));
                     }
                 }
-            } else if !["dep-", "invoked", "output-", "stderr-", "root-output"].iter().any(|p| n.starts_with(p)) {
+            } else if !["dep-", "invoked", "output-", "stderr-", "root-output"]
+                .iter()
+                .any(|p| n.starts_with(p))
+            {
                 u.names.insert(if n.contains("build-script") {
                     "build_script_build".into()
                 } else {
@@ -261,7 +304,10 @@ fn closure(units: &HashMap<String, Unit>, roots: &[String]) -> (HashSet<String>,
 
 /// Sessions of one `incremental/<crate>-<id>` dir, oldest first.
 fn sessions(inc: &Path) -> Vec<PathBuf> {
-    let mut s: Vec<PathBuf> = read_dir_sorted(inc).into_iter().filter(|p| p.is_dir()).collect();
+    let mut s: Vec<PathBuf> = read_dir_sorted(inc)
+        .into_iter()
+        .filter(|p| p.is_dir())
+        .collect();
     s.sort_by(|a, b| mtime(a).total_cmp(&mtime(b)));
     s
 }
@@ -278,22 +324,102 @@ struct Plan {
     units: usize,
     runs: usize,
     kept: usize,
+    /// Runs actually kept (lower than `--keep` when `--max-size` forced it).
+    keep_runs: usize,
     unresolved: usize,
     doomed: Vec<PathBuf>,
+    /// Kept-run executables dropped by the smart rule.
+    superseded: usize,
 }
 
-fn plan(profile: &Path, keep_runs: usize, gap: f64) -> Plan {
+/// An executable cargo linked for a unit: `deps/<name>-<hash>` without an extension
+/// (`.exe` on Windows). Test harnesses and bins; libs always carry an extension.
+fn is_exe(p: &Path) -> bool {
+    let n = file_name(p);
+    let in_deps = p.parent().is_some_and(|d| file_name(d) == "deps");
+    in_deps && !n.starts_with("lib") && (!n.contains('.') || n.ends_with(".exe")) && p.is_file()
+}
+
+/// Smart rule: kept units that only produce an executable nothing depends on (test binaries,
+/// bins), when a newer kept unit of the same name exists. Their old links are dead weight:
+/// cargo reruns the newest one, and relinks an old configuration if it ever comes back.
+fn superseded(units: &HashMap<String, Unit>, kept: &HashSet<String>) -> HashSet<String> {
+    let mut needed: HashSet<u64> = HashSet::new();
+    for h in kept {
+        needed.extend(units[h].deps.iter().map(|d| d.1));
+    }
+    let mut leaves: HashMap<Vec<String>, Vec<&Unit>> = HashMap::new();
+    for h in kept {
+        let u = &units[h];
+        if u.files.iter().any(|f| is_exe(f)) && u.fps.iter().all(|fp| !needed.contains(fp)) {
+            let mut k: Vec<String> = u.names.iter().cloned().collect();
+            k.sort();
+            leaves.entry(k).or_default().push(u);
+        }
+    }
+    let mut out = HashSet::new();
+    for mut v in leaves.into_values() {
+        v.sort_by(|a, b| a.started.total_cmp(&b.started));
+        v.pop(); // the newest stays
+        out.extend(v.into_iter().map(|u| u.hash.clone()));
+    }
+    out
+}
+
+fn plan(profile: &Path, o: &Opts) -> Plan {
     let units = load_units(profile);
-    let runs = group_runs(&units, gap, &load_markers(profile));
+    let runs = group_runs(&units, o.gap, &load_markers(profile));
+    let mut keep_runs = o.keep;
+    let mut p = plan_keep(profile, &units, &runs, keep_runs, o);
+    if let Some(budget) = o.max_size {
+        let total: u64 = [".fingerprint"]
+            .iter()
+            .chain(ARTIFACT_DIRS.iter())
+            .map(|s| size_of(&profile.join(s)))
+            .sum();
+        while keep_runs > 1
+            && p.unresolved == 0
+            && total - p.doomed.iter().map(|d| size_of(d)).sum::<u64>().min(total) > budget
+        {
+            keep_runs -= 1;
+            p = plan_keep(profile, &units, &runs, keep_runs, o);
+        }
+        p.keep_runs = keep_runs;
+    }
+    p
+}
+
+fn plan_keep(
+    profile: &Path,
+    units: &HashMap<String, Unit>,
+    runs: &[Vec<String>],
+    keep_runs: usize,
+    o: &Opts,
+) -> Plan {
+    let gap = o.gap;
     let roots: Vec<String> = runs[runs.len().saturating_sub(keep_runs)..].concat();
-    let (kept, unresolved) = closure(&units, &roots);
-    let mut p = Plan { units: units.len(), runs: runs.len(), kept: kept.len(), unresolved, doomed: vec![] };
+    let (mut kept, unresolved) = closure(units, &roots);
+    let mut p = Plan {
+        units: units.len(),
+        runs: runs.len(),
+        kept: kept.len(),
+        keep_runs,
+        unresolved,
+        doomed: vec![],
+        superseded: 0,
+    };
     if unresolved > 0 {
         p.kept = units.len();
         return p; // fail safe: a kept unit needs something we cannot map
     }
+    if !o.no_smart {
+        let old = superseded(units, &kept);
+        p.superseded = old.len();
+        kept.retain(|h| !old.contains(h));
+        p.kept = kept.len();
+    }
     let mut claimed: HashSet<PathBuf> = HashSet::new();
-    for (h, u) in &units {
+    for (h, u) in units {
         claimed.extend(u.files.iter().cloned());
         if !kept.contains(h) {
             p.doomed.extend(u.files.iter().cloned());
@@ -302,7 +428,11 @@ fn plan(profile: &Path, keep_runs: usize, gap: f64) -> Plan {
     // incremental/<crate>-<id> is named by rustc's crate id, not cargo's unit hash, so it
     // rarely matches a unit. Keep only the newest session of dirs used since the oldest
     // kept run started; drop dirs idle since then.
-    let cutoff = roots.iter().map(|h| units[h].started).fold(f64::INFINITY, f64::min) - gap;
+    let cutoff = roots
+        .iter()
+        .map(|h| units[h].started)
+        .fold(f64::INFINITY, f64::min)
+        - gap;
     for inc in read_dir_sorted(&profile.join("incremental")) {
         if !inc.is_dir() || (claimed.contains(&inc) && !kept.contains(hash_of(file_name(&inc)))) {
             continue; // already doomed with its unit
@@ -322,7 +452,11 @@ fn plan(profile: &Path, keep_runs: usize, gap: f64) -> Plan {
 
 fn remove(p: &Path) {
     let is_dir = fs::symlink_metadata(p).map(|m| m.is_dir()).unwrap_or(false);
-    let _ = if is_dir { fs::remove_dir_all(p) } else { fs::remove_file(p) };
+    let _ = if is_dir {
+        fs::remove_dir_all(p)
+    } else {
+        fs::remove_file(p)
+    };
 }
 
 fn human(n: u64) -> String {
@@ -340,17 +474,25 @@ fn prune(o: &Opts) -> (u64, u64) {
     let (mut total_all, mut free_all) = (0, 0);
     let verb = if o.apply { "freed" } else { "would free" };
     for profile in find_profile_dirs(&o.roots) {
-        let p = plan(&profile, o.keep, o.gap);
-        let total: u64 = [".fingerprint"].iter().chain(ARTIFACT_DIRS.iter()).map(|s| size_of(&profile.join(s))).sum();
+        let p = plan(&profile, o);
+        let total: u64 = [".fingerprint"]
+            .iter()
+            .chain(ARTIFACT_DIRS.iter())
+            .map(|s| size_of(&profile.join(s)))
+            .sum();
         let free: u64 = p.doomed.iter().map(|d| size_of(d)).sum();
         total_all += total;
         free_all += free;
         if p.unresolved > 0 {
-            eprintln!("{}: {} unresolved deps, skipping (fail safe)", profile.display(), p.unresolved);
+            eprintln!(
+                "{}: {} unresolved deps, skipping (fail safe)",
+                profile.display(),
+                p.unresolved
+            );
         }
         println!(
-            "{}: units {}, runs {}, kept units {}; total {}, {verb} {}, kept {}",
-            profile.display(), p.units, p.runs, p.kept, human(total), human(free), human(total - free.min(total))
+            "{}: units {}, runs {}, kept runs {}, kept units {}, superseded exes {}; total {}, {verb} {}, kept {}",
+            profile.display(), p.units, p.runs, p.keep_runs.min(p.runs), p.kept, p.superseded, human(total), human(free), human(total - free.min(total))
         );
         for d in &p.doomed {
             if o.verbose {
@@ -361,8 +503,16 @@ fn prune(o: &Opts) -> (u64, u64) {
             }
         }
     }
-    let tail = if o.apply { "" } else { "  (dry run; pass --apply to delete)" };
-    println!("TOTAL: {}, {verb} {}{tail}", human(total_all), human(free_all));
+    let tail = if o.apply {
+        ""
+    } else {
+        "  (dry run; pass --apply to delete)"
+    };
+    println!(
+        "TOTAL: {}, {verb} {}{tail}",
+        human(total_all),
+        human(free_all)
+    );
     (total_all, free_all)
 }
 
@@ -372,7 +522,9 @@ fn snapshot(roots: &[PathBuf]) {
         let mut per_crate: BTreeMap<String, usize> = BTreeMap::new();
         for d in read_dir_sorted(&profile.join(".fingerprint")) {
             let n = file_name(&d);
-            *per_crate.entry(n.rsplit_once('-').map_or(n, |x| x.0).to_string()).or_default() += 1;
+            *per_crate
+                .entry(n.rsplit_once('-').map_or(n, |x| x.0).to_string())
+                .or_default() += 1;
         }
         let mut dups: Vec<(&String, &usize)> = per_crate.iter().filter(|x| *x.1 > 1).collect();
         dups.sort_by(|a, b| b.1.cmp(a.1));
@@ -402,13 +554,19 @@ fn snapshot(roots: &[PathBuf]) {
 }
 
 fn default_roots(r: &[PathBuf], fallback: PathBuf) -> Vec<PathBuf> {
-    if r.is_empty() { vec![fallback] } else { r.to_vec() }
+    if r.is_empty() {
+        vec![fallback]
+    } else {
+        r.to_vec()
+    }
 }
 
 fn main() -> ExitCode {
     match Cli::parse().cmd {
         Cmd::Prune(mut o) => {
-            let home = std::env::var_os("HOME").map(PathBuf::from).unwrap_or_default();
+            let home = std::env::var_os("HOME")
+                .map(PathBuf::from)
+                .unwrap_or_default();
             o.roots = default_roots(&o.roots, home.join("Grok/worktrees"));
             prune(&o);
             ExitCode::SUCCESS
@@ -418,7 +576,8 @@ fn main() -> ExitCode {
             ExitCode::SUCCESS
         }
         Cmd::Run { mut opts, command } => {
-            let target = std::env::var_os("CARGO_TARGET_DIR").map_or(PathBuf::from("target"), PathBuf::from);
+            let target =
+                std::env::var_os("CARGO_TARGET_DIR").map_or(PathBuf::from("target"), PathBuf::from);
             opts.roots = default_roots(&opts.roots, target);
             for r in &opts.roots {
                 let _ = fs::create_dir_all(r);

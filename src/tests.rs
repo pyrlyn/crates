@@ -6,7 +6,8 @@ const BASE: f64 = 1_000_000.0;
 
 fn set_mtime(p: &Path, t: f64) {
     let f = fs::File::options().read(true).open(p).unwrap();
-    f.set_modified(UNIX_EPOCH + std::time::Duration::from_secs_f64(t)).unwrap();
+    f.set_modified(UNIX_EPOCH + std::time::Duration::from_secs_f64(t))
+        .unwrap();
 }
 
 /// A fake unit the way cargo lays it out: fingerprint dir, rlib, .d.
@@ -14,10 +15,21 @@ fn unit(profile: &Path, name: &str, h: &str, fp: u64, deps: &[(&str, u64)], t: f
     let d = profile.join(".fingerprint").join(format!("{name}-{h}"));
     fs::create_dir_all(&d).unwrap();
     fs::create_dir_all(profile.join("deps")).unwrap();
-    let hex: String = fp.to_le_bytes().iter().map(|b| format!("{b:02x}")).collect();
+    let hex: String = fp
+        .to_le_bytes()
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect();
     fs::write(d.join(format!("lib-{name}")), hex).unwrap();
-    let deps: Vec<_> = deps.iter().map(|(n, f)| serde_json::json!([0, n, false, f])).collect();
-    fs::write(d.join(format!("lib-{name}.json")), serde_json::json!({ "deps": deps }).to_string()).unwrap();
+    let deps: Vec<_> = deps
+        .iter()
+        .map(|(n, f)| serde_json::json!([0, n, false, f]))
+        .collect();
+    fs::write(
+        d.join(format!("lib-{name}.json")),
+        serde_json::json!({ "deps": deps }).to_string(),
+    )
+    .unwrap();
     fs::write(d.join("invoked.timestamp"), "x").unwrap();
     let rlib = profile.join("deps").join(format!("lib{name}-{h}.rlib"));
     fs::write(&rlib, vec![b'0'; 5000]).unwrap();
@@ -51,7 +63,11 @@ impl Drop for Fx {
 fn fixture() -> Fx {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("tmp")
-        .join(format!("t{}-{}", std::process::id(), N.fetch_add(1, Ordering::SeqCst)));
+        .join(format!(
+            "t{}-{}",
+            std::process::id(),
+            N.fetch_add(1, Ordering::SeqCst)
+        ));
     let p = root.join("target/debug");
     unit(&p, "a", "aaaaaaaaaaaaaaaa", 1, &[], BASE);
     unit(&p, "b", "b1b1b1b1b1b1b1b1", 2, &[("a", 1)], BASE + 1.0);
@@ -64,7 +80,15 @@ fn fixture() -> Fx {
 }
 
 fn opts(fx: &Fx, keep: usize, apply: bool) -> Opts {
-    Opts { roots: vec![fx.root.clone()], keep, gap: 60.0, apply, verbose: false }
+    Opts {
+        roots: vec![fx.root.clone()],
+        keep,
+        gap: 60.0,
+        apply,
+        verbose: false,
+        max_size: None,
+        no_smart: false,
+    }
 }
 
 fn all_files(root: &Path) -> Vec<PathBuf> {
@@ -94,7 +118,11 @@ fn markers_split_runs_closer_than_gap() {
     // a marker between b1 (BASE+1) and app1 (BASE+2) splits run 1; after the first marker
     // only markers split, so the rest is one run
     assert_eq!(group_runs(&load_units(&fx.p), 60.0, &[BASE + 1.5]).len(), 2);
-    fs::write(fx.root.join("target").join(MARKERS), format!("{}\n", BASE + 1.5)).unwrap();
+    fs::write(
+        fx.root.join("target").join(MARKERS),
+        format!("{}\n", BASE + 1.5),
+    )
+    .unwrap();
     assert_eq!(load_markers(&fx.p), vec![BASE + 1.5]);
 }
 
@@ -104,7 +132,10 @@ fn markers_override_gap_within_a_run() {
     // one marker before everything: the 1000 s gaps no longer split, all is one run
     assert_eq!(group_runs(&load_units(&fx.p), 60.0, &[BASE - 1.0]).len(), 1);
     // markers before run 1 and run 3: run 1+2 merge (no marker between them), run 3 separate
-    assert_eq!(group_runs(&load_units(&fx.p), 60.0, &[BASE - 1.0, BASE + 1500.0]).len(), 2);
+    assert_eq!(
+        group_runs(&load_units(&fx.p), 60.0, &[BASE - 1.0, BASE + 1500.0]).len(),
+        2
+    );
 }
 
 #[test]
@@ -169,7 +200,14 @@ fn idle_unmatched_incremental_dir_removed() {
 #[test]
 fn unresolved_dep_is_fail_safe() {
     let fx = fixture();
-    unit(&fx.p, "x", "9999999999999999", 7, &[("ghost", 42)], BASE + 2001.0);
+    unit(
+        &fx.p,
+        "x",
+        "9999999999999999",
+        7,
+        &[("ghost", 42)],
+        BASE + 2001.0,
+    );
     let before = all_files(&fx.root);
     let (_, free) = prune(&opts(&fx, 1, true));
     assert_eq!(free, 0);
@@ -180,7 +218,14 @@ fn unresolved_dep_is_fail_safe() {
 fn rebuilt_dep_falls_back_to_name() {
     let fx = fixture();
     // app4 points at a b fingerprint that no longer exists: keep every b rather than guess
-    unit(&fx.p, "app", "0000000000000004", 8, &[("b", 777)], BASE + 3000.0);
+    unit(
+        &fx.p,
+        "app",
+        "0000000000000004",
+        8,
+        &[("b", 777)],
+        BASE + 3000.0,
+    );
     prune(&opts(&fx, 1, true));
     assert!(fp(&fx, "b-b1b1b1b1b1b1b1b1") && fp(&fx, "b-b2b2b2b2b2b2b2b2"));
 }
@@ -189,6 +234,105 @@ fn rebuilt_dep_falls_back_to_name() {
 fn keep_0_and_empty_dir() {
     let fx = fixture();
     prune(&opts(&fx, 0, true));
-    assert!(fs::read_dir(fx.p.join(".fingerprint")).unwrap().next().is_none());
+    assert!(fs::read_dir(fx.p.join(".fingerprint"))
+        .unwrap()
+        .next()
+        .is_none());
     assert_eq!(find_profile_dirs(&[fx.root.join("nope")]).len(), 0);
+}
+
+/// A test binary unit: like `unit`, plus the linked executable `deps/<name>-<hash>`.
+fn test_exe(profile: &Path, name: &str, h: &str, fp: u64, deps: &[(&str, u64)], t: f64) {
+    unit(profile, name, h, fp, deps, t);
+    let exe = profile.join("deps").join(format!("{name}-{h}"));
+    fs::write(&exe, vec![b'x'; 50_000]).unwrap();
+    set_mtime(&exe, t);
+}
+
+#[test]
+fn smart_drops_superseded_test_exe_but_keeps_its_libs() {
+    let fx = fixture();
+    test_exe(
+        &fx.p,
+        "it",
+        "1111111111111111",
+        21,
+        &[("b", 3)],
+        BASE + 1002.0,
+    );
+    test_exe(
+        &fx.p,
+        "it",
+        "2222222222222222",
+        22,
+        &[("b", 4)],
+        BASE + 2001.0,
+    );
+    prune(&opts(&fx, 2, true));
+    assert!(fp(&fx, "it-2222222222222222"));
+    assert!(
+        !fp(&fx, "it-1111111111111111"),
+        "older test exe of a kept run goes"
+    );
+    assert!(!fx.p.join("deps/it-1111111111111111").exists());
+    assert!(
+        fp(&fx, "b-b1b1b1b1b1b1b1b1"),
+        "its libs stay: switching back only relinks"
+    );
+}
+
+#[test]
+fn no_smart_keeps_superseded_test_exe() {
+    let fx = fixture();
+    test_exe(
+        &fx.p,
+        "it",
+        "1111111111111111",
+        21,
+        &[("b", 3)],
+        BASE + 1002.0,
+    );
+    test_exe(
+        &fx.p,
+        "it",
+        "2222222222222222",
+        22,
+        &[("b", 4)],
+        BASE + 2001.0,
+    );
+    prune(&Opts {
+        no_smart: true,
+        ..opts(&fx, 2, true)
+    });
+    assert!(fp(&fx, "it-1111111111111111"));
+}
+
+#[test]
+fn max_size_lowers_keep_but_never_below_one() {
+    let fx = fixture();
+    prune(&Opts {
+        max_size: Some(1),
+        ..opts(&fx, 3, true)
+    });
+    assert!(fp(&fx, "app-0000000000000003"), "newest run always stays");
+    assert!(!fp(&fx, "app-0000000000000002"));
+}
+
+#[test]
+fn max_size_large_budget_changes_nothing() {
+    let fx = fixture();
+    prune(&Opts {
+        max_size: Some(1 << 40),
+        ..opts(&fx, 2, true)
+    });
+    assert!(fp(&fx, "app-0000000000000002"));
+}
+
+#[test]
+fn sizes_parse() {
+    assert_eq!(parse_size("12G").unwrap(), 12 << 30);
+    assert_eq!(parse_size("1.5GB").unwrap(), 3 << 29);
+    assert_eq!(parse_size("800m").unwrap(), 800 << 20);
+    assert_eq!(parse_size("4096").unwrap(), 4096);
+    assert!(parse_size("lots").is_err());
 }
