@@ -22,6 +22,7 @@ Cargo workspace of five small Rust crates shared by ketch and rtok:
 | `scoped-check` | Binary that runs only the check commands a change touches |
 | `telemetry-setup` | `tracing` setup with rotating JSON logs, optional OTLP traces and secret redaction, shared by aulo and Mailune |
 | `sqlite-change-feed` | Change feed for a SQLite database shared between processes: `PRAGMA data_version` through Diesel |
+| `sqlitex-graph` | Code-symbol store in SQLite with a native reference/call graph in CSR segments and graph table-valued functions; rlib and loadable extension (cdylib) |
 | `wasm-plugin-host` | WebAssembly plugin host (extism) shared by cox and scull: worker per plugin, memory cap, deadlines |
 
 Each member directory has its own `AGENTS.md`. This file is the workspace root.
