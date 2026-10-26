@@ -56,6 +56,17 @@ struct Opts {
     /// fewer runs are kept, down to 1. The newest run is never dropped to meet the budget.
     #[arg(long, value_parser = parse_size)]
     max_size: Option<u64>,
+    /// Size budget for each target dir as a whole (all its profile and variant dirs together,
+    /// e.g. `target/debug`, `target/<triple>/debug`, `target/variant-x/debug`). When the
+    /// target dir is still larger after the per-dir pass, the oldest kept run across all of
+    /// them is dropped first (least recently used), one at a time. The newest run of the most
+    /// recently used dir is never dropped.
+    #[arg(long, value_parser = parse_size)]
+    max_total_size: Option<u64>,
+    /// Do not trim `incremental/<crate>-<id>/` to its newest session (trimming is on by
+    /// default). Whole idle incremental dirs are still removed with the rest of a dropped run.
+    #[arg(long)]
+    no_incremental_cleanup: bool,
 }
 
 /// `12G`, `1.5GB`, `800M`, `4096` (bytes). Powers of 1024.
@@ -309,6 +320,44 @@ fn sessions(inc: &Path) -> Vec<PathBuf> {
     s
 }
 
+/// True when another process holds a lock on `p` (flock, as cargo uses, or a POSIX record
+/// lock, as rustc uses for incremental sessions). A lock file we cannot open counts as held.
+fn lock_held(p: &Path) -> bool {
+    let Ok(f) = fs::File::options().read(true).write(true).open(p) else {
+        return p.exists();
+    };
+    let flock = match f.try_lock() {
+        Ok(()) => {
+            let _ = f.unlock();
+            false
+        }
+        Err(fs::TryLockError::WouldBlock) => true,
+        Err(_) => true,
+    };
+    flock || fcntl_locked(&f)
+}
+
+fn fcntl_locked(f: &fs::File) -> bool {
+    use std::os::fd::AsRawFd;
+    // SAFETY: zeroed `flock` is a valid argument; F_GETLK only reads the fd's lock state.
+    let mut fl: libc::flock = unsafe { std::mem::zeroed() };
+    fl.l_type = libc::F_WRLCK as _;
+    fl.l_whence = libc::SEEK_SET as _;
+    let r = unsafe { libc::fcntl(f.as_raw_fd(), libc::F_GETLK, &mut fl) };
+    r == -1 || i32::from(fl.l_type) != i32::from(libc::F_UNLCK)
+}
+
+/// An incremental session rustc is writing (`s-...-working`) or whose `.lock` is held.
+fn session_busy(s: &Path) -> bool {
+    file_name(s).ends_with("-working")
+        || lock_held(&s.with_file_name(format!("{}.lock", file_name(s))))
+}
+
+/// Cargo holds `<profile>/.cargo-lock` for the whole build.
+fn cargo_running(profile: &Path) -> bool {
+    lock_held(&profile.join(".cargo-lock"))
+}
+
 fn with_lock(s: &Path, out: &mut Vec<PathBuf>) {
     out.push(s.to_path_buf());
     let lock = s.with_file_name(format!("{}.lock", file_name(s)));
@@ -327,23 +376,30 @@ struct Plan {
     doomed: Vec<PathBuf>,
 }
 
-fn plan(profile: &Path, o: &Opts) -> Plan {
-    let units = load_units(profile);
-    let runs = group_runs(&units, o.gap, &load_markers(profile));
+fn profile_size(profile: &Path) -> u64 {
+    [".fingerprint"]
+        .iter()
+        .chain(ARTIFACT_DIRS.iter())
+        .map(|s| size_of(&profile.join(s)))
+        .sum()
+}
+
+fn plan_with(
+    profile: &Path,
+    units: &HashMap<String, Unit>,
+    runs: &[Vec<String>],
+    total: u64,
+    o: &Opts,
+) -> Plan {
     let mut keep_runs = o.keep;
-    let mut p = plan_keep(profile, &units, &runs, keep_runs, o);
+    let mut p = plan_keep(profile, units, runs, keep_runs, o);
     if let Some(budget) = o.max_size {
-        let total: u64 = [".fingerprint"]
-            .iter()
-            .chain(ARTIFACT_DIRS.iter())
-            .map(|s| size_of(&profile.join(s)))
-            .sum();
         while keep_runs > 1
             && p.unresolved == 0
             && total - p.doomed.iter().map(|d| size_of(d)).sum::<u64>().min(total) > budget
         {
             keep_runs -= 1;
-            p = plan_keep(profile, &units, &runs, keep_runs, o);
+            p = plan_keep(profile, units, runs, keep_runs, o);
         }
         p.keep_runs = keep_runs;
     }
@@ -394,10 +450,14 @@ fn plan_keep(
         let s = sessions(&inc);
         let newest = s.last().map_or(mtime(&inc), |l| mtime(l));
         if !claimed.contains(&inc) && newest < cutoff {
-            p.doomed.push(inc);
-        } else {
+            if !s.iter().any(|x| session_busy(x)) {
+                p.doomed.push(inc);
+            }
+        } else if !o.no_incremental_cleanup {
             for old in &s[..s.len().saturating_sub(1)] {
-                with_lock(old, &mut p.doomed);
+                if !session_busy(old) {
+                    with_lock(old, &mut p.doomed);
+                }
             }
         }
     }
@@ -424,36 +484,170 @@ fn human(n: u64) -> String {
     format!("{x:.1} TB")
 }
 
+/// One profile dir with its plan.
+struct Folder {
+    profile: PathBuf,
+    units: HashMap<String, Unit>,
+    runs: Vec<Vec<String>>,
+    busy: bool,
+    total: u64,
+    freed: u64,
+    plan: Plan,
+}
+
+impl Folder {
+    fn new(profile: PathBuf, o: &Opts) -> Self {
+        let units = load_units(&profile);
+        let runs = group_runs(&units, o.gap, &load_markers(&profile));
+        let total = profile_size(&profile);
+        let busy = cargo_running(&profile);
+        let plan = if busy {
+            Plan {
+                units: units.len(),
+                runs: runs.len(),
+                kept: units.len(),
+                keep_runs: runs.len(),
+                unresolved: 0,
+                doomed: vec![],
+            }
+        } else {
+            plan_with(&profile, &units, &runs, total, o)
+        };
+        let freed = plan.doomed.iter().map(|d| size_of(d)).sum();
+        Folder {
+            profile,
+            units,
+            runs,
+            busy,
+            total,
+            freed,
+            plan,
+        }
+    }
+
+    fn kept_size(&self) -> u64 {
+        self.total - self.freed.min(self.total)
+    }
+
+    fn kept_runs(&self) -> usize {
+        self.plan.keep_runs.min(self.runs.len())
+    }
+
+    /// Start time of the newest unit of run `i`.
+    fn run_time(&self, i: usize) -> f64 {
+        self.runs[i]
+            .iter()
+            .map(|h| self.units[h].started)
+            .fold(f64::NEG_INFINITY, f64::max)
+    }
+
+    fn last_used(&self) -> f64 {
+        self.runs
+            .len()
+            .checked_sub(1)
+            .map_or(f64::NEG_INFINITY, |i| self.run_time(i))
+    }
+}
+
+/// The target dir a profile dir belongs to: the nearest ancestor (up to 3 levels) holding
+/// cargo's `CACHEDIR.TAG`, else the profile dir's parent.
+fn target_root(profile: &Path) -> PathBuf {
+    profile
+        .ancestors()
+        .skip(1)
+        .take(3)
+        .find(|d| d.join("CACHEDIR.TAG").is_file())
+        .or(profile.parent())
+        .unwrap_or(profile)
+        .to_path_buf()
+}
+
+/// `--max-total-size`: drop the globally oldest kept run until the folders fit `budget`.
+fn apply_total_budget(folders: &mut [Folder], idx: &[usize], budget: u64, o: &Opts) {
+    let mru = idx
+        .iter()
+        .copied()
+        .filter(|&i| !folders[i].runs.is_empty())
+        .max_by(|&a, &b| folders[a].last_used().total_cmp(&folders[b].last_used()));
+    loop {
+        let kept: u64 = idx.iter().map(|&i| folders[i].kept_size()).sum();
+        if kept <= budget {
+            return;
+        }
+        let pick = idx
+            .iter()
+            .copied()
+            .filter(|&i| {
+                let f = &folders[i];
+                let floor = usize::from(Some(i) == mru);
+                !f.busy && f.plan.unresolved == 0 && f.kept_runs() > floor
+            })
+            .min_by(|&a, &b| {
+                let t =
+                    |i: usize| folders[i].run_time(folders[i].runs.len() - folders[i].kept_runs());
+                t(a).total_cmp(&t(b))
+            });
+        let Some(i) = pick else { return };
+        let f = &mut folders[i];
+        let keep = f.kept_runs() - 1;
+        f.plan = plan_keep(&f.profile, &f.units, &f.runs, keep, o);
+        f.plan.keep_runs = keep;
+        f.freed = f.plan.doomed.iter().map(|d| size_of(d)).sum();
+    }
+}
+
 fn prune(o: &Opts) -> (u64, u64) {
     let (mut total_all, mut free_all) = (0, 0);
     let verb = if o.apply { "freed" } else { "would free" };
-    for profile in find_profile_dirs(&o.roots) {
-        let p = plan(&profile, o);
-        let total: u64 = [".fingerprint"]
-            .iter()
-            .chain(ARTIFACT_DIRS.iter())
-            .map(|s| size_of(&profile.join(s)))
-            .sum();
-        let free: u64 = p.doomed.iter().map(|d| size_of(d)).sum();
-        total_all += total;
-        free_all += free;
+    let mut folders: Vec<Folder> = find_profile_dirs(&o.roots)
+        .into_iter()
+        .map(|p| Folder::new(p, o))
+        .collect();
+    if let Some(budget) = o.max_total_size {
+        let mut groups: BTreeMap<PathBuf, Vec<usize>> = BTreeMap::new();
+        for (i, f) in folders.iter().enumerate() {
+            groups.entry(target_root(&f.profile)).or_default().push(i);
+        }
+        for (root, idx) in &groups {
+            apply_total_budget(&mut folders, idx, budget, o);
+            let kept: u64 = idx.iter().map(|&i| folders[i].kept_size()).sum();
+            if kept > budget {
+                eprintln!(
+                    "{}: {} kept, over --max-total-size {} (newest run of the most recently used dir, busy or fail-safe dirs stay)",
+                    root.display(),
+                    human(kept),
+                    human(budget)
+                );
+            }
+        }
+    }
+    for f in &folders {
+        let p = &f.plan;
+        total_all += f.total;
+        free_all += f.freed;
+        if f.busy {
+            eprintln!(
+                "{}: cargo is running (.cargo-lock held), skipping",
+                f.profile.display()
+            );
+        }
         if p.unresolved > 0 {
             eprintln!(
                 "{}: {} unresolved deps, skipping (fail safe)",
-                profile.display(),
+                f.profile.display(),
                 p.unresolved
             );
         }
         println!(
             "{}: units {}, runs {}, kept runs {}, kept units {}; total {}, {verb} {}, kept {}",
-            profile.display(),
+            f.profile.display(),
             p.units,
             p.runs,
             p.keep_runs.min(p.runs),
             p.kept,
-            human(total),
-            human(free),
-            human(total - free.min(total))
+            human(f.total),
+            human(f.freed),
+            human(f.kept_size())
         );
         for d in &p.doomed {
             if o.verbose {

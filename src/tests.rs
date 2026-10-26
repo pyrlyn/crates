@@ -87,6 +87,8 @@ fn opts(fx: &Fx, keep: usize, apply: bool) -> Opts {
         apply,
         verbose: false,
         max_size: None,
+        max_total_size: None,
+        no_incremental_cleanup: false,
     }
 }
 
@@ -268,4 +270,118 @@ fn sizes_parse() {
     assert_eq!(parse_size("800m").unwrap(), 800 << 20);
     assert_eq!(parse_size("4096").unwrap(), 4096);
     assert!(parse_size("lots").is_err());
+}
+
+#[test]
+fn incremental_cleanup_can_be_disabled() {
+    let fx = fixture();
+    prune(&Opts {
+        no_incremental_cleanup: true,
+        ..opts(&fx, 1, true)
+    });
+    let inc = fx.p.join("incremental/app-0000000000000003");
+    assert!(inc.join("s-0").exists() && inc.join("s-1").exists() && inc.join("s-2").exists());
+    assert!(!fp(&fx, "app-0000000000000002"), "unit pruning still runs");
+}
+
+#[test]
+fn locked_or_working_session_is_kept() {
+    let fx = fixture();
+    let inc = fx.p.join("incremental/app-0000000000000003");
+    let held = fs::File::options()
+        .read(true)
+        .write(true)
+        .open(inc.join("s-0.lock"))
+        .unwrap();
+    held.lock().unwrap();
+    fs::rename(inc.join("s-1"), inc.join("s-1-working")).unwrap();
+    set_mtime(&inc.join("s-1-working"), BASE + 2001.0);
+    prune(&opts(&fx, 1, true));
+    assert!(inc.join("s-0").exists(), "lock held: kept");
+    assert!(inc.join("s-1-working").exists(), "working session kept");
+    assert!(inc.join("s-2").exists());
+    drop(held);
+}
+
+#[test]
+fn cargo_lock_held_skips_profile() {
+    let fx = fixture();
+    fs::write(fx.p.join(".cargo-lock"), "").unwrap();
+    let held = fs::File::options()
+        .read(true)
+        .write(true)
+        .open(fx.p.join(".cargo-lock"))
+        .unwrap();
+    held.lock().unwrap();
+    let before = all_files(&fx.root);
+    let (_, free) = prune(&opts(&fx, 1, true));
+    assert_eq!(free, 0);
+    assert_eq!(before, all_files(&fx.root));
+    drop(held);
+    let (_, free) = prune(&opts(&fx, 1, true));
+    assert!(free > 0, "released lock: pruned");
+}
+
+/// Adds an older variant dir `target/v/debug` with two runs (both older than the fixture).
+fn variant(fx: &Fx) -> PathBuf {
+    fs::write(fx.root.join("target/CACHEDIR.TAG"), "x").unwrap();
+    let v = fx.root.join("target/v/debug");
+    unit(&v, "a", "a0a0a0a0a0a0a0a0", 11, &[], BASE - 5000.0);
+    unit(
+        &v,
+        "app",
+        "a1a1a1a1a1a1a1a1",
+        12,
+        &[("a", 11)],
+        BASE - 4000.0,
+    );
+    v
+}
+
+#[test]
+fn max_total_size_drops_oldest_runs_across_dirs() {
+    let fx = fixture();
+    let v = variant(&fx);
+    assert_eq!(target_root(&v), fx.root.join("target"));
+    prune(&Opts {
+        max_total_size: Some(1),
+        ..opts(&fx, 2, true)
+    });
+    // the variant dir is least recently used: emptied first
+    let vfp = v.join(".fingerprint");
+    assert!(fs::read_dir(&vfp).unwrap().next().is_none());
+    // the most recently used dir keeps its newest run (and its closure)
+    assert!(fp(&fx, "app-0000000000000003"));
+    assert!(fp(&fx, "b-b2b2b2b2b2b2b2b2") && fp(&fx, "a-aaaaaaaaaaaaaaaa"));
+    assert!(!fp(&fx, "app-0000000000000002"));
+}
+
+#[test]
+fn max_total_size_lru_order() {
+    let fx = fixture();
+    let v = variant(&fx);
+    let size_all = |fx: &Fx| profile_size(&fx.p) + profile_size(&v);
+    // first measure what --keep 2 keeps, then allow a budget just under it. The variant's
+    // older run frees nothing (its unit is a dep of the newer one), so the variant's newer
+    // run goes next; the more recently used dir keeps both of its runs.
+    prune(&opts(&fx, 2, true));
+    let after_keep = size_all(&fx);
+    prune(&Opts {
+        max_total_size: Some(after_keep - 1),
+        ..opts(&fx, 2, true)
+    });
+    assert!(fp(&fx, "app-0000000000000002"), "newer dir untouched");
+    assert!(!v.join(".fingerprint/app-a1a1a1a1a1a1a1a1").exists());
+}
+
+#[test]
+fn max_total_size_large_budget_changes_nothing() {
+    let fx = fixture();
+    let v = variant(&fx);
+    prune(&Opts {
+        max_total_size: Some(1 << 40),
+        ..opts(&fx, 2, true)
+    });
+    assert!(fp(&fx, "app-0000000000000002"));
+    assert!(v.join(".fingerprint/app-a1a1a1a1a1a1a1a1").exists());
 }
